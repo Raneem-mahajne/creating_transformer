@@ -8,17 +8,18 @@ import matplotlib.pyplot as plt
 from scipy.cluster.hierarchy import fcluster
 import numpy as np
 import os
+import random
 from IntegerStringGenerator import IntegerStringGenerator, OddEvenIndexRule
 
 # -----------------------------
 # Hyperparameters (same values)
 # -----------------------------
-MAX_STEPS = 8000
-EVAL_ITERATIONS = 100
-EVAL_INTERVAL = 300
+MAX_STEPS =3000
+EVAL_ITERATIONS = 50
+EVAL_INTERVAL = 200
 
-N_EMBD = 40
-BLOCK_SIZE = 16
+N_EMBD = 2
+BLOCK_SIZE = 8
 BATCH_SIZE = 4
 
 def annotate_sequence(ax, chars, y=1.02, fontsize=10):
@@ -41,9 +42,9 @@ def sparse_ticks(chars, every=2):
 # Data helpers
 # -----------------------------
 def generate_integer_string_data(generator: IntegerStringGenerator, num_sequences: int = 1000, 
-                                  min_length: int = 50, max_length: int = 200) -> list[int]:
+                                  min_length: int = 50, max_length: int = 200) -> list[list[int]]:
     """
-    Generate integer sequences using the generator and return as a flat list.
+    Generate integer sequences using the generator and return as a list of sequences.
     
     Args:
         generator: IntegerStringGenerator instance
@@ -52,14 +53,10 @@ def generate_integer_string_data(generator: IntegerStringGenerator, num_sequence
         max_length: Maximum sequence length
         
     Returns:
-        Flat list of integers (all sequences concatenated)
+        List of sequences (each sequence is a list of integers)
     """
     sequences = generator.generate_dataset(num_sequences, min_length, max_length)
-    # Flatten sequences into a single list
-    data = []
-    for seq in sequences:
-        data.extend(seq)
-    return data
+    return sequences
 
 def build_encoder_for_integers(min_value: int = 0, max_value: int = 20):
     """
@@ -103,31 +100,72 @@ def build_encoder_for_integers(min_value: int = 0, max_value: int = 20):
         return [idx + min_value for idx in token_indices]
     
     return encode, decode, vocab_size, index_to_string, string_to_index
-def split_train_val(data: torch.Tensor, train_ratio: float = 0.9):
-    """Split data into training and validation tensors."""
-    n_train = int(train_ratio * data.size(0))
-    train_data = data[:n_train]
-    val_data = data[n_train:]
-    return train_data, val_data
-def get_batch(split: str, train_data: torch.Tensor, val_data: torch.Tensor):
+def split_train_val_sequences(sequences: list[list[int]], train_ratio: float = 0.9):
+    """Split sequences into training and validation sets."""
+    n_train = int(train_ratio * len(sequences))
+    train_sequences = sequences[:n_train]
+    val_sequences = sequences[n_train:]
+    return train_sequences, val_sequences
+
+def get_batch_from_sequences(sequences: list[list[int]], block_size: int, batch_size: int):
     """
-    Create a mini-batch of inputs/targets.
-
-    X: (B, T) tokens
-    Y: (B, T) next tokens (shifted by 1)
+    Sample batches that respect sequence boundaries.
+    Only samples from sequences long enough to contain a block.
+    
+    Args:
+        sequences: List of sequences (each is a list of integers)
+        block_size: Size of the context block
+        batch_size: Number of samples in the batch
+        
+    Returns:
+        X, Y tensors of shape (batch_size, block_size)
     """
-    data = train_data if split == "train" else val_data
-
-    # random starting indices
-    ix = torch.randint(0, len(data) - BLOCK_SIZE, (BATCH_SIZE,))
-
-    X = torch.stack([data[i : i + BLOCK_SIZE] for i in ix])
-    Y = torch.stack([data[i + 1 : i + BLOCK_SIZE + 1] for i in ix])
-    return X, Y
+    # Filter sequences that are long enough
+    valid_sequences = [seq for seq in sequences if len(seq) >= block_size + 1]
+    if not valid_sequences:
+        raise ValueError(f"No sequences long enough for block_size {block_size}")
+    
+    batch_x, batch_y = [], []
+    for _ in range(batch_size):
+        seq = random.choice(valid_sequences)
+        if len(seq) <= block_size + 1:
+            start_idx = 0
+        else:
+            start_idx = random.randint(0, len(seq) - block_size - 1)
+        
+        x = seq[start_idx:start_idx + block_size]
+        y = seq[start_idx + 1:start_idx + block_size + 1]
+        batch_x.append(x)
+        batch_y.append(y)
+    
+    return torch.tensor(batch_x, dtype=torch.long), torch.tensor(batch_y, dtype=torch.long)
 
 # -----------------------------
 # Plotting helpers (same plots)
 # -----------------------------
+def plot_token_embeddings_heatmap(model, itos, save_path=None):
+    """
+    Plot token embeddings as a heatmap: tokens (rows) x embedding dimensions (columns).
+    """
+    with torch.no_grad():
+        embeddings = model.token_embedding.weight.detach().cpu().numpy()  # (vocab, N_EMBD)
+
+    y_labels = [itos[i] for i in range(len(itos))]
+
+    plt.figure(figsize=(14, 10))
+    x_labels = list(range(embeddings.shape[1]))
+    vocab_size, n_embd = embeddings.shape
+    ax = sns.heatmap(embeddings, yticklabels=y_labels, xticklabels=x_labels, cmap="RdBu_r", center=0)
+    plt.xlabel("Embedding dimension")
+    plt.ylabel("Token")
+    plt.title(f"Token Embeddings Heatmap ({vocab_size}×{n_embd})")
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path)
+        plt.close()
+    else:
+        plt.show()
+
 def plot_bigram_logits_heatmap(model, itos, save_path=None):
     """
     Heatmap of the model's output weights (logits) per token.
@@ -141,10 +179,12 @@ def plot_bigram_logits_heatmap(model, itos, save_path=None):
     y_labels = [itos[i] for i in range(len(itos))]
 
     plt.figure(figsize=(12, 10))
-    sns.heatmap(weights, yticklabels=y_labels)
+    x_labels = list(range(weights.shape[1]))
+    vocab_size, n_embd = weights.shape
+    sns.heatmap(weights, yticklabels=y_labels, xticklabels=x_labels)
     plt.xlabel("Embedding dimension")
-    plt.ylabel("Token (current char)")
-    plt.title("Token Embedding Weights Heatmap")
+    plt.ylabel("Token")
+    plt.title(f"Token Embedding Weights Heatmap ({vocab_size}×{n_embd})")
     plt.tight_layout()
     if save_path:
         plt.savefig(save_path)
@@ -184,7 +224,8 @@ def plot_token_embeddings_pca_2d_with_hclust(
         cmap="tab10"
     )
 
-    plt.title(f"PCA 2D of Token Embeddings + HClust coloring (k={k_clusters})")
+    vocab_size = W.shape[0]
+    plt.title(f"PCA 2D of Token Embeddings + HClust coloring (vocab={vocab_size}, k={k_clusters})")
     plt.xlabel("PC1")
     plt.ylabel("PC2")
     plt.grid(True, alpha=0.2)
@@ -245,10 +286,12 @@ def plot_bigram_probability_heatmap_hclust(
     y_labels = [itos[i] for i in row_order]
 
     plt.figure(figsize=(12, 10))
-    sns.heatmap(P_ord, yticklabels=y_labels, cmap="magma")
+    x_labels = list(range(P_ord.shape[1]))
+    vocab_size, n_embd = P_ord.shape
+    sns.heatmap(P_ord, yticklabels=y_labels, xticklabels=x_labels, cmap="magma")
     plt.xlabel("Embedding dimension")
     plt.ylabel("Token (clustered)")
-    plt.title(f"Token Embedding Softmax Heatmap (rows clustered on {cluster_on}; {metric}/{method})")
+    plt.title(f"Token Embedding Softmax Heatmap ({vocab_size}×{n_embd}, rows clustered on {cluster_on}; {metric}/{method})")
     plt.tight_layout()
     if save_path:
         plt.savefig(save_path)
@@ -268,10 +311,12 @@ def plot_bigram_probability_heatmap(model, itos, save_path=None):
     y_labels = [itos[i] for i in range(len(itos))]
 
     plt.figure(figsize=(12, 10))
-    sns.heatmap(probs, yticklabels=y_labels, cmap="magma")
+    x_labels = list(range(probs.shape[1]))
+    vocab_size, n_embd = probs.shape
+    sns.heatmap(probs, yticklabels=y_labels, xticklabels=x_labels, cmap="magma")
     plt.xlabel("Embedding dimension")
-    plt.ylabel("Token (current char)")
-    plt.title("Token Embedding Softmax (over embedding dims)")
+    plt.ylabel("Token")
+    plt.title(f"Token Embedding Softmax ({vocab_size}×{n_embd}, over embedding dims)")
     plt.tight_layout()
     if save_path:
         plt.savefig(save_path)
@@ -296,8 +341,12 @@ def plot_learning_curve(steps, train_losses, val_losses, save_path=None):
 def plot_heatmaps(out, tril, wei, chars, save_dir=None):
     # 1) Causal mask heatmap
     plt.figure(figsize=(6, 5))
-    sns.heatmap(tril.numpy(), cmap="gray_r", cbar=False)
-    plt.title("Causal Mask (tril) — allowed=1 blocked=0")
+    tril_np = tril.numpy()
+    x_labels = list(range(tril_np.shape[1]))
+    y_labels = list(range(tril_np.shape[0]))
+    sns.heatmap(tril_np, cmap="gray_r", cbar=False, xticklabels=x_labels, yticklabels=y_labels)
+    t_size = tril_np.shape[0]
+    plt.title(f"Causal Mask (tril) {t_size}×{t_size} — allowed=1 blocked=0")
     plt.xlabel("Key position (look at)")
     plt.ylabel("Query position (looking from)")
     plt.tight_layout()
@@ -309,8 +358,12 @@ def plot_heatmaps(out, tril, wei, chars, save_dir=None):
 
     # 2) Attention weights heatmap (batch 0)
     plt.figure(figsize=(6, 5))
-    sns.heatmap(wei[0].detach().cpu().numpy(), cmap="magma", vmin=0.0, vmax=1.0)
-    plt.title("Attention Weights (wei) — batch 0")
+    wei_np = wei[0].detach().cpu().numpy()
+    x_labels = list(range(wei_np.shape[1]))
+    y_labels = list(range(wei_np.shape[0]))
+    sns.heatmap(wei_np, cmap="magma", vmin=0.0, vmax=1.0, xticklabels=x_labels, yticklabels=y_labels)
+    t_size = wei_np.shape[0]
+    plt.title(f"Attention Weights (wei) {t_size}×{t_size} — batch 0")
     plt.xlabel("Key position (look at)")
     plt.ylabel("Query position (looking from)")
     plt.tight_layout()
@@ -322,8 +375,12 @@ def plot_heatmaps(out, tril, wei, chars, save_dir=None):
 
     # 3) Output after attention heatmap (batch 0)
     plt.figure(figsize=(8, 4))
-    sns.heatmap(out[0].detach().cpu().numpy(), cmap="viridis")
-    plt.title("Output after attention (out) — batch 0 (T x head_size)")
+    out_np = out[0].detach().cpu().numpy()
+    x_labels = list(range(out_np.shape[1]))
+    y_labels = list(range(out_np.shape[0]))
+    sns.heatmap(out_np, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels)
+    t_size, head_size = out_np.shape
+    plt.title(f"Output after attention (out) {t_size}×{head_size} — batch 0")
     plt.xlabel("Feature index (head_size)")
     plt.ylabel("Time position (T)")
     plt.tight_layout()
@@ -361,8 +418,10 @@ def plot_heatmaps(out, tril, wei, chars, save_dir=None):
     # FIXED call signature
     annotate_sequence(ax, chars, y=1.02, fontsize=12)
 
+    t_size = W.shape[0]
     ax.set_xlabel("Key position")
     ax.set_ylabel("Query position")
+    plt.title(f"Attention Weights {t_size}×{t_size} — readable")
     plt.tight_layout()
     if save_dir:
         plt.savefig(os.path.join(save_dir, "attention_weights_readable.png"))
@@ -386,11 +445,11 @@ def plot_all_heads_snapshot(snap, title="", save_path=None):
 
     cols = ["q", "W_Q", "k", "W_K", "v", "W_V", "wei", "out"]
     col_titles = [
-        "Q (T×hs)", "W_Q (C×hs)",
-        "K (T×hs)", "W_K (C×hs)",
-        "V (T×hs)", "W_V (C×hs)",
-        "Attention WEI (T×T)",
-        "Head OUT (T×hs)",
+        f"Q {T}×{hs}", f"W_Q {C}×{hs}",
+        f"K {T}×{hs}", f"W_K {C}×{hs}",
+        f"V {T}×{hs}", f"W_V {C}×{hs}",
+        f"Attention WEI {T}×{T}",
+        f"Head OUT {T}×{hs}",
     ]
 
     # shared color scales per column
@@ -418,20 +477,9 @@ def plot_all_heads_snapshot(snap, title="", save_path=None):
             cmap = "magma" if c == "wei" else "viridis"
             vmin, vmax = vlims[c]
 
-            # axis tick labels
-            if c in ("q", "k", "v", "out"):
-                # these are still cramped; show none or only on first col if you want
-                ytick = False
-                xtick = False
-            elif c in ("W_Q", "W_K", "W_V"):
-                ytick = False
-                xtick = list(range(hs)) if i == H - 1 else False
-            elif c == "wei":
-                # KEY FIX: no per-char ticks in the grid
-                ytick = False
-                xtick = False
-            else:
-                ytick = xtick = False
+            # axis tick labels - show on all rows and columns
+            ytick = list(range(data.shape[0]))
+            xtick = list(range(data.shape[1]))
 
             sns.heatmap(
                 data,
@@ -479,11 +527,11 @@ def plot_all_heads_snapshot(snap, title="", save_path=None):
         plt.show()
 
 @torch.no_grad()
-def collect_epoch_stats(model, train_data, val_data):
+def collect_epoch_stats(model, train_sequences):
     model.eval()
 
     # single representative batch
-    X, _ = get_batch("train", train_data, val_data)
+    X, _ = get_batch_from_sequences(train_sequences, BLOCK_SIZE, BATCH_SIZE)
 
     # embeddings
     token_emb = model.token_embedding(X)  # (B,T,C)
@@ -609,7 +657,8 @@ def plot_embedding_triplet_matrix(model, X, itos, title="Embeddings: pos, token,
     x0   = x[0].detach().cpu().numpy()
 
     mats = [pos0, tok0, x0]
-    titles = ["pos_emb (T×C)", "token_emb (T×C)", "x = token + pos (T×C)"]
+    t_size, c_size = pos0.shape
+    titles = [f"pos_emb {t_size}×{c_size}", f"token_emb {t_size}×{c_size}", f"x = token + pos {t_size}×{c_size}"]
 
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
 
@@ -619,15 +668,17 @@ def plot_embedding_triplet_matrix(model, X, itos, title="Embeddings: pos, token,
 
     for j in range(3):
         ax = axes[j]
+        x_labels = list(range(mats[j].shape[1]))
         sns.heatmap(
             mats[j],
             ax=ax,
             cmap="viridis",
             cbar=True,
             yticklabels=ytick,
-            xticklabels=False
+            xticklabels=x_labels
         )
         ax.tick_params(axis="y", labelrotation=0)
+        ax.tick_params(axis="x", labelrotation=0)
         ax.set_title(titles[j], fontsize=12)
         ax.set_xlabel("Embedding dim (C)")
         ax.set_ylabel("")
@@ -650,20 +701,20 @@ def plot_embedding_triplet_matrix(model, X, itos, title="Embeddings: pos, token,
 # Loss evaluation helper
 # -----------------------------
 @torch.no_grad()
-def estimate_loss(model, train_data, val_data):
+def estimate_loss(model, train_sequences, val_sequences):
     """
     Average loss on 'train' and 'validation' splits.
     """
     out = {}
     model.eval()
 
-    for split in ["train", "validation"]:
+    for split_name, sequences in [("train", train_sequences), ("validation", val_sequences)]:
         losses = torch.zeros(EVAL_ITERATIONS)
         for i in range(EVAL_ITERATIONS):
-            X, Y = get_batch(split, train_data, val_data)
+            X, Y = get_batch_from_sequences(sequences, BLOCK_SIZE, BATCH_SIZE)
             _, loss = model(X, Y)
             losses[i] = loss.item()
-        out[split] = losses.mean()
+        out[split_name] = losses.mean()
 
     model.train()
     return out
@@ -738,7 +789,7 @@ class BigramLanguageModel(nn.Module):
         super().__init__()
         self.token_embedding = nn.Embedding(vocab_size, N_EMBD)           # (vocab, N_EMBD)
         self.position_embedding_table = nn.Embedding(BLOCK_SIZE, N_EMBD)  # (block_size, N_EMBD)
-        self.sa_heads = MultiHeadAttention(4, N_EMBD, N_EMBD // 4)
+        self.sa_heads = MultiHeadAttention(2, N_EMBD, N_EMBD // 2)
         self.lm_head = nn.Linear(N_EMBD, vocab_size)                      # (N_EMBD -> vocab)
 
     def forward(self, idx: torch.Tensor, targets: torch.Tensor | None = None, return_wei: bool = False):
@@ -793,30 +844,33 @@ def main():
     min_value, max_value = 0, 20
     generator = OddEvenIndexRule(min_value=min_value, max_value=max_value)
     
-    integer_data = generate_integer_string_data(generator, num_sequences=1000, min_length=50, max_length=200)
-    print("Generated integer sequences, total length:", len(integer_data))
+    sequences = generate_integer_string_data(generator, num_sequences=1500, min_length=16, max_length=32)
+    print(f"Generated {len(sequences)} sequences")
+    print(f"Sequence lengths: min={min(len(s) for s in sequences)}, max={max(len(s) for s in sequences)}, avg={sum(len(s) for s in sequences)/len(sequences):.1f}")
     
     # 2) Build encoder/decoder for integers
     encode, decode, vocab_size, itos, stoi = build_encoder_for_integers(min_value=min_value, max_value=max_value)
     print("Vocabulary size:", vocab_size)
     print("Vocabulary (integers):", [itos[i] for i in range(vocab_size)])
 
-    # 3) Encode data (integer values -> token indices)
-    data = torch.tensor(encode(integer_data), dtype=torch.long)
-    train_data, val_data = split_train_val(data, train_ratio=0.9)
-    print("Train shape:", train_data.shape, "Val shape:", val_data.shape)
+    # 3) Encode sequences (integer values -> token indices)
+    encoded_sequences = [encode(seq) for seq in sequences]
+    
+    # 4) Split sequences into train/val
+    train_sequences, val_sequences = split_train_val_sequences(encoded_sequences, train_ratio=0.9)
+    print(f"Train: {len(train_sequences)} sequences, Val: {len(val_sequences)} sequences")
 
-    # 4) Create model + optimizer
+    # 5) Create model + optimizer
     model = BigramLanguageModel(vocab_size)
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
 
-    # 5) Training loop
+    # 6) Training loop
     steps_for_plot = []
     train_loss_history = []
     val_loss_history = []
 
 
-    X_fixed, _ = get_batch("train", train_data, val_data)
+    X_fixed, _ = get_batch_from_sequences(train_sequences, BLOCK_SIZE, BATCH_SIZE)
     plot_embedding_triplet_matrix(model, X_fixed, itos, title="Before training: pos vs token vs x", save_path=os.path.join(plots_dir, "embedding_triplet_before.png"))
 
     snap_start = get_multihead_snapshot_from_X(model, X_fixed, itos)
@@ -825,7 +879,7 @@ def main():
     for step in range(MAX_STEPS):
         # Evaluate occasionally
         if step % EVAL_INTERVAL == 0:
-            losses = estimate_loss(model, train_data, val_data)
+            losses = estimate_loss(model, train_sequences, val_sequences)
 
             steps_for_plot.append(step)
             train_loss_history.append(losses["train"])
@@ -834,7 +888,7 @@ def main():
             print(f"step {step}: train loss {losses['train']:.4f}, val loss {losses['validation']:.4f}")
 
         # One batch
-        X, Y = get_batch("train", train_data, val_data)
+        X, Y = get_batch_from_sequences(train_sequences, BLOCK_SIZE, BATCH_SIZE)
 
         # Forward + backward + update
         _, loss = model(X, Y)
@@ -870,6 +924,7 @@ def main():
     with torch.no_grad():
         probs = torch.softmax(model.token_embedding.weight, dim=1).cpu().numpy()
 
+    x_labels = list(range(probs.shape[1]))
     g = sns.clustermap(
         probs,
         metric="cosine",    # good for embeddings
@@ -877,13 +932,19 @@ def main():
         row_cluster=True,   # cluster tokens
         col_cluster=False,  # don't cluster embedding dims unless you want
         yticklabels=[itos[i] for i in range(len(itos))],
+        xticklabels=x_labels,
         cmap="magma",
         figsize=(12,10)
     )
+    g.ax_col_dendrogram.set_xlabel("Embedding dimension")
+    g.ax_heatmap.set_ylabel("Token")
+    g.ax_heatmap.set_xlabel("Embedding dimension")
     g.savefig(os.path.join(plots_dir, "clustermap.png"))
     plt.close()
 
     plot_embedding_triplet_matrix(model, X_fixed, itos, title="After training: pos vs token vs x", save_path=os.path.join(plots_dir, "embedding_triplet_final.png"))
+    
+    plot_token_embeddings_heatmap(model, itos, save_path=os.path.join(plots_dir, "token_embeddings_heatmap.png"))
 
 
 
