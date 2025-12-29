@@ -7,6 +7,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.cluster.hierarchy import fcluster
 import numpy as np
+import os
+from IntegerStringGenerator import IntegerStringGenerator, OddEvenIndexRule
 
 # -----------------------------
 # Hyperparameters (same values)
@@ -38,28 +40,68 @@ def sparse_ticks(chars, every=2):
 # -----------------------------
 # Data helpers
 # -----------------------------
-def load_text(path: str = "./input.txt") -> str:
-    """Read the whole dataset text file."""
-    with open(path, "r", encoding="utf-8") as f:
-        return f.read()
-def build_encoder(text: str):
+def generate_integer_string_data(generator: IntegerStringGenerator, num_sequences: int = 1000, 
+                                  min_length: int = 50, max_length: int = 200) -> list[int]:
     """
-    Builds:
-    - string_to_index: char -> int
-    - index_to_string: int -> char
-    - encode/decode functions
+    Generate integer sequences using the generator and return as a flat list.
+    
+    Args:
+        generator: IntegerStringGenerator instance
+        num_sequences: Number of sequences to generate
+        min_length: Minimum sequence length
+        max_length: Maximum sequence length
+        
+    Returns:
+        Flat list of integers (all sequences concatenated)
     """
-    chars = sorted(list(set(text)))
-    string_to_index = {ch: i for i, ch in enumerate(chars)}
-    index_to_string = {i: ch for ch, i in string_to_index.items()}
+    sequences = generator.generate_dataset(num_sequences, min_length, max_length)
+    # Flatten sequences into a single list
+    data = []
+    for seq in sequences:
+        data.extend(seq)
+    return data
 
-    def encode(s: str):
-        return [string_to_index[c] for c in s]
-
-    def decode(indices):
-        return "".join(index_to_string[i] for i in indices)
-
-    vocab_size = len(chars)
+def build_encoder_for_integers(min_value: int = 0, max_value: int = 20):
+    """
+    Builds encoder/decoder for integer tokens.
+    Each integer value (min_value to max_value) is a unique token.
+    Works directly with integers - no text conversion.
+    
+    Args:
+        min_value: Minimum integer value (inclusive)
+        max_value: Maximum integer value (inclusive)
+        
+    Returns:
+        encode, decode, vocab_size, index_to_string, string_to_index
+    """
+    # Vocabulary: all integers from min_value to max_value
+    vocab_size = max_value - min_value + 1
+    
+    # index_to_string: maps token index -> integer value string (only for plotting/display)
+    # string_to_index: maps integer value string -> token index (for compatibility)
+    index_to_string = {i: str(min_value + i) for i in range(vocab_size)}
+    string_to_index = {str(min_value + i): i for i in range(vocab_size)}
+    
+    def encode(integers: list[int]) -> list[int]:
+        """
+        Encode integer values directly to token indices.
+        Args:
+            integers: List of integer values (e.g., [0, 1, 2, 15])
+        Returns:
+            List of token indices (integers)
+        """
+        return [val - min_value for val in integers]
+    
+    def decode(token_indices) -> list[int]:
+        """
+        Decode token indices directly back to integer values.
+        Args:
+            token_indices: List of token indices (integers)
+        Returns:
+            List of integer values
+        """
+        return [idx + min_value for idx in token_indices]
+    
     return encode, decode, vocab_size, index_to_string, string_to_index
 def split_train_val(data: torch.Tensor, train_ratio: float = 0.9):
     """Split data into training and validation tensors."""
@@ -86,7 +128,7 @@ def get_batch(split: str, train_data: torch.Tensor, val_data: torch.Tensor):
 # -----------------------------
 # Plotting helpers (same plots)
 # -----------------------------
-def plot_bigram_logits_heatmap(model, itos):
+def plot_bigram_logits_heatmap(model, itos, save_path=None):
     """
     Heatmap of the model's output weights (logits) per token.
     Note: In THIS model version, token_embedding is (vocab_size, N_EMBD),
@@ -104,13 +146,18 @@ def plot_bigram_logits_heatmap(model, itos):
     plt.ylabel("Token (current char)")
     plt.title("Token Embedding Weights Heatmap")
     plt.tight_layout()
-    plt.show()
+    if save_path:
+        plt.savefig(save_path)
+        plt.close()
+    else:
+        plt.show()
 def plot_token_embeddings_pca_2d_with_hclust(
     model,
     itos,
     metric="cosine",
     method="average",
     k_clusters=6,
+    save_path=None,
 ):
     with torch.no_grad():
         W = model.token_embedding.weight.detach().cpu().numpy()
@@ -152,7 +199,11 @@ def plot_token_embeddings_pca_2d_with_hclust(
     cbar.set_label("Cluster ID")
 
     plt.tight_layout()
-    plt.show()
+    if save_path:
+        plt.savefig(save_path)
+        plt.close()
+    else:
+        plt.show()
 def plot_bigram_probability_heatmap_hclust(
     model,
     itos,
@@ -160,6 +211,7 @@ def plot_bigram_probability_heatmap_hclust(
     method="average",
     cluster_on="embeddings",   # "embeddings" | "probs"
     zscore_rows=False,
+    save_path=None,
 ):
     """
     Softmax heatmap (over embedding dims) but with token rows reordered by
@@ -198,8 +250,12 @@ def plot_bigram_probability_heatmap_hclust(
     plt.ylabel("Token (clustered)")
     plt.title(f"Token Embedding Softmax Heatmap (rows clustered on {cluster_on}; {metric}/{method})")
     plt.tight_layout()
-    plt.show()
-def plot_bigram_probability_heatmap(model, itos):
+    if save_path:
+        plt.savefig(save_path)
+        plt.close()
+    else:
+        plt.show()
+def plot_bigram_probability_heatmap(model, itos, save_path=None):
     """
     This softmax is applied across embedding dimensions in this version
     (since token_embedding is vocab_size x N_EMBD).
@@ -217,8 +273,12 @@ def plot_bigram_probability_heatmap(model, itos):
     plt.ylabel("Token (current char)")
     plt.title("Token Embedding Softmax (over embedding dims)")
     plt.tight_layout()
-    plt.show()
-def plot_learning_curve(steps, train_losses, val_losses):
+    if save_path:
+        plt.savefig(save_path)
+        plt.close()
+    else:
+        plt.show()
+def plot_learning_curve(steps, train_losses, val_losses, save_path=None):
     plt.figure(figsize=(10, 6))
     plt.plot(steps, train_losses, label="Training Loss")
     plt.plot(steps, val_losses, label="Validation Loss")
@@ -228,8 +288,12 @@ def plot_learning_curve(steps, train_losses, val_losses):
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
-    plt.show()
-def plot_heatmaps(out, tril, wei, chars):
+    if save_path:
+        plt.savefig(save_path)
+        plt.close()
+    else:
+        plt.show()
+def plot_heatmaps(out, tril, wei, chars, save_dir=None):
     # 1) Causal mask heatmap
     plt.figure(figsize=(6, 5))
     sns.heatmap(tril.numpy(), cmap="gray_r", cbar=False)
@@ -237,7 +301,11 @@ def plot_heatmaps(out, tril, wei, chars):
     plt.xlabel("Key position (look at)")
     plt.ylabel("Query position (looking from)")
     plt.tight_layout()
-    plt.show()
+    if save_dir:
+        plt.savefig(os.path.join(save_dir, "causal_mask.png"))
+        plt.close()
+    else:
+        plt.show()
 
     # 2) Attention weights heatmap (batch 0)
     plt.figure(figsize=(6, 5))
@@ -246,7 +314,11 @@ def plot_heatmaps(out, tril, wei, chars):
     plt.xlabel("Key position (look at)")
     plt.ylabel("Query position (looking from)")
     plt.tight_layout()
-    plt.show()
+    if save_dir:
+        plt.savefig(os.path.join(save_dir, "attention_weights.png"))
+        plt.close()
+    else:
+        plt.show()
 
     # 3) Output after attention heatmap (batch 0)
     plt.figure(figsize=(8, 4))
@@ -255,7 +327,11 @@ def plot_heatmaps(out, tril, wei, chars):
     plt.xlabel("Feature index (head_size)")
     plt.ylabel("Time position (T)")
     plt.tight_layout()
-    plt.show()
+    if save_dir:
+        plt.savefig(os.path.join(save_dir, "output_after_attention.png"))
+        plt.close()
+    else:
+        plt.show()
 
     # 4) Attention weights — readable version
     plt.figure(figsize=(7, 6))
@@ -288,9 +364,13 @@ def plot_heatmaps(out, tril, wei, chars):
     ax.set_xlabel("Key position")
     ax.set_ylabel("Query position")
     plt.tight_layout()
-    plt.show()
+    if save_dir:
+        plt.savefig(os.path.join(save_dir, "attention_weights_readable.png"))
+        plt.close()
+    else:
+        plt.show()
 
-def plot_all_heads_snapshot(snap, title=""):
+def plot_all_heads_snapshot(snap, title="", save_path=None):
     """
     Grid: H rows (heads) × 8 columns:
     q, W_Q, k, W_K, v, W_V, wei, out
@@ -392,7 +472,11 @@ def plot_all_heads_snapshot(snap, title=""):
                 ax.set_ylabel(f"head {i}\nQuery pos", fontsize=10)
 
     fig.suptitle(title, fontsize=16)
-    plt.show()
+    if save_path:
+        plt.savefig(save_path)
+        plt.close()
+    else:
+        plt.show()
 
 @torch.no_grad()
 def collect_epoch_stats(model, train_data, val_data):
@@ -508,7 +592,7 @@ def get_multihead_snapshot_from_X(model, X, itos):
     model.train()
     return snap
 
-def plot_embedding_triplet_matrix(model, X, itos, title="Embeddings: pos, token, x"):
+def plot_embedding_triplet_matrix(model, X, itos, title="Embeddings: pos, token, x", save_path=None):
     model.eval()
     B, T = X.shape
 
@@ -555,7 +639,11 @@ def plot_embedding_triplet_matrix(model, X, itos, title="Embeddings: pos, token,
 
     fig.suptitle(title, fontsize=16)
     # fig.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.show()
+    if save_path:
+        plt.savefig(save_path)
+        plt.close()
+    else:
+        plt.show()
     model.train()
 
 # -----------------------------
@@ -697,32 +785,42 @@ class BigramLanguageModel(nn.Module):
 def main():
     torch.manual_seed(0)
 
-    # 1) Load + encode data
-    text = load_text()
-    print("Raw text length:", len(text))
+    # Create plots directory
+    plots_dir = "plots"
+    os.makedirs(plots_dir, exist_ok=True)
 
-    encode, decode, vocab_size, itos, stoi = build_encoder(text)
+    # 1) Generate integer string data using OddEvenIndexRule
+    min_value, max_value = 0, 20
+    generator = OddEvenIndexRule(min_value=min_value, max_value=max_value)
+    
+    integer_data = generate_integer_string_data(generator, num_sequences=1000, min_length=50, max_length=200)
+    print("Generated integer sequences, total length:", len(integer_data))
+    
+    # 2) Build encoder/decoder for integers
+    encode, decode, vocab_size, itos, stoi = build_encoder_for_integers(min_value=min_value, max_value=max_value)
     print("Vocabulary size:", vocab_size)
+    print("Vocabulary (integers):", [itos[i] for i in range(vocab_size)])
 
-    data = torch.tensor(encode(text), dtype=torch.long)
+    # 3) Encode data (integer values -> token indices)
+    data = torch.tensor(encode(integer_data), dtype=torch.long)
     train_data, val_data = split_train_val(data, train_ratio=0.9)
     print("Train shape:", train_data.shape, "Val shape:", val_data.shape)
 
-    # 2) Create model + optimizer
+    # 4) Create model + optimizer
     model = BigramLanguageModel(vocab_size)
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
 
-    # 3) Training loop
+    # 5) Training loop
     steps_for_plot = []
     train_loss_history = []
     val_loss_history = []
 
 
     X_fixed, _ = get_batch("train", train_data, val_data)
-    plot_embedding_triplet_matrix(model, X_fixed, itos, title="Before training: pos vs token vs x")
+    plot_embedding_triplet_matrix(model, X_fixed, itos, title="Before training: pos vs token vs x", save_path=os.path.join(plots_dir, "embedding_triplet_before.png"))
 
     snap_start = get_multihead_snapshot_from_X(model, X_fixed, itos)
-    plot_all_heads_snapshot(snap_start, "BEFORE: all heads (Q,K,V,WEI,OUT + weights)")
+    plot_all_heads_snapshot(snap_start, "BEFORE: all heads (Q,K,V,WEI,OUT + weights)", save_path=os.path.join(plots_dir, "all_heads_before.png"))
 
     for step in range(MAX_STEPS):
         # Evaluate occasionally
@@ -744,45 +842,48 @@ def main():
         loss.backward()
         optimizer.step()
 
-    plot_embedding_triplet_matrix(model, X_fixed, itos, title="AFTER: pos vs token vs x")
+    plot_embedding_triplet_matrix(model, X_fixed, itos, title="AFTER: pos vs token vs x", save_path=os.path.join(plots_dir, "embedding_triplet_after.png"))
 
     snap_after = get_multihead_snapshot_from_X(model, X_fixed, itos)
-    plot_all_heads_snapshot(snap_after, "AFTER: all heads (Q,K,V,WEI,OUT + weights)")
+    plot_all_heads_snapshot(snap_after, "AFTER: all heads (Q,K,V,WEI,OUT + weights)", save_path=os.path.join(plots_dir, "all_heads_after.png"))
 
 
     # plot_two_snapshots_grid(snap_start, snap_end, title_top="Step 0 snapshot", title_bottom="Final snapshot")
     # 4) Show results
     print("Final loss:", loss.item())
 
-    # Generate some text
-    start = torch.zeros((1, 1), dtype=torch.long)
+    # Generate some integer sequences
+    start = torch.zeros((1, 1), dtype=torch.long)  # Start with token 0 (integer value 0)
     sample = model.generate(start, max_new_tokens=1000)[0].tolist()
-    generated_text = decode(sample)  # print(decode(sample))
-    with open("generated_text_ver3.txt", "w", encoding="utf-8") as f:
-        f.write(generated_text)
+    generated_integers = decode(sample)  # Decode token indices back to integer values
+    # Write as space-separated integers
+    with open("generated_integer_sequence.txt", "w", encoding="utf-8") as f:
+        f.write(" ".join(str(i) for i in generated_integers))
+    print(f"Generated sequence (first 100 integers): {generated_integers[:100]}")
 
     # 5) Plots
-    plot_learning_curve(steps_for_plot, train_loss_history, val_loss_history)
-    plot_bigram_logits_heatmap(model, itos)
-    plot_bigram_probability_heatmap(model, itos)
-    plot_token_embeddings_pca_2d_with_hclust(model, itos)
+    plot_learning_curve(steps_for_plot, train_loss_history, val_loss_history, save_path=os.path.join(plots_dir, "learning_curve.png"))
+    plot_bigram_logits_heatmap(model, itos, save_path=os.path.join(plots_dir, "bigram_logits_heatmap.png"))
+    plot_bigram_probability_heatmap(model, itos, save_path=os.path.join(plots_dir, "bigram_probability_heatmap.png"))
+    plot_token_embeddings_pca_2d_with_hclust(model, itos, save_path=os.path.join(plots_dir, "token_embeddings_pca.png"))
 
     with torch.no_grad():
         probs = torch.softmax(model.token_embedding.weight, dim=1).cpu().numpy()
 
-    sns.clustermap(
+    g = sns.clustermap(
         probs,
         metric="cosine",    # good for embeddings
         method="average",
         row_cluster=True,   # cluster tokens
-        col_cluster=False,  # don’t cluster embedding dims unless you want
+        col_cluster=False,  # don't cluster embedding dims unless you want
         yticklabels=[itos[i] for i in range(len(itos))],
         cmap="magma",
         figsize=(12,10)
     )
-    plt.show()
+    g.savefig(os.path.join(plots_dir, "clustermap.png"))
+    plt.close()
 
-    plot_embedding_triplet_matrix(model, X_fixed, itos, title="After training: pos vs token vs x")
+    plot_embedding_triplet_matrix(model, X_fixed, itos, title="After training: pos vs token vs x", save_path=os.path.join(plots_dir, "embedding_triplet_final.png"))
 
 
 
