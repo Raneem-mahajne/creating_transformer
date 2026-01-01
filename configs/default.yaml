@@ -1,0 +1,29 @@
+# Configuration file for transformer training
+
+# Configuration name (used for output folder)
+name: "default"
+
+# Data generation configuration
+data:
+  generator_type: "OddEvenIndexRule"  # Which generator class to use
+  min_value: 0
+  max_value: 20
+  num_sequences: 1500
+  min_length: 16
+  max_length: 32
+
+# Model architecture
+model:
+  n_embd: 2              # Embedding dimension
+  block_size: 8          # Context length
+  num_heads: 1           # Number of attention heads
+  head_size: 2           # Size of each attention head
+
+# Training configuration
+training:
+  max_steps: 10000
+  batch_size: 4
+  learning_rate: 0.001
+  eval_interval: 200     # Steps between evaluations
+  eval_iterations: 50    # Number of batches to evaluate on
+

@@ -93,6 +93,49 @@ class OddEvenIndexRule(IntegerStringGenerator):
         return sequence
 
 
+class EvenToOddTransitionRule(IntegerStringGenerator):
+    """
+    Rule: If the current number is even, the next number must be odd.
+    If the current number is odd, the next number can be anything.
+    Starts with a random number.
+    """
+    
+    def __init__(self, min_value: int = 0, max_value: int = 20, sequence_length: int = None):
+        super().__init__(min_value, max_value, sequence_length)
+        # Precompute all numbers, even numbers, and odd numbers
+        self.all_nums = list(range(min_value, max_value + 1))
+        self.odd_nums = [n for n in range(min_value, max_value + 1) if n % 2 == 1]
+        
+        # Fallback values if lists are empty
+        self.fallback = min_value
+        self.odd_fallback = min(min_value + 1, max_value) if min_value % 2 == 0 else min_value
+    
+    def generate_sequence(self, length: int) -> list[int]:
+        """
+        Generate a sequence where:
+        - If current number is even, next must be odd
+        - If current number is odd, next can be anything
+        - Starts with a random number
+        """
+        if length == 0:
+            return []
+        
+        sequence = []
+        # Start with a random number
+        current = random.choice(self.all_nums) if self.all_nums else self.fallback
+        sequence.append(current)
+        
+        # Generate the rest based on the rule
+        for _ in range(length - 1):
+            if current % 2 == 0:  # Current is even, next must be odd
+                current = random.choice(self.odd_nums) if self.odd_nums else self.odd_fallback
+            else:  # Current is odd, next can be anything
+                current = random.choice(self.all_nums) if self.all_nums else self.fallback
+            sequence.append(current)
+        
+        return sequence
+
+
 def main():
     generator = OddEvenIndexRule(min_value=0, max_value=20)
     sequences = generator.generate_dataset(5, min_length=10, max_length=20)

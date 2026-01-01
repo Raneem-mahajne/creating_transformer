@@ -10,18 +10,9 @@ from scipy.cluster.hierarchy import fcluster
 import numpy as np
 import os
 import random
+import sys
 from IntegerStringGenerator import IntegerStringGenerator, OddEvenIndexRule
-
-# -----------------------------
-# Hyperparameters (same values)
-# -----------------------------
-MAX_STEPS = 10000
-EVAL_ITERATIONS = 50
-EVAL_INTERVAL = 200
-
-N_EMBD = 2
-BLOCK_SIZE = 8
-BATCH_SIZE = 4
+from config_loader import load_config, get_generator_from_config
 
 def annotate_sequence(ax, chars, y=1.02, fontsize=10):
     s = "".join(chars)
@@ -324,12 +315,13 @@ def plot_bigram_probability_heatmap(model, itos, save_path=None):
         plt.close()
     else:
         plt.show()
-def plot_learning_curve(steps, train_losses, val_losses, save_path=None):
+def plot_learning_curve(steps, train_losses, val_losses, save_path=None, eval_interval=None):
     plt.figure(figsize=(10, 6))
     plt.plot(steps, train_losses, label="Training Loss")
     plt.plot(steps, val_losses, label="Validation Loss")
     plt.title("Learning Curve: Training vs Validation Loss")
-    plt.xlabel(f"Training Steps (evaluated every {EVAL_INTERVAL} steps)")
+    eval_interval_str = f" (evaluated every {eval_interval} steps)" if eval_interval else ""
+    plt.xlabel(f"Training Steps{eval_interval_str}")
     plt.ylabel("Cross-entropy loss")
     plt.grid(True)
     plt.legend()
@@ -528,11 +520,11 @@ def plot_all_heads_snapshot(snap, title="", save_path=None):
         plt.show()
 
 @torch.no_grad()
-def collect_epoch_stats(model, train_sequences):
+def collect_epoch_stats(model, train_sequences, block_size, batch_size):
     model.eval()
 
     # single representative batch
-    X, _ = get_batch_from_sequences(train_sequences, BLOCK_SIZE, BATCH_SIZE)
+    X, _ = get_batch_from_sequences(train_sequences, block_size, batch_size)
 
     # embeddings
     token_emb = model.token_embedding(X)  # (B,T,C)
@@ -567,7 +559,7 @@ def get_attention_snapshot_from_X(model, X, itos):
     chars = [itos[i.item()] for i in X[0]]
 
     token_emb = model.token_embedding(X)
-    pos = torch.arange(T, device=X.device) % BLOCK_SIZE
+    pos = torch.arange(T, device=X.device) % model.block_size
     pos_emb = model.position_embedding_table(pos)
     x = token_emb + pos_emb
 
@@ -589,7 +581,7 @@ def get_multihead_snapshot_from_X(model, X, itos):
     chars = [itos[i.item()] for i in X[0]]
 
     token_emb = model.token_embedding(X)                          # (B,T,C)
-    pos = torch.arange(T, device=X.device) % BLOCK_SIZE
+    pos = torch.arange(T, device=X.device) % model.block_size
     pos_emb = model.position_embedding_table(pos)                 # (T,C)
     x = token_emb + pos_emb                                       # (B,T,C)
 
@@ -744,7 +736,7 @@ def plot_weights_qkv(model, X, itos, save_path=None, sequence_str=None):
     
     # Get activations Q, K, V from input X
     token_emb = model.token_embedding(X)
-    pos = torch.arange(T, device=X.device) % BLOCK_SIZE
+    pos = torch.arange(T, device=X.device) % model.block_size
     pos_emb = model.position_embedding_table(pos)
     x = token_emb + pos_emb
     
@@ -925,7 +917,7 @@ def plot_weights_qkv_single(model, X, itos, fig, col_offset, sequence_str=None):
     
     # Get activations Q, K, V from input X
     token_emb = model.token_embedding(X)
-    pos = torch.arange(T, device=X.device) % BLOCK_SIZE
+    pos = torch.arange(T, device=X.device) % model.block_size
     pos_emb = model.position_embedding_table(pos)
     x = token_emb + pos_emb
     
@@ -1049,7 +1041,7 @@ def plot_attention_matrix(model, X, itos, save_path=None):
     
     # Get embeddings and positional encodings
     token_emb = model.token_embedding(X)
-    pos = torch.arange(T, device=X.device) % BLOCK_SIZE
+    pos = torch.arange(T, device=X.device) % model.block_size
     pos_emb = model.position_embedding_table(pos)
     x = token_emb + pos_emb
     
@@ -1090,7 +1082,7 @@ def plot_output_matrix(model, X, itos, save_path=None):
     
     # Get embeddings and positional encodings
     token_emb = model.token_embedding(X)
-    pos = torch.arange(T, device=X.device) % BLOCK_SIZE
+    pos = torch.arange(T, device=X.device) % model.block_size
     pos_emb = model.position_embedding_table(pos)
     x = token_emb + pos_emb
     
@@ -1129,7 +1121,7 @@ def plot_embedding_triplet_matrix(model, X, itos, title="Embeddings: pos, token,
     ytick = chars
 
     token_emb = model.token_embedding(X)
-    pos = torch.arange(T, device=X.device) % BLOCK_SIZE
+    pos = torch.arange(T, device=X.device) % model.block_size
     pos_emb = model.position_embedding_table(pos)
     x = token_emb + pos_emb
 
@@ -1182,7 +1174,7 @@ def plot_embedding_triplet_matrix(model, X, itos, title="Embeddings: pos, token,
 # Loss evaluation helper
 # -----------------------------
 @torch.no_grad()
-def estimate_loss(model, train_sequences, val_sequences):
+def estimate_loss(model, train_sequences, val_sequences, block_size, batch_size, eval_iterations):
     """
     Average loss on 'train' and 'validation' splits.
     """
@@ -1190,9 +1182,9 @@ def estimate_loss(model, train_sequences, val_sequences):
     model.eval()
 
     for split_name, sequences in [("train", train_sequences), ("validation", val_sequences)]:
-        losses = torch.zeros(EVAL_ITERATIONS)
-        for i in range(EVAL_ITERATIONS):
-            X, Y = get_batch_from_sequences(sequences, BLOCK_SIZE, BATCH_SIZE)
+        losses = torch.zeros(eval_iterations)
+        for i in range(eval_iterations):
+            X, Y = get_batch_from_sequences(sequences, block_size, batch_size)
             _, loss = model(X, Y)
             losses[i] = loss.item()
         out[split_name] = losses.mean()
@@ -1203,14 +1195,14 @@ def estimate_loss(model, train_sequences, val_sequences):
 class Head(nn.Module):
         """One head of self-attention (Version 4)."""
 
-        def __init__(self, n_embd: int, head_size: int):
+        def __init__(self, n_embd: int, head_size: int, block_size: int):
             super().__init__()
             self.key = nn.Linear(n_embd, head_size, bias=False)
             self.query = nn.Linear(n_embd, head_size, bias=False)
             self.value = nn.Linear(n_embd, head_size, bias=False)
 
             # causal mask
-            self.register_buffer("tril", torch.tril(torch.ones(BLOCK_SIZE, BLOCK_SIZE)))
+            self.register_buffer("tril", torch.tril(torch.ones(block_size, block_size)))
 
         def forward(self, x):
             # x: (B, T, C)
@@ -1239,9 +1231,9 @@ class Head(nn.Module):
 class MultiHeadAttention(nn.Module):
     """ multiple heads of self-attention in parallel """
 
-    def __init__(self, num_heads, n_embd, head_size):
+    def __init__(self, num_heads, n_embd, head_size, block_size):
         super().__init__()
-        self.heads = nn.ModuleList([Head(n_embd, head_size) for _ in range(num_heads)])
+        self.heads = nn.ModuleList([Head(n_embd, head_size, block_size) for _ in range(num_heads)])
 
     def forward(self, x):
         outs, weights = zip(*[h(x) for h in self.heads])   # each head returns (out, wei)
@@ -1263,21 +1255,22 @@ class FeedForward(nn.Module):
 
 class BigramLanguageModel(nn.Module):
     """
-    - token_embedding: maps token id -> embedding vector (N_EMBD)
+    - token_embedding: maps token id -> embedding vector (n_embd)
     - lm_head: maps embedding -> logits over vocab
     """
-    def __init__(self, vocab_size: int):
+    def __init__(self, vocab_size: int, n_embd: int, block_size: int, num_heads: int, head_size: int):
         super().__init__()
-        self.token_embedding = nn.Embedding(vocab_size, N_EMBD)           # (vocab, N_EMBD)
-        self.position_embedding_table = nn.Embedding(BLOCK_SIZE, N_EMBD)  # (block_size, N_EMBD)
-        self.sa_heads = MultiHeadAttention(1, N_EMBD, N_EMBD)
-        self.lm_head = nn.Linear(N_EMBD, vocab_size)                      # (N_EMBD -> vocab)
+        self.token_embedding = nn.Embedding(vocab_size, n_embd)           # (vocab, n_embd)
+        self.position_embedding_table = nn.Embedding(block_size, n_embd)  # (block_size, n_embd)
+        self.sa_heads = MultiHeadAttention(num_heads, n_embd, head_size, block_size)
+        self.lm_head = nn.Linear(n_embd, vocab_size)                      # (n_embd -> vocab)
+        self.block_size = block_size
 
     def forward(self, idx: torch.Tensor, targets: torch.Tensor | None = None, return_wei: bool = False):
         B, T = idx.shape
 
         token_emb = self.token_embedding(idx)  # (B,T,C)
-        positions = torch.arange(T, device=idx.device) % BLOCK_SIZE
+        positions = torch.arange(T, device=idx.device) % self.block_size
         pos_emb = self.position_embedding_table(positions)  # (T,C)
 
         x = token_emb + pos_emb  # (B,T,C)
@@ -1303,7 +1296,7 @@ class BigramLanguageModel(nn.Module):
         returns idx extended to (B, T + max_new_tokens)
         """
         for _ in range(max_new_tokens):
-            idx_cond = idx[:, -BLOCK_SIZE:]
+            idx_cond = idx[:, -self.block_size:]
             logits, _ = self(idx_cond)            # (B, T, vocab)
             last_logits = logits[:, -1, :]   # (B, vocab)
             probs = F.softmax(last_logits, dim=-1)
@@ -1314,22 +1307,43 @@ class BigramLanguageModel(nn.Module):
 # -----------------------------
 # Main training script
 # -----------------------------
-def main():
+def main(config_name: str = "default"):
+    """
+    Main training function.
+    
+    Args:
+        config_name: Name of the config file (without .yaml extension) in the configs folder
+    """
     torch.manual_seed(0)
 
-    # Create plots directory
-    plots_dir = "plots"
+    # Load configuration
+    config = load_config(config_name)
+    print(f"Loaded configuration: {config['name']}")
+    
+    # Extract config values
+    config_name_actual = config['name']
+    data_config = config['data']
+    model_config = config['model']
+    training_config = config['training']
+    
+    # Create plots directory with config name subfolder
+    plots_dir = os.path.join("plots", config_name_actual)
     os.makedirs(plots_dir, exist_ok=True)
 
-    # 1) Generate integer string data using OddEvenIndexRule
-    min_value, max_value = 0, 20
-    generator = OddEvenIndexRule(min_value=min_value, max_value=max_value)
-    
-    sequences = generate_integer_string_data(generator, num_sequences=1500, min_length=16, max_length=32)
+    # 1) Generate integer string data using generator from config
+    generator = get_generator_from_config(config)
+    sequences = generate_integer_string_data(
+        generator, 
+        num_sequences=data_config['num_sequences'],
+        min_length=data_config['min_length'],
+        max_length=data_config['max_length']
+    )
     print(f"Generated {len(sequences)} sequences")
     print(f"Sequence lengths: min={min(len(s) for s in sequences)}, max={max(len(s) for s in sequences)}, avg={sum(len(s) for s in sequences)/len(sequences):.1f}")
     
     # 2) Build encoder/decoder for integers
+    min_value = data_config['min_value']
+    max_value = data_config['max_value']
     encode, decode, vocab_size, itos, stoi = build_encoder_for_integers(min_value=min_value, max_value=max_value)
     print("Vocabulary size:", vocab_size)
     print("Vocabulary (integers):", [itos[i] for i in range(vocab_size)])
@@ -1342,20 +1356,30 @@ def main():
     print(f"Train: {len(train_sequences)} sequences, Val: {len(val_sequences)} sequences")
 
     # 5) Create model + optimizer
-    model = BigramLanguageModel(vocab_size)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
+    n_embd = model_config['n_embd']
+    block_size = model_config['block_size']
+    num_heads = model_config['num_heads']
+    head_size = model_config['head_size']
+    
+    model = BigramLanguageModel(vocab_size, n_embd, block_size, num_heads, head_size)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=training_config['learning_rate'])
 
     # 6) Training loop
     steps_for_plot = []
     train_loss_history = []
     val_loss_history = []
 
-    X_fixed, _ = get_batch_from_sequences(train_sequences, BLOCK_SIZE, BATCH_SIZE)
+    batch_size = training_config['batch_size']
+    max_steps = training_config['max_steps']
+    eval_interval = training_config['eval_interval']
+    eval_iterations = training_config['eval_iterations']
+    
+    X_fixed, _ = get_batch_from_sequences(train_sequences, block_size, batch_size)
 
-    for step in range(MAX_STEPS):
+    for step in range(max_steps):
         # Evaluate occasionally
-        if step % EVAL_INTERVAL == 0:
-            losses = estimate_loss(model, train_sequences, val_sequences)
+        if step % eval_interval == 0:
+            losses = estimate_loss(model, train_sequences, val_sequences, block_size, batch_size, eval_iterations)
 
             steps_for_plot.append(step)
             train_loss_history.append(losses["train"])
@@ -1364,7 +1388,7 @@ def main():
             print(f"step {step}: train loss {losses['train']:.4f}, val loss {losses['validation']:.4f}")
 
         # One batch
-        X, Y = get_batch_from_sequences(train_sequences, BLOCK_SIZE, BATCH_SIZE)
+        X, Y = get_batch_from_sequences(train_sequences, block_size, batch_size)
 
         # Forward + backward + update
         _, loss = model(X, Y)
@@ -1380,13 +1404,21 @@ def main():
     sample = model.generate(start, max_new_tokens=1000)[0].tolist()
     generated_integers = decode(sample)  # Decode token indices back to integer values
     # Write as space-separated integers
-    with open("generated_integer_sequence.txt", "w", encoding="utf-8") as f:
+    with open(os.path.join(plots_dir, "generated_integer_sequence.txt"), "w", encoding="utf-8") as f:
         f.write(" ".join(str(i) for i in generated_integers))
     print(f"Generated sequence (first 100 integers): {generated_integers[:100]}")
 
     # 5) Plots - keep only: QKV (2 rows: weights W_Q/W_K/W_V, activations Q/K/V), embeddings (1x3: raw/hierarchical/PCA), attention matrix, output matrix, learning curve
-    plot_learning_curve(steps_for_plot, train_loss_history, val_loss_history, save_path=os.path.join(plots_dir, "learning_curve.png"))
-    plot_weights_qkv(model, X_fixed, itos, save_path=os.path.join(plots_dir, "qkv.png"))
+    plot_learning_curve(steps_for_plot, train_loss_history, val_loss_history, 
+                       save_path=os.path.join(plots_dir, "learning_curve.png"), 
+                       eval_interval=eval_interval)
+    
+    # Create two different example sequences
+    X1, _ = get_batch_from_sequences(train_sequences, block_size, 1)
+    X2, _ = get_batch_from_sequences(train_sequences, block_size, 1)
+    
+    # Plot QKV for two sequences
+    plot_weights_qkv_two_sequences(model, X1, X2, itos, save_path=os.path.join(plots_dir, "qkv.png"))
     plot_embeddings_pca(model, itos, save_path=os.path.join(plots_dir, "embeddings.png"))
     plot_attention_matrix(model, X_fixed, itos, save_path=os.path.join(plots_dir, "attention_matrix.png"))
     plot_output_matrix(model, X_fixed, itos, save_path=os.path.join(plots_dir, "output_matrix.png"))
@@ -1394,4 +1426,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # Get config name from command line argument, default to "default"
+    config_name = sys.argv[1] if len(sys.argv) > 1 else "default"
+    main(config_name=config_name)
