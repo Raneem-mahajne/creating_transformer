@@ -1,0 +1,29 @@
+# Configuration file for transformer training with EvenRepeatLastOddRule
+
+# Configuration name (used for output folder)
+name: "even_repeat_last_odd"
+
+# Data generation configuration
+data:
+  generator_type: "EvenRepeatLastOddRule"  # If current is even, next is last odd seen; if no odd seen, random
+  min_value: 0
+  max_value: 20
+  num_sequences: 1500
+  min_length: 16
+  max_length: 32
+
+# Model architecture
+model:
+  n_embd: 12           # Embedding dimension (equal to block_size for good positional learning)
+  block_size: 12         # Context length
+  num_heads: 2          # Number of attention heads
+  head_size: 6          # Size of each attention head (num_heads * head_size = n_embd)
+
+# Training configuration
+training:
+  max_steps: 10000
+  batch_size: 4
+  learning_rate: 0.001
+  eval_interval: 200     # Steps between evaluations
+  eval_iterations: 50    # Number of batches to evaluate on
+

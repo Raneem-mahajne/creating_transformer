@@ -4,7 +4,7 @@ Configuration loader for transformer training
 import yaml
 import os
 from pathlib import Path
-from IntegerStringGenerator import OddEvenIndexRule, EvenToOddTransitionRule, IntegerStringGenerator
+from IntegerStringGenerator import OddEvenIndexRule, EvenToOddTransitionRule, EvenRepeatLastOddRule, EvenAbsDiffRule, CopyModuloRule, SuccessorRule, ConditionalTransformRule, LookupPermutationRule, IntegerStringGenerator
 
 
 def load_config(config_name: str):
@@ -53,6 +53,20 @@ def get_generator_from_config(config: dict) -> IntegerStringGenerator:
         return OddEvenIndexRule(min_value=min_value, max_value=max_value)
     elif generator_type == "EvenToOddTransitionRule":
         return EvenToOddTransitionRule(min_value=min_value, max_value=max_value)
+    elif generator_type == "EvenRepeatLastOddRule":
+        return EvenRepeatLastOddRule(min_value=min_value, max_value=max_value)
+    elif generator_type == "EvenAbsDiffRule":
+        return EvenAbsDiffRule(min_value=min_value, max_value=max_value)
+    elif generator_type == "CopyModuloRule":
+        period = data_config.get('period', 3)  # Default period of 3
+        return CopyModuloRule(min_value=min_value, max_value=max_value, period=period)
+    elif generator_type == "SuccessorRule":
+        return SuccessorRule(min_value=min_value, max_value=max_value)
+    elif generator_type == "ConditionalTransformRule":
+        return ConditionalTransformRule(min_value=min_value, max_value=max_value)
+    elif generator_type == "LookupPermutationRule":
+        seed = data_config.get('seed', 42)
+        return LookupPermutationRule(min_value=min_value, max_value=max_value, seed=seed)
     else:
         raise ValueError(f"Unknown generator type: {generator_type}")
 

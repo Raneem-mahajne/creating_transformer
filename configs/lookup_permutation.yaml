@@ -1,0 +1,30 @@
+# Configuration for LookupPermutationRule - perfect for understanding V matrix
+
+# Configuration name (used for output folder)
+name: "lookup_permutation"
+
+# Data generation configuration
+data:
+  generator_type: "LookupPermutationRule"
+  min_value: 0
+  max_value: 9         # Only 10 tokens (0-9) for clarity
+  num_sequences: 1500
+  min_length: 12
+  max_length: 20
+  seed: 42             # Fixed permutation for reproducibility
+
+# Model architecture - small for interpretability
+model:
+  n_embd: 6            # Slightly larger for the lookup
+  block_size: 10       # Short context
+  num_heads: 1         # Single head
+  head_size: 6         # Match n_embd
+
+# Training configuration
+training:
+  max_steps: 10000
+  batch_size: 4
+  learning_rate: 0.001
+  eval_interval: 200
+  eval_iterations: 50
+

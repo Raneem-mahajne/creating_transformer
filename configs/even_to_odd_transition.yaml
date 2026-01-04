@@ -14,14 +14,14 @@ data:
 
 # Model architecture
 model:
-  n_embd: 2              # Embedding dimension
+  n_embd: 1              # Embedding dimension
   block_size: 8          # Context length
   num_heads: 1           # Number of attention heads
-  head_size: 2           # Size of each attention head
+  head_size: 1           # Size of each attention head
 
 # Training configuration
 training:
-  max_steps: 10000
+  max_steps: 50000
   batch_size: 4
   learning_rate: 0.001
   eval_interval: 200     # Steps between evaluations

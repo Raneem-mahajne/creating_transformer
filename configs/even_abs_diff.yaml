@@ -1,0 +1,29 @@
+# Configuration file for transformer training with EvenAbsDiffRule
+
+# Configuration name (used for output folder)
+name: "even_abs_diff"
+
+# Data generation configuration
+data:
+  generator_type: "EvenAbsDiffRule"  # If current is even, next is |prev - prev_prev|
+  min_value: 0
+  max_value: 20
+  num_sequences: 1500
+  min_length: 16
+  max_length: 32
+
+# Model architecture
+model:
+  n_embd: 12           # Embedding dimension
+  block_size: 12       # Context length
+  num_heads: 2         # Number of attention heads
+  head_size: 6         # Size of each attention head
+
+# Training configuration
+training:
+  max_steps: 50000
+  batch_size: 4
+  learning_rate: 0.001
+  eval_interval: 200     # Steps between evaluations
+  eval_iterations: 50    # Number of batches to evaluate on
+

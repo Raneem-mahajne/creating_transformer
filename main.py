@@ -722,6 +722,9 @@ def plot_weights_qkv(model, X, itos, save_path=None, sequence_str=None):
     model.eval()
     B, T = X.shape
     
+    # Get actual tokens for tick labels
+    tokens = [itos[i.item()] for i in X[0]]
+    
     # Get weights - average across heads
     Wq_all, Wk_all, Wv_all = [], [], []
     for h in model.sa_heads.heads:
@@ -789,9 +792,9 @@ def plot_weights_qkv(model, X, itos, save_path=None, sequence_str=None):
     for j, (data, title) in enumerate(zip(row1_data, row1_titles)):
         ax = axes[0, j]
         if title in ["QK^T", "Attention"]:
-            # QK^T and Attention are (T, T) matrices
-            x_labels = list(range(data.shape[1]))
-            y_labels_local = list(range(data.shape[0]))
+            # QK^T and Attention are (T, T) matrices - use tokens for both axes
+            x_labels = tokens
+            y_labels_local = tokens
             dim_str = f"(T×T={data.shape[0]}×{data.shape[1]})"
             
             cmap = "magma" if title == "Attention" else "viridis"
@@ -803,7 +806,7 @@ def plot_weights_qkv(model, X, itos, save_path=None, sequence_str=None):
             ax.set_ylabel("T", fontsize=10)
             ax.set_xlabel("T", fontsize=10)
         else:
-            # W_Q, W_K, W_V are (C, hs) matrices
+            # W_Q, W_K, W_V are (C, hs) matrices - keep numeric labels
             x_labels = list(range(data.shape[1]))
             y_labels_local = list(range(data.shape[0]))
             dim_str = f"(C×hs={data.shape[0]}×{data.shape[1]})"
@@ -821,9 +824,9 @@ def plot_weights_qkv(model, X, itos, save_path=None, sequence_str=None):
     for j, (data, title) in enumerate(zip(row2_data, row2_titles)):
         ax = axes[1, j]
         if title == "softmax(QK^T)":
-            # softmax(QK^T) is (T, T) matrix
-            x_labels = list(range(data.shape[1]))
-            y_labels_local = list(range(data.shape[0]))
+            # softmax(QK^T) is (T, T) matrix - use tokens for both axes
+            x_labels = tokens
+            y_labels_local = tokens
             dim_str = f"(T×T={data.shape[0]}×{data.shape[1]})"
             
             sns.heatmap(data, cmap="magma", vmin=0.0, vmax=1.0,
@@ -833,9 +836,9 @@ def plot_weights_qkv(model, X, itos, save_path=None, sequence_str=None):
                 ax.set_ylabel("T", fontsize=10)
             ax.set_xlabel("T", fontsize=10)
         elif title == "Output":
-            # Output is (T, head_size) matrix
+            # Output is (T, head_size) matrix - use tokens for y-axis
             x_labels = list(range(data.shape[1]))
-            y_labels_local = list(range(data.shape[0]))
+            y_labels_local = tokens
             dim_str = f"(T×hs={data.shape[0]}×{data.shape[1]})"
             
             sns.heatmap(data, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
@@ -844,9 +847,9 @@ def plot_weights_qkv(model, X, itos, save_path=None, sequence_str=None):
                 ax.set_ylabel("T", fontsize=10)
             ax.set_xlabel("hs", fontsize=10)
         else:
-            # Q, K, V are (T, hs) matrices
+            # Q, K, V are (T, hs) matrices - use tokens for y-axis
             x_labels = list(range(data.shape[1]))
-            y_labels_local = list(range(data.shape[0]))
+            y_labels_local = tokens
             dim_str = f"(T×hs={data.shape[0]}×{data.shape[1]})"
             
             sns.heatmap(data, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
@@ -902,6 +905,9 @@ def plot_weights_qkv_single(model, X, itos, fig, col_offset, sequence_str=None):
     col_offset: 0 for left, 1 for right (each sequence takes 5 columns)
     """
     B, T = X.shape
+    
+    # Get actual tokens for tick labels
+    tokens = [itos[i.item()] for i in X[0]]
     
     # Get weights - average across heads
     Wq_all, Wk_all, Wv_all = [], [], []
@@ -963,8 +969,9 @@ def plot_weights_qkv_single(model, X, itos, fig, col_offset, sequence_str=None):
     for j, (data, title) in enumerate(zip(row1_data, row1_titles)):
         ax = fig.add_subplot(gs[0, col_offset*5 + j])
         if title in ["QK^T", "Attention"]:
-            x_labels = list(range(data.shape[1]))
-            y_labels_local = list(range(data.shape[0]))
+            # QK^T and Attention are (T, T) matrices - use tokens for both axes
+            x_labels = tokens
+            y_labels_local = tokens
             dim_str = f"(T×T={data.shape[0]}×{data.shape[1]})"
             
             cmap = "magma" if title == "Attention" else "viridis"
@@ -976,6 +983,7 @@ def plot_weights_qkv_single(model, X, itos, fig, col_offset, sequence_str=None):
             ax.set_ylabel("T", fontsize=10)
             ax.set_xlabel("T", fontsize=10)
         else:
+            # W_Q, W_K, W_V are (C, hs) matrices - keep numeric labels
             x_labels = list(range(data.shape[1]))
             y_labels_local = list(range(data.shape[0]))
             dim_str = f"(C×hs={data.shape[0]}×{data.shape[1]})"
@@ -993,8 +1001,9 @@ def plot_weights_qkv_single(model, X, itos, fig, col_offset, sequence_str=None):
     for j, (data, title) in enumerate(zip(row2_data, row2_titles)):
         ax = fig.add_subplot(gs[1, col_offset*5 + j])
         if title == "softmax(QK^T)":
-            x_labels = list(range(data.shape[1]))
-            y_labels_local = list(range(data.shape[0]))
+            # softmax(QK^T) is (T, T) matrix - use tokens for both axes
+            x_labels = tokens
+            y_labels_local = tokens
             dim_str = f"(T×T={data.shape[0]}×{data.shape[1]})"
             
             sns.heatmap(data, cmap="magma", vmin=0.0, vmax=1.0,
@@ -1004,8 +1013,9 @@ def plot_weights_qkv_single(model, X, itos, fig, col_offset, sequence_str=None):
                 ax.set_ylabel("T", fontsize=10)
             ax.set_xlabel("T", fontsize=10)
         elif title == "Output":
+            # Output is (T, head_size) matrix - use tokens for y-axis
             x_labels = list(range(data.shape[1]))
-            y_labels_local = list(range(data.shape[0]))
+            y_labels_local = tokens
             dim_str = f"(T×hs={data.shape[0]}×{data.shape[1]})"
             
             sns.heatmap(data, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
@@ -1014,8 +1024,9 @@ def plot_weights_qkv_single(model, X, itos, fig, col_offset, sequence_str=None):
                 ax.set_ylabel("T", fontsize=10)
             ax.set_xlabel("hs", fontsize=10)
         else:
+            # Q, K, V are (T, hs) matrices - use tokens for y-axis
             x_labels = list(range(data.shape[1]))
-            y_labels_local = list(range(data.shape[0]))
+            y_labels_local = tokens
             dim_str = f"(T×hs={data.shape[0]}×{data.shape[1]})"
             
             sns.heatmap(data, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
@@ -1071,6 +1082,170 @@ def plot_attention_matrix(model, X, itos, save_path=None):
     else:
         plt.show()
     model.train()
+
+@torch.no_grad()
+def plot_position_embeddings(model, X, itos, save_path=None):
+    """
+    Plot token embeddings, positional embeddings, their sum, and PCAs
+    Row 1: Heatmaps (token, position, combined)
+    Row 2: PCAs (token, position, combined)
+    """
+    model.eval()
+    B, T = X.shape
+    
+    # Get embedding dimension from the model
+    n_embd = model.position_embedding_table.weight.shape[1]
+    
+    # Get position indices (0, 1, 2, ..., T-1, wrapped by block_size)
+    positions = torch.arange(T, device=X.device) % model.block_size
+    positions_np = positions.cpu().numpy()  # (T,)
+    
+    # Get positional embeddings
+    pos_emb = model.position_embedding_table(positions)  # (T, n_embd)
+    pos_emb_np = pos_emb.detach().cpu().numpy()  # (T, n_embd)
+    
+    # Get token embeddings
+    token_emb = model.token_embedding(X)  # (B, T, n_embd)
+    token_emb_np = token_emb[0].detach().cpu().numpy()  # (T, n_embd)
+    
+    # Get sum (token + position)
+    combined_emb = token_emb + pos_emb  # (B, T, n_embd)
+    combined_emb_np = combined_emb[0].detach().cpu().numpy()  # (T, n_embd)
+    
+    # Get tokens for labels
+    tokens = [itos[i.item()] for i in X[0]]
+    
+    # Create figure: 2 rows, 3 columns
+    fig, axes = plt.subplots(2, 3, figsize=(20, 12))
+    
+    # Row 1: Heatmaps
+    # Token embeddings heatmap
+    ax1 = axes[0, 0]
+    sns.heatmap(token_emb_np, cmap="RdBu_r", center=0, xticklabels=list(range(n_embd)),
+                yticklabels=tokens, cbar=True, ax=ax1)
+    ax1.set_title(f"Token Embeddings (T×n_embd={T}×{n_embd})", fontsize=11)
+    ax1.set_xlabel("Embedding dim")
+    ax1.set_ylabel("Position (token)")
+    
+    # Positional embeddings heatmap
+    ax2 = axes[0, 1]
+    sns.heatmap(pos_emb_np, cmap="RdBu_r", center=0, xticklabels=list(range(n_embd)),
+                yticklabels=tokens, cbar=True, ax=ax2)
+    ax2.set_title(f"Positional Embeddings (T×n_embd={T}×{n_embd})", fontsize=11)
+    ax2.set_xlabel("Embedding dim")
+    ax2.set_ylabel("Position (token)")
+    
+    # Combined embeddings heatmap
+    ax3 = axes[0, 2]
+    sns.heatmap(combined_emb_np, cmap="RdBu_r", center=0, xticklabels=list(range(n_embd)),
+                yticklabels=tokens, cbar=True, ax=ax3)
+    ax3.set_title(f"Token + Position (T×n_embd={T}×{n_embd})", fontsize=11)
+    ax3.set_xlabel("Embedding dim")
+    ax3.set_ylabel("Position (token)")
+    
+    # Row 2: PCAs
+    def plot_pca(ax, data, title, color_by_position=True):
+        if n_embd >= 2:
+            X_data = data.astype(np.float64)
+            X_data = X_data - X_data.mean(axis=0, keepdims=True)
+            _, _, Vt = np.linalg.svd(X_data, full_matrices=False)
+            X2 = X_data @ Vt[:2].T
+            colors = positions_np if color_by_position else range(T)
+            sc = ax.scatter(X2[:, 0], X2[:, 1], c=colors, s=100, alpha=0.7, cmap="viridis")
+            ax.set_title(title, fontsize=11)
+            ax.set_xlabel("PC1")
+            ax.set_ylabel("PC2")
+            ax.grid(True, alpha=0.2)
+            for i, token in enumerate(tokens):
+                ax.text(X2[i, 0], X2[i, 1], token, fontsize=8, ha='center', va='center')
+            plt.colorbar(sc, ax=ax, label="Position mod k")
+        else:
+            X1 = data[:, 0]
+            sc = ax.scatter(X1, positions_np, c=positions_np, s=100, alpha=0.7, cmap="viridis")
+            ax.set_title(title, fontsize=11)
+            ax.set_xlabel("Embedding value")
+            ax.set_ylabel("Position index")
+            ax.grid(True, alpha=0.2)
+            for i, token in enumerate(tokens):
+                ax.text(X1[i], positions_np[i], token, fontsize=8, ha='center', va='bottom')
+            plt.colorbar(sc, ax=ax, label="Position index")
+    
+    # PCA of token embeddings
+    plot_pca(axes[1, 0], token_emb_np, f"PCA: Token Embeddings (T={T})")
+    
+    # PCA of positional embeddings
+    plot_pca(axes[1, 1], pos_emb_np, f"PCA: Positional Embeddings (T={T})")
+    
+    # PCA of combined embeddings
+    plot_pca(axes[1, 2], combined_emb_np, f"PCA: Combined Embeddings (T={T})")
+    
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150)
+        plt.close()
+    else:
+        plt.show()
+    model.train()
+
+@torch.no_grad()
+def plot_learned_lookup(model, vocab_size, itos, save_path=None):
+    """
+    Plot what the model predicts for each input token (the learned lookup table).
+    This directly shows the V matrix's role in encoding token-to-token mappings.
+    """
+    model.eval()
+    device = next(model.parameters()).device
+    
+    # Create a sequence with each token appearing once, with context
+    # We'll query position 1 for each pair (context_token, query_token)
+    predictions = np.zeros((vocab_size, vocab_size))
+    
+    # For each possible input token, what does the model predict next?
+    for token in range(vocab_size):
+        # Create input: [token] and predict next
+        # Use a minimal context with just the token
+        x = torch.tensor([[token]], dtype=torch.long, device=device)
+        logits, _ = model(x)
+        probs = torch.softmax(logits[0, 0], dim=-1).cpu().numpy()
+        predictions[token] = probs
+    
+    # Find the argmax prediction for each token
+    predicted_next = np.argmax(predictions, axis=1)
+    
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    
+    # Left: Probability matrix (what probabilities does model assign)
+    ax1 = axes[0]
+    sns.heatmap(predictions, cmap="viridis", xticklabels=[itos[i] for i in range(vocab_size)],
+                yticklabels=[itos[i] for i in range(vocab_size)], cbar=True, ax=ax1,
+                vmin=0, vmax=1)
+    ax1.set_title("Learned Lookup Table\n(P(next_token | current_token))", fontsize=12)
+    ax1.set_xlabel("Predicted Next Token")
+    ax1.set_ylabel("Current Token")
+    
+    # Right: The argmax mapping as a simple table
+    ax2 = axes[1]
+    # Create a mapping visualization
+    mapping_text = "Learned Mapping:\n\n"
+    for i in range(vocab_size):
+        pred = predicted_next[i]
+        conf = predictions[i, pred] * 100
+        mapping_text += f"{itos[i]} → {itos[pred]} ({conf:.1f}%)\n"
+    
+    ax2.text(0.1, 0.95, mapping_text, transform=ax2.transAxes, fontsize=11,
+             verticalalignment='top', fontfamily='monospace',
+             bbox=dict(boxstyle='round', facecolor='lightgray', alpha=0.8))
+    ax2.axis('off')
+    ax2.set_title("Token Mappings (argmax)", fontsize=12)
+    
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150)
+        plt.close()
+    else:
+        plt.show()
+    model.train()
+
 
 @torch.no_grad()
 def plot_output_matrix(model, X, itos, save_path=None):
@@ -1256,14 +1431,15 @@ class FeedForward(nn.Module):
 class BigramLanguageModel(nn.Module):
     """
     - token_embedding: maps token id -> embedding vector (n_embd)
-    - lm_head: maps embedding -> logits over vocab
+    - lm_head: maps attention output -> logits over vocab
     """
     def __init__(self, vocab_size: int, n_embd: int, block_size: int, num_heads: int, head_size: int):
         super().__init__()
         self.token_embedding = nn.Embedding(vocab_size, n_embd)           # (vocab, n_embd)
         self.position_embedding_table = nn.Embedding(block_size, n_embd)  # (block_size, n_embd)
         self.sa_heads = MultiHeadAttention(num_heads, n_embd, head_size, block_size)
-        self.lm_head = nn.Linear(n_embd, vocab_size)                      # (n_embd -> vocab)
+        # lm_head takes attention output (num_heads * head_size), not n_embd
+        self.lm_head = nn.Linear(num_heads * head_size, vocab_size)       # (num_heads*head_size -> vocab)
         self.block_size = block_size
 
     def forward(self, idx: torch.Tensor, targets: torch.Tensor | None = None, return_wei: bool = False):
@@ -1307,7 +1483,7 @@ class BigramLanguageModel(nn.Module):
 # -----------------------------
 # Main training script
 # -----------------------------
-def main(config_name: str = "default"):
+def main(config_name: str = "copy_modulo"):
     """
     Main training function.
     
@@ -1422,10 +1598,12 @@ def main(config_name: str = "default"):
     plot_embeddings_pca(model, itos, save_path=os.path.join(plots_dir, "embeddings.png"))
     plot_attention_matrix(model, X_fixed, itos, save_path=os.path.join(plots_dir, "attention_matrix.png"))
     plot_output_matrix(model, X_fixed, itos, save_path=os.path.join(plots_dir, "output_matrix.png"))
+    plot_learned_lookup(model, vocab_size, itos, save_path=os.path.join(plots_dir, "learned_lookup.png"))
+    plot_position_embeddings(model, X_fixed, itos, save_path=os.path.join(plots_dir, "position_embeddings.png"))
 
 
 
 if __name__ == "__main__":
     # Get config name from command line argument, default to "default"
-    config_name = sys.argv[1] if len(sys.argv) > 1 else "default"
+    config_name = sys.argv[1] if len(sys.argv) > 1 else "copy_modulo"
     main(config_name=config_name)

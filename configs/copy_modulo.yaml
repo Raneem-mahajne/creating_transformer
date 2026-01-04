@@ -1,0 +1,30 @@
+# Configuration file for CopyModuloRule - pedagogically ideal for understanding transformer internals
+
+# Configuration name (used for output folder)
+name: "copy_modulo"
+
+# Data generation configuration
+data:
+  generator_type: "CopyModuloRule"
+  min_value: 0
+  max_value: 20
+  num_sequences: 1500
+  min_length: 33
+  max_length: 64
+  period: 3  # Token at position i copies token at position (i mod 3)
+
+# Model architecture - designed to clearly show attention patterns
+model:
+  n_embd: 3           # Embedding dimension (should encode position mod 3 + token info)
+  block_size: 32       # Context length (covers 4 full periods of 3)
+  num_heads: 1         # Single head for clarity
+  head_size: 3         # Match n_embd for simple interpretation
+
+# Training configuration
+training:
+  max_steps: 10000     # Shorter since pattern is simple
+  batch_size: 4
+  learning_rate: 0.001
+  eval_interval: 200
+  eval_iterations: 50
+
