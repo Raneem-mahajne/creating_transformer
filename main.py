@@ -871,24 +871,74 @@ def plot_weights_qkv(model, X, itos, save_path=None, sequence_str=None):
     model.train()
 
 @torch.no_grad()
-def plot_weights_qkv_two_sequences(model, X1, X2, itos, save_path=None):
+def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequences=3):
     """
-    Plot QKV for two different sequences side by side
+    Plot QKV for multiple sequences shown as different rows.
+    Weights (W_Q, W_K, W_V) are shown once at the top since they're shared model parameters.
+    Activations (Q, K, V, etc.) are shown for each sequence.
+    
+    Args:
+        model: The model
+        X_list: List of input sequences, or single sequence (will be converted to list)
+        itos: Index to string mapping
+        save_path: Path to save figure
+        num_sequences: Number of sequences to show (if X_list is single sequence, will use it multiple times)
     """
     model.eval()
     
-    # Get sequence strings
-    seq1_str = " ".join([itos[i.item()] for i in X1[0]])
-    seq2_str = " ".join([itos[i.item()] for i in X2[0]])
+    # Handle single sequence input
+    if not isinstance(X_list, list):
+        X_list = [X_list]
     
-    # Create figure with 2 columns (one for each sequence), each with 2 rows, 5 columns
-    fig = plt.figure(figsize=(50, 10))
+    # Use provided sequences up to num_sequences
+    sequences_to_plot = X_list[:num_sequences]
+    num_sequences = len(sequences_to_plot)
     
-    # Plot first sequence
-    plot_weights_qkv_single(model, X1, itos, fig, 0, seq1_str)
+    # Get weights once (they're the same for all sequences)
+    Wq_all, Wk_all, Wv_all = [], [], []
+    for h in model.sa_heads.heads:
+        Wq_all.append(h.query.weight.cpu().numpy())  # (hs, C)
+        Wk_all.append(h.key.weight.cpu().numpy())    # (hs, C)
+        Wv_all.append(h.value.weight.cpu().numpy())  # (hs, C)
     
-    # Plot second sequence
-    plot_weights_qkv_single(model, X2, itos, fig, 1, seq2_str)
+    # Average weights across heads
+    W_Q = np.stack(Wq_all, axis=0).mean(axis=0).T  # (C, hs) averaged
+    W_K = np.stack(Wk_all, axis=0).mean(axis=0).T  # (C, hs) averaged
+    W_V = np.stack(Wv_all, axis=0).mean(axis=0).T  # (C, hs) averaged
+    
+    # Create figure: 1 row for weights + (num_sequences * 2) rows for activations, 5 columns
+    # Total: (1 + num_sequences * 2) rows, 5 columns
+    fig = plt.figure(figsize=(25, 3 + 5 * num_sequences))
+    gs = GridSpec(1 + num_sequences * 2, 5, figure=fig, hspace=0.3, wspace=0.3)
+    
+    # Row 0: Show weights once (W_Q, W_K, W_V, empty, empty)
+    for j, (data, title) in enumerate(zip([W_Q, W_K, W_V], ["W_Q", "W_K", "W_V"])):
+        ax = fig.add_subplot(gs[0, j])
+        x_labels = list(range(data.shape[1]))
+        y_labels_local = list(range(data.shape[0]))
+        dim_str = f"(C×hs={data.shape[0]}×{data.shape[1]})"
+        
+        sns.heatmap(data, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
+        ax.set_title(f"{title} {dim_str}", fontsize=11)
+        if j == 0:
+            ax.set_ylabel("C", fontsize=10)
+        ax.set_xlabel("hs", fontsize=10)
+    
+    # Leave columns 3 and 4 empty in the weights row
+    for j in [3, 4]:
+        ax = fig.add_subplot(gs[0, j])
+        ax.axis('off')
+    
+    # For each sequence, show activations
+    for seq_idx, X in enumerate(sequences_to_plot):
+        # Get sequence string
+        seq_str = " ".join([itos[i.item()] for i in X[0]])
+        
+        # Calculate row offset for this sequence (1 row for weights + seq_idx * 2 rows for previous sequences)
+        row_offset = 1 + seq_idx * 2
+        
+        # Plot this sequence's activations
+        plot_weights_qkv_single_rows(model, X, itos, fig, gs, row_offset, seq_str, seq_idx, show_weights=False)
     
     plt.tight_layout(rect=[0, 0, 1, 0.98])
     if save_path:
@@ -897,6 +947,183 @@ def plot_weights_qkv_two_sequences(model, X1, X2, itos, save_path=None):
     else:
         plt.show()
     model.train()
+
+@torch.no_grad()
+def plot_weights_qkv_single_rows(model, X, itos, fig, gs, row_offset, sequence_str=None, seq_idx=0, show_weights=True):
+    """
+    Plot a single QKV figure in a subplot grid, using row_offset to position it.
+    row_offset: which row to start at (1, 3, 5, etc. for multiple sequences, since row 0 is weights)
+    show_weights: if False, don't show weights (they're shown once at the top)
+    """
+    B, T = X.shape
+    
+    # Get actual tokens for tick labels
+    tokens = [itos[i.item()] for i in X[0]]
+    
+    # Get activations Q, K, V from input X
+    token_emb = model.token_embedding(X)
+    pos = torch.arange(T, device=X.device) % model.block_size
+    pos_emb = model.position_embedding_table(pos)
+    x = token_emb + pos_emb
+    
+    q_all, k_all, v_all = [], [], []
+    for h in model.sa_heads.heads:
+        q_all.append(h.query(x)[0].cpu().numpy())  # (T, hs)
+        k_all.append(h.key(x)[0].cpu().numpy())    # (T, hs)
+        v_all.append(h.value(x)[0].cpu().numpy())  # (T, hs)
+    
+    # Average activations across heads
+    Q = np.stack(q_all, axis=0).mean(axis=0)  # (T, hs)
+    K = np.stack(k_all, axis=0).mean(axis=0)  # (T, hs)
+    V = np.stack(v_all, axis=0).mean(axis=0)  # (T, hs)
+    
+    # Compute QK^T (attention formula: Q @ K^T)
+    QK_T = Q @ K.T  # (T, hs) @ (hs, T) = (T, T)
+    
+    # Compute softmax(QK^T) without masking
+    QK_T_torch = torch.from_numpy(QK_T).float()
+    Softmax_QK_T = F.softmax(QK_T_torch, dim=-1).numpy()  # (T, T)
+    
+    # Get attention weights (softmax(QK^T) after masking) from all heads
+    wei_all = []
+    out_all = []
+    for h in model.sa_heads.heads:
+        out, wei = h(x)  # out: (B, T, head_size), wei: (B, T, T)
+        wei_all.append(wei[0].cpu().numpy())  # (T, T)
+        out_all.append(out[0].cpu().numpy())  # (T, head_size)
+    
+    # Average attention weights across heads
+    Attention = np.stack(wei_all, axis=0).mean(axis=0)  # (T, T)
+    
+    # Average output across heads
+    Output = np.stack(out_all, axis=0).mean(axis=0)  # (T, head_size)
+    
+    if show_weights:
+        # Row 1: W_Q, W_K, QK^T, W_V, Attention (old behavior for backward compatibility)
+        # Get weights - average across heads
+        Wq_all, Wk_all, Wv_all = [], [], []
+        for h in model.sa_heads.heads:
+            Wq_all.append(h.query.weight.cpu().numpy())  # (hs, C)
+            Wk_all.append(h.key.weight.cpu().numpy())    # (hs, C)
+            Wv_all.append(h.value.weight.cpu().numpy())  # (hs, C)
+        
+        W_Q = np.stack(Wq_all, axis=0).mean(axis=0).T  # (C, hs) averaged
+        W_K = np.stack(Wk_all, axis=0).mean(axis=0).T  # (C, hs) averaged
+        W_V = np.stack(Wv_all, axis=0).mean(axis=0).T  # (C, hs) averaged
+        
+        row1_titles = ["W_Q", "W_K", "QK^T", "W_V", "Attention"]
+        row1_data = [W_Q, W_K, QK_T, W_V, Attention]
+        
+        for j, (data, title) in enumerate(zip(row1_data, row1_titles)):
+            ax = fig.add_subplot(gs[row_offset, j])
+            if title in ["QK^T", "Attention"]:
+                # QK^T and Attention are (T, T) matrices - use tokens for both axes
+                x_labels = tokens
+                y_labels_local = tokens
+                dim_str = f"(T×T={data.shape[0]}×{data.shape[1]})"
+                
+                cmap = "magma" if title == "Attention" else "viridis"
+                vmin, vmax = (0.0, 1.0) if title == "Attention" else (None, None)
+                
+                sns.heatmap(data, cmap=cmap, vmin=vmin, vmax=vmax, 
+                            xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
+                ax.set_title(f"{title} {dim_str}", fontsize=11)
+                ax.set_ylabel("T", fontsize=10)
+                ax.set_xlabel("T", fontsize=10)
+            else:
+                # W_Q, W_K, W_V are (C, hs) matrices - keep numeric labels
+                x_labels = list(range(data.shape[1]))
+                y_labels_local = list(range(data.shape[0]))
+                dim_str = f"(C×hs={data.shape[0]}×{data.shape[1]})"
+                
+                sns.heatmap(data, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
+                ax.set_title(f"{title} {dim_str}", fontsize=11)
+                if j == 0:
+                    if sequence_str:
+                        ax.set_ylabel(f"Seq {seq_idx+1}: {sequence_str}\nC", fontsize=9)
+                    else:
+                        ax.set_ylabel("C", fontsize=10)
+                ax.set_xlabel("hs", fontsize=10)
+    else:
+        # Row 1: Q, K, QK^T, V, Attention (no weights)
+        row1_titles = ["Q", "K", "QK^T", "V", "Attention"]
+        row1_data = [Q, K, QK_T, V, Attention]
+        
+        for j, (data, title) in enumerate(zip(row1_data, row1_titles)):
+            ax = fig.add_subplot(gs[row_offset, j])
+            if title in ["QK^T", "Attention"]:
+                # QK^T and Attention are (T, T) matrices - use tokens for both axes
+                x_labels = tokens
+                y_labels_local = tokens
+                dim_str = f"(T×T={data.shape[0]}×{data.shape[1]})"
+                
+                cmap = "magma" if title == "Attention" else "viridis"
+                vmin, vmax = (0.0, 1.0) if title == "Attention" else (None, None)
+                
+                sns.heatmap(data, cmap=cmap, vmin=vmin, vmax=vmax, 
+                            xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
+                ax.set_title(f"{title} {dim_str}", fontsize=11)
+                if j == 0:
+                    if sequence_str:
+                        ax.set_ylabel(f"Seq {seq_idx+1}: {sequence_str}\nT", fontsize=9)
+                    else:
+                        ax.set_ylabel("T", fontsize=10)
+                ax.set_xlabel("T", fontsize=10)
+            else:
+                # Q, K, V are (T, hs) matrices - use tokens for y-axis
+                x_labels = list(range(data.shape[1]))
+                y_labels_local = tokens
+                dim_str = f"(T×hs={data.shape[0]}×{data.shape[1]})"
+                
+                sns.heatmap(data, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
+                ax.set_title(f"{title} {dim_str}", fontsize=11)
+                if j == 0:
+                    if sequence_str:
+                        ax.set_ylabel(f"Seq {seq_idx+1}: {sequence_str}\nT", fontsize=9)
+                    else:
+                        ax.set_ylabel("T", fontsize=10)
+                ax.set_xlabel("hs", fontsize=10)
+    
+    # Row 2: Q, K, softmax(QK^T), V, Output
+    row2_titles = ["Q", "K", "softmax(QK^T)", "V", "Output"]
+    row2_data = [Q, K, Softmax_QK_T, V, Output]
+    
+    for j, (data, title) in enumerate(zip(row2_data, row2_titles)):
+        ax = fig.add_subplot(gs[row_offset + 1, j])
+        if title == "softmax(QK^T)":
+            # softmax(QK^T) is (T, T) matrix - use tokens for both axes
+            x_labels = tokens
+            y_labels_local = tokens
+            dim_str = f"(T×T={data.shape[0]}×{data.shape[1]})"
+            
+            sns.heatmap(data, cmap="magma", vmin=0.0, vmax=1.0,
+                        xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
+            ax.set_title(f"{title} {dim_str}", fontsize=11)
+            if j == 0:
+                ax.set_ylabel("T", fontsize=10)
+            ax.set_xlabel("T", fontsize=10)
+        elif title == "Output":
+            # Output is (T, head_size) matrix - use tokens for y-axis
+            x_labels = list(range(data.shape[1]))
+            y_labels_local = tokens
+            dim_str = f"(T×hs={data.shape[0]}×{data.shape[1]})"
+            
+            sns.heatmap(data, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
+            ax.set_title(f"{title} {dim_str}", fontsize=11)
+            if j == 0:
+                ax.set_ylabel("T", fontsize=10)
+            ax.set_xlabel("hs", fontsize=10)
+        else:
+            # Q, K, V are (T, hs) matrices - use tokens for y-axis
+            x_labels = list(range(data.shape[1]))
+            y_labels_local = tokens
+            dim_str = f"(T×hs={data.shape[0]}×{data.shape[1]})"
+            
+            sns.heatmap(data, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
+            ax.set_title(f"{title} {dim_str}", fontsize=11)
+            if j == 0:
+                ax.set_ylabel("T", fontsize=10)
+            ax.set_xlabel("hs", fontsize=10)
 
 @torch.no_grad()
 def plot_weights_qkv_single(model, X, itos, fig, col_offset, sequence_str=None):
@@ -1043,41 +1270,135 @@ def plot_weights_qkv_single(model, X, itos, fig, col_offset, sequence_str=None):
                 fontsize=12, ha='center', va='top', weight='bold')
 
 @torch.no_grad()
-def plot_attention_matrix(model, X, itos, save_path=None):
+def plot_attention_matrix(model, X_list, itos, save_path=None, num_sequences=3):
     """
-    Plot attention weights matrix (averaged across heads)
+    Plot attention weights matrix (averaged across heads) for multiple sequences,
+    and show linear/logit/softmax layers after attention.
+    
+    Args:
+        model: The model
+        X_list: List of input sequences, or single sequence (will be converted to list)
+        itos: Index to string mapping
+        save_path: Path to save figure
+        num_sequences: Number of sequences to show (if X_list is single sequence, will generate more)
     """
     model.eval()
-    B, T = X.shape
     
-    # Get embeddings and positional encodings
-    token_emb = model.token_embedding(X)
-    pos = torch.arange(T, device=X.device) % model.block_size
-    pos_emb = model.position_embedding_table(pos)
-    x = token_emb + pos_emb
+    # Handle single sequence input
+    if not isinstance(X_list, list):
+        X_list = [X_list]
     
-    # Get attention weights from all heads
-    wei_all = []
-    for h in model.sa_heads.heads:
-        _, wei = h(x)  # wei: (B, T, T)
-        wei_all.append(wei[0].cpu().numpy())  # (T, T)
+    # If only one sequence provided, we'll use it multiple times (or could generate more)
+    # For now, just use what's provided up to num_sequences
+    sequences_to_plot = X_list[:num_sequences]
+    num_sequences = len(sequences_to_plot)
     
-    # Average across heads
-    attention_matrix = np.stack(wei_all, axis=0).mean(axis=0)  # (T, T)
+    # Collect data for all sequences
+    attention_matrices = []
+    linear_outputs = []
+    logits_list = []
+    probs_list = []
+    tokens_list = []
     
-    # Plot
-    plt.figure(figsize=(8, 7))
-    x_labels = list(range(attention_matrix.shape[1]))
-    y_labels = list(range(attention_matrix.shape[0]))
-    sns.heatmap(attention_matrix, cmap="magma", vmin=0.0, vmax=1.0, 
-                xticklabels=x_labels, yticklabels=y_labels, cbar=True)
-    plt.title(f"Attention Weights Matrix (T×T={T}×{T})", fontsize=12)
-    plt.xlabel("Key position (look at)")
-    plt.ylabel("Query position (looking from)")
-    plt.tight_layout()
+    for X in sequences_to_plot:
+        B, T = X.shape
+        
+        # Get tokens for this sequence
+        tokens = [itos[i.item()] for i in X[0]]
+        tokens_list.append(tokens)
+        
+        # Get embeddings and positional encodings
+        token_emb = model.token_embedding(X)
+        pos = torch.arange(T, device=X.device) % model.block_size
+        pos_emb = model.position_embedding_table(pos)
+        x = token_emb + pos_emb
+        
+        # Get attention weights from all heads
+        wei_all = []
+        for h in model.sa_heads.heads:
+            _, wei = h(x)  # wei: (B, T, T)
+            wei_all.append(wei[0].cpu().numpy())  # (T, T)
+        
+        # Average across heads
+        attention_matrix = np.stack(wei_all, axis=0).mean(axis=0)  # (T, T)
+        attention_matrices.append(attention_matrix)
+        
+        # Get attention output (before linear layer)
+        out_all = []
+        for h in model.sa_heads.heads:
+            out, _ = h(x)  # out: (B, T, head_size)
+            out_all.append(out[0].cpu().numpy())  # (T, head_size)
+        
+        # Concatenate heads and average (or just concatenate)
+        attention_out = np.concatenate(out_all, axis=-1)  # (T, num_heads * head_size)
+        linear_outputs.append(attention_out)
+        
+        # Get logits (after linear layer)
+        logits, _ = model(X)
+        logits_np = logits[0].cpu().numpy()  # (T, vocab_size)
+        logits_list.append(logits_np)
+        
+        # Get probabilities (softmax of logits)
+        probs = F.softmax(logits[0], dim=-1).cpu().numpy()  # (T, vocab_size)
+        probs_list.append(probs)
+    
+    # Create figure: num_sequences rows, 4 columns (Attention, Linear Out, Logits, Probs)
+    fig, axes = plt.subplots(num_sequences, 4, figsize=(20, 5 * num_sequences))
+    if num_sequences == 1:
+        axes = axes.reshape(1, -1)
+    
+    for i, (attn, lin_out, logits_np, probs_np, tokens) in enumerate(
+        zip(attention_matrices, linear_outputs, logits_list, probs_list, tokens_list)
+    ):
+        T = attn.shape[0]
+        
+        # Column 1: Attention matrix
+        ax = axes[i, 0]
+        sns.heatmap(attn, cmap="magma", vmin=0.0, vmax=1.0, 
+                    xticklabels=tokens, yticklabels=tokens, cbar=True, ax=ax)
+        ax.set_title(f"Attention (T×T={T}×{T})", fontsize=11)
+        ax.set_xlabel("Key position")
+        ax.set_ylabel("Query position")
+        
+        # Column 2: Linear output (attention output before lm_head)
+        ax = axes[i, 1]
+        sns.heatmap(lin_out, cmap="viridis", 
+                    xticklabels=list(range(lin_out.shape[1])), 
+                    yticklabels=tokens, cbar=True, ax=ax)
+        ax.set_title(f"Linear Input (T×{lin_out.shape[1]})", fontsize=11)
+        ax.set_xlabel("Head dim")
+        ax.set_ylabel("Position")
+        
+        # Column 3: Logits
+        ax = axes[i, 2]
+        sns.heatmap(logits_np, cmap="RdBu_r", center=0,
+                    xticklabels=[itos[j] for j in range(logits_np.shape[1])], 
+                    yticklabels=tokens, cbar=True, ax=ax)
+        ax.set_title(f"Logits (T×vocab={T}×{logits_np.shape[1]})", fontsize=11)
+        ax.set_xlabel("Vocabulary")
+        ax.set_ylabel("Position")
+        
+        # Column 4: Probabilities (softmax)
+        ax = axes[i, 3]
+        sns.heatmap(probs_np, cmap="magma", vmin=0.0, vmax=1.0,
+                    xticklabels=[itos[j] for j in range(probs_np.shape[1])], 
+                    yticklabels=tokens, cbar=True, ax=ax)
+        ax.set_title(f"Probabilities (T×vocab={T}×{probs_np.shape[1]})", fontsize=11)
+        ax.set_xlabel("Vocabulary")
+        ax.set_ylabel("Position")
+        
+        # Add sequence string as ylabel on leftmost plot
+        if i == 0:
+            seq_str = " ".join(tokens)
+            axes[i, 0].set_ylabel(f"Seq {i+1}: {seq_str}\nQuery position", fontsize=10)
+        else:
+            seq_str = " ".join(tokens)
+            axes[i, 0].set_ylabel(f"Seq {i+1}: {seq_str}\nQuery position", fontsize=10)
+    
+    plt.tight_layout(rect=[0, 0, 1, 0.97])
     
     if save_path:
-        plt.savefig(save_path)
+        plt.savefig(save_path, bbox_inches='tight', dpi=150)
         plt.close()
     else:
         plt.show()
@@ -1589,14 +1910,16 @@ def main(config_name: str = "copy_modulo"):
                        save_path=os.path.join(plots_dir, "learning_curve.png"), 
                        eval_interval=eval_interval)
     
-    # Create two different example sequences
+    # Create multiple example sequences for plotting
     X1, _ = get_batch_from_sequences(train_sequences, block_size, 1)
     X2, _ = get_batch_from_sequences(train_sequences, block_size, 1)
+    X3, _ = get_batch_from_sequences(train_sequences, block_size, 1)
+    X_list = [X1, X2, X3]
     
-    # Plot QKV for two sequences
-    plot_weights_qkv_two_sequences(model, X1, X2, itos, save_path=os.path.join(plots_dir, "qkv.png"))
+    # Plot QKV for multiple sequences (shown as rows)
+    plot_weights_qkv_two_sequences(model, X_list, itos, save_path=os.path.join(plots_dir, "qkv.png"), num_sequences=3)
     plot_embeddings_pca(model, itos, save_path=os.path.join(plots_dir, "embeddings.png"))
-    plot_attention_matrix(model, X_fixed, itos, save_path=os.path.join(plots_dir, "attention_matrix.png"))
+    plot_attention_matrix(model, X_list, itos, save_path=os.path.join(plots_dir, "attention_matrix.png"), num_sequences=3)
     plot_output_matrix(model, X_fixed, itos, save_path=os.path.join(plots_dir, "output_matrix.png"))
     plot_learned_lookup(model, vocab_size, itos, save_path=os.path.join(plots_dir, "learned_lookup.png"))
     plot_position_embeddings(model, X_fixed, itos, save_path=os.path.join(plots_dir, "position_embeddings.png"))
