@@ -1,0 +1,35 @@
+# Configuration file for ParityBasedRule
+# Rule: If current and previous have same parity → next is even
+#       If current and previous have different parity → next is odd
+
+# Configuration name (used for output folder)
+name: "parity_based"
+
+# Data generation configuration
+data:
+  generator_type: "ParityBasedRule"
+  min_value: 0
+  max_value: 20
+  num_sequences: 1500
+  min_length: 33
+  max_length: 64
+
+# Model architecture
+model:
+  n_embd: 8           # Embedding dimension
+  block_size: 32       # Context length
+  num_heads: 2         # Number of attention heads
+  head_size: 8         # Head size
+
+# Training configuration
+training:
+  max_steps: 20000     # Training steps
+  batch_size: 4
+  learning_rate: 0.001
+  eval_interval: 200
+  eval_iterations: 50
+
+
+
+
+

@@ -4,7 +4,7 @@ Configuration loader for transformer training
 import yaml
 import os
 from pathlib import Path
-from IntegerStringGenerator import OddEvenIndexRule, EvenToOddTransitionRule, EvenRepeatLastOddRule, EvenAbsDiffRule, CopyModuloRule, SuccessorRule, ConditionalTransformRule, LookupPermutationRule, IntegerStringGenerator
+from IntegerStringGenerator import OddEvenIndexRule, EvenToOddTransitionRule, EvenRepeatLastOddRule, EvenAbsDiffRule, CopyModuloRule, SuccessorRule, ConditionalTransformRule, LookupPermutationRule, ParityBasedRule, IntegerStringGenerator
 
 
 def load_config(config_name: str):
@@ -67,6 +67,8 @@ def get_generator_from_config(config: dict) -> IntegerStringGenerator:
     elif generator_type == "LookupPermutationRule":
         seed = data_config.get('seed', 42)
         return LookupPermutationRule(min_value=min_value, max_value=max_value, seed=seed)
+    elif generator_type == "ParityBasedRule":
+        return ParityBasedRule(min_value=min_value, max_value=max_value)
     else:
         raise ValueError(f"Unknown generator type: {generator_type}")
 

@@ -1894,7 +1894,7 @@ def main(config_name: str = "copy_modulo"):
     val_loss_history = []
 
     batch_size = training_config['batch_size']
-    max_steps = training_config['max_steps'] // 2  # Cut training steps in half
+    max_steps = training_config['max_steps']
     eval_interval = training_config['eval_interval']
     eval_iterations = training_config['eval_iterations']
     
@@ -1923,14 +1923,25 @@ def main(config_name: str = "copy_modulo"):
     # 4) Show results
     print("Final loss:", loss.item())
 
-    # Generate some integer sequences
-    start = torch.zeros((1, 1), dtype=torch.long)  # Start with token 0 (integer value 0)
-    sample = model.generate(start, max_new_tokens=1000)[0].tolist()
-    generated_integers = decode(sample)  # Decode token indices back to integer values
-    # Write as space-separated integers
+    # Generate multiple integer sequences
+    num_sequences_to_generate = 10  # Number of sequences to generate
+    generated_sequences = []
+    for _ in range(num_sequences_to_generate):
+        # Random sequence length between min_length and max_length
+        seq_length = random.randint(data_config['min_length'], data_config['max_length'])
+        # Start with a random token instead of always 0 to avoid bias
+        start_token = random.randint(0, vocab_size - 1)
+        start = torch.tensor([[start_token]], dtype=torch.long)
+        sample = model.generate(start, max_new_tokens=seq_length - 1)[0].tolist()  # -1 because start token counts
+        generated_integers = decode(sample)  # Decode token indices back to integer values
+        generated_sequences.append(generated_integers)
+    
+    # Write sequences, one per line, with space-separated integers
     with open(os.path.join(plots_dir, "generated_integer_sequence.txt"), "w", encoding="utf-8") as f:
-        f.write(" ".join(str(i) for i in generated_integers))
-    print(f"Generated sequence (first 100 integers): {generated_integers[:100]}")
+        for seq in generated_sequences:
+            f.write(" ".join(str(i) for i in seq) + "\n")
+    print(f"Generated {num_sequences_to_generate} sequences")
+    print(f"First sequence (length {len(generated_sequences[0])}): {generated_sequences[0][:50]}...")
 
     # 5) Plots - keep only: QKV (2 rows: weights W_Q/W_K/W_V, activations Q/K/V), embeddings (1x3: raw/hierarchical/PCA), attention matrix, output matrix, learning curve
     plot_learning_curve(steps_for_plot, train_loss_history, val_loss_history, 

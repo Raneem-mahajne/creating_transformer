@@ -402,6 +402,70 @@ class LookupPermutationRule(IntegerStringGenerator):
         return sequence
 
 
+class ParityBasedRule(IntegerStringGenerator):
+    """
+    Rule: If current and previous number have the same parity (both even or both odd), 
+    next number is even. If they have different parity (one even, one odd), next number is odd.
+    
+    This rule requires looking at the relationship between consecutive pairs:
+    - Same parity (even-even or odd-odd) → next is even
+    - Different parity (even-odd or odd-even) → next is odd
+    """
+    
+    def __init__(self, min_value: int = 0, max_value: int = 20, sequence_length: int = None):
+        super().__init__(min_value, max_value, sequence_length)
+        # Precompute even and odd number lists
+        self.even_nums = [n for n in range(min_value, max_value + 1) if n % 2 == 0]
+        self.odd_nums = [n for n in range(min_value, max_value + 1) if n % 2 == 1]
+        self.all_nums = list(range(min_value, max_value + 1))
+        
+        # Fallback values
+        self.even_fallback = min_value if min_value % 2 == 0 else min(min_value + 1, max_value)
+        self.odd_fallback = min_value if min_value % 2 == 1 else min(min_value + 1, max_value)
+        self.fallback = min_value
+    
+    def generate_sequence(self, length: int) -> list[int]:
+        """
+        Generate a sequence where:
+        - If current and previous have same parity → next is even
+        - If current and previous have different parity → next is odd
+        """
+        if length == 0:
+            return []
+        
+        sequence = []
+        
+        # Start with two random numbers (need at least 2 to determine parity relationship)
+        if length == 1:
+            current = random.choice(self.all_nums) if self.all_nums else self.fallback
+            sequence.append(current)
+            return sequence
+        
+        # First two numbers are random
+        prev = random.choice(self.all_nums) if self.all_nums else self.fallback
+        current = random.choice(self.all_nums) if self.all_nums else self.fallback
+        sequence.append(prev)
+        sequence.append(current)
+        
+        # Generate the rest based on the rule
+        for _ in range(length - 2):
+            # Check if current and previous have the same parity
+            same_parity = (prev % 2) == (current % 2)
+            
+            if same_parity:
+                # Same parity → next is even
+                next_val = random.choice(self.even_nums) if self.even_nums else self.even_fallback
+            else:
+                # Different parity → next is odd
+                next_val = random.choice(self.odd_nums) if self.odd_nums else self.odd_fallback
+            
+            sequence.append(next_val)
+            prev = current
+            current = next_val
+        
+        return sequence
+
+
 def main():
     generator = OddEvenIndexRule(min_value=0, max_value=20)
     sequences = generator.generate_dataset(5, min_length=10, max_length=20)
