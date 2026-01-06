@@ -1405,100 +1405,127 @@ def plot_attention_matrix(model, X_list, itos, save_path=None, num_sequences=3):
     model.train()
 
 @torch.no_grad()
-def plot_position_embeddings(model, X, itos, save_path=None):
+def plot_position_embeddings(model, X_list, itos, save_path=None, num_sequences=3):
     """
-    Plot token embeddings, positional embeddings, their sum, and PCAs
-    Row 1: Heatmaps (token, position, combined)
-    Row 2: PCAs (token, position, combined)
+    Plot token embeddings, positional embeddings, their sum, and PCAs for multiple sequences
+    Each sequence gets 2 rows: Row 1: Heatmaps (token, position, combined), Row 2: PCAs (token, position, combined)
+    
+    Args:
+        model: The model
+        X_list: List of input sequences, or single sequence (will be converted to list)
+        itos: Index to string mapping
+        save_path: Path to save figure
+        num_sequences: Number of sequences to show
     """
     model.eval()
-    B, T = X.shape
+    
+    # Handle single sequence input
+    if not isinstance(X_list, list):
+        X_list = [X_list]
+    
+    # Use provided sequences up to num_sequences
+    sequences_to_plot = X_list[:num_sequences]
+    num_sequences = len(sequences_to_plot)
     
     # Get embedding dimension from the model
     n_embd = model.position_embedding_table.weight.shape[1]
     
-    # Get position indices (0, 1, 2, ..., T-1, wrapped by block_size)
-    positions = torch.arange(T, device=X.device) % model.block_size
-    positions_np = positions.cpu().numpy()  # (T,)
+    # Create figure: (num_sequences * 2) rows, 3 columns
+    fig, axes = plt.subplots(num_sequences * 2, 3, figsize=(20, 6 * num_sequences))
+    if num_sequences == 1:
+        axes = axes.reshape(2, -1)
     
-    # Get positional embeddings
-    pos_emb = model.position_embedding_table(positions)  # (T, n_embd)
-    pos_emb_np = pos_emb.detach().cpu().numpy()  # (T, n_embd)
-    
-    # Get token embeddings
-    token_emb = model.token_embedding(X)  # (B, T, n_embd)
-    token_emb_np = token_emb[0].detach().cpu().numpy()  # (T, n_embd)
-    
-    # Get sum (token + position)
-    combined_emb = token_emb + pos_emb  # (B, T, n_embd)
-    combined_emb_np = combined_emb[0].detach().cpu().numpy()  # (T, n_embd)
-    
-    # Get tokens for labels
-    tokens = [itos[i.item()] for i in X[0]]
-    
-    # Create figure: 2 rows, 3 columns
-    fig, axes = plt.subplots(2, 3, figsize=(20, 12))
-    
-    # Row 1: Heatmaps
-    # Token embeddings heatmap
-    ax1 = axes[0, 0]
-    sns.heatmap(token_emb_np, cmap="RdBu_r", center=0, xticklabels=list(range(n_embd)),
-                yticklabels=tokens, cbar=True, ax=ax1)
-    ax1.set_title(f"Token Embeddings (T×n_embd={T}×{n_embd})", fontsize=11)
-    ax1.set_xlabel("Embedding dim")
-    ax1.set_ylabel("Position (token)")
-    
-    # Positional embeddings heatmap
-    ax2 = axes[0, 1]
-    sns.heatmap(pos_emb_np, cmap="RdBu_r", center=0, xticklabels=list(range(n_embd)),
-                yticklabels=tokens, cbar=True, ax=ax2)
-    ax2.set_title(f"Positional Embeddings (T×n_embd={T}×{n_embd})", fontsize=11)
-    ax2.set_xlabel("Embedding dim")
-    ax2.set_ylabel("Position (token)")
-    
-    # Combined embeddings heatmap
-    ax3 = axes[0, 2]
-    sns.heatmap(combined_emb_np, cmap="RdBu_r", center=0, xticklabels=list(range(n_embd)),
-                yticklabels=tokens, cbar=True, ax=ax3)
-    ax3.set_title(f"Token + Position (T×n_embd={T}×{n_embd})", fontsize=11)
-    ax3.set_xlabel("Embedding dim")
-    ax3.set_ylabel("Position (token)")
-    
-    # Row 2: PCAs
-    def plot_pca(ax, data, title, color_by_position=True):
-        if n_embd >= 2:
-            X_data = data.astype(np.float64)
-            X_data = X_data - X_data.mean(axis=0, keepdims=True)
-            _, _, Vt = np.linalg.svd(X_data, full_matrices=False)
-            X2 = X_data @ Vt[:2].T
-            colors = positions_np if color_by_position else range(T)
-            sc = ax.scatter(X2[:, 0], X2[:, 1], c=colors, s=100, alpha=0.7, cmap="viridis")
-            ax.set_title(title, fontsize=11)
-            ax.set_xlabel("PC1")
-            ax.set_ylabel("PC2")
-            ax.grid(True, alpha=0.2)
-            for i, token in enumerate(tokens):
-                ax.text(X2[i, 0], X2[i, 1], token, fontsize=8, ha='center', va='center')
-            plt.colorbar(sc, ax=ax, label="Position mod k")
-        else:
-            X1 = data[:, 0]
-            sc = ax.scatter(X1, positions_np, c=positions_np, s=100, alpha=0.7, cmap="viridis")
-            ax.set_title(title, fontsize=11)
-            ax.set_xlabel("Embedding value")
-            ax.set_ylabel("Position index")
-            ax.grid(True, alpha=0.2)
-            for i, token in enumerate(tokens):
-                ax.text(X1[i], positions_np[i], token, fontsize=8, ha='center', va='bottom')
-            plt.colorbar(sc, ax=ax, label="Position index")
-    
-    # PCA of token embeddings
-    plot_pca(axes[1, 0], token_emb_np, f"PCA: Token Embeddings (T={T})")
-    
-    # PCA of positional embeddings
-    plot_pca(axes[1, 1], pos_emb_np, f"PCA: Positional Embeddings (T={T})")
-    
-    # PCA of combined embeddings
-    plot_pca(axes[1, 2], combined_emb_np, f"PCA: Combined Embeddings (T={T})")
+    for seq_idx, X in enumerate(sequences_to_plot):
+        B, T = X.shape
+        
+        # Get position indices (0, 1, 2, ..., T-1, wrapped by block_size)
+        positions = torch.arange(T, device=X.device) % model.block_size
+        positions_np = positions.cpu().numpy()  # (T,)
+        
+        # Get positional embeddings
+        pos_emb = model.position_embedding_table(positions)  # (T, n_embd)
+        pos_emb_np = pos_emb.detach().cpu().numpy()  # (T, n_embd)
+        
+        # Get token embeddings
+        token_emb = model.token_embedding(X)  # (B, T, n_embd)
+        token_emb_np = token_emb[0].detach().cpu().numpy()  # (T, n_embd)
+        
+        # Get sum (token + position)
+        combined_emb = token_emb + pos_emb  # (B, T, n_embd)
+        combined_emb_np = combined_emb[0].detach().cpu().numpy()  # (T, n_embd)
+        
+        # Get tokens for labels
+        tokens = [itos[i.item()] for i in X[0]]
+        
+        # Calculate row indices for this sequence
+        row_heatmap = seq_idx * 2
+        row_pca = seq_idx * 2 + 1
+        
+        # Get sequence string for title
+        seq_str = " ".join(tokens[:20])  # First 20 tokens
+        if len(tokens) > 20:
+            seq_str += "..."
+        
+        # Row 1: Heatmaps
+        # Token embeddings heatmap
+        ax1 = axes[row_heatmap, 0]
+        sns.heatmap(token_emb_np, cmap="RdBu_r", center=0, xticklabels=list(range(n_embd)),
+                    yticklabels=tokens, cbar=True, ax=ax1)
+        ax1.set_title(f"Token Embeddings (T×n_embd={T}×{n_embd}) - Seq {seq_idx+1}", fontsize=11)
+        ax1.set_xlabel("Embedding dim")
+        ax1.set_ylabel("Position (token)")
+        
+        # Positional embeddings heatmap
+        ax2 = axes[row_heatmap, 1]
+        sns.heatmap(pos_emb_np, cmap="RdBu_r", center=0, xticklabels=list(range(n_embd)),
+                    yticklabels=tokens, cbar=True, ax=ax2)
+        ax2.set_title(f"Positional Embeddings (T×n_embd={T}×{n_embd}) - Seq {seq_idx+1}", fontsize=11)
+        ax2.set_xlabel("Embedding dim")
+        ax2.set_ylabel("Position (token)")
+        
+        # Combined embeddings heatmap
+        ax3 = axes[row_heatmap, 2]
+        sns.heatmap(combined_emb_np, cmap="RdBu_r", center=0, xticklabels=list(range(n_embd)),
+                    yticklabels=tokens, cbar=True, ax=ax3)
+        ax3.set_title(f"Token + Position (T×n_embd={T}×{n_embd}) - Seq {seq_idx+1}", fontsize=11)
+        ax3.set_xlabel("Embedding dim")
+        ax3.set_ylabel("Position (token)")
+        
+        # Row 2: PCAs
+        def plot_pca(ax, data, title, color_by_position=True):
+            if n_embd >= 2:
+                X_data = data.astype(np.float64)
+                X_data = X_data - X_data.mean(axis=0, keepdims=True)
+                _, _, Vt = np.linalg.svd(X_data, full_matrices=False)
+                X2 = X_data @ Vt[:2].T
+                colors = positions_np if color_by_position else range(T)
+                sc = ax.scatter(X2[:, 0], X2[:, 1], c=colors, s=100, alpha=0.7, cmap="viridis")
+                ax.set_title(title, fontsize=11)
+                ax.set_xlabel("PC1")
+                ax.set_ylabel("PC2")
+                ax.grid(True, alpha=0.2)
+                for i, token in enumerate(tokens):
+                    ax.text(X2[i, 0], X2[i, 1], token, fontsize=8, ha='center', va='center')
+                plt.colorbar(sc, ax=ax, label="Position mod k")
+            else:
+                X1 = data[:, 0]
+                sc = ax.scatter(X1, positions_np, c=positions_np, s=100, alpha=0.7, cmap="viridis")
+                ax.set_title(title, fontsize=11)
+                ax.set_xlabel("Embedding value")
+                ax.set_ylabel("Position index")
+                ax.grid(True, alpha=0.2)
+                for i, token in enumerate(tokens):
+                    ax.text(X1[i], positions_np[i], token, fontsize=8, ha='center', va='bottom')
+                plt.colorbar(sc, ax=ax, label="Position index")
+        
+        # PCA of token embeddings
+        plot_pca(axes[row_pca, 0], token_emb_np, f"PCA: Token Embeddings (T={T}) - Seq {seq_idx+1}")
+        
+        # PCA of positional embeddings
+        plot_pca(axes[row_pca, 1], pos_emb_np, f"PCA: Positional Embeddings (T={T}) - Seq {seq_idx+1}")
+        
+        # PCA of combined embeddings
+        plot_pca(axes[row_pca, 2], combined_emb_np, f"PCA: Combined Embeddings (T={T}) - Seq {seq_idx+1}")
     
     plt.tight_layout()
     if save_path:
@@ -1867,7 +1894,7 @@ def main(config_name: str = "copy_modulo"):
     val_loss_history = []
 
     batch_size = training_config['batch_size']
-    max_steps = training_config['max_steps']
+    max_steps = training_config['max_steps'] // 2  # Cut training steps in half
     eval_interval = training_config['eval_interval']
     eval_iterations = training_config['eval_iterations']
     
@@ -1922,7 +1949,7 @@ def main(config_name: str = "copy_modulo"):
     plot_attention_matrix(model, X_list, itos, save_path=os.path.join(plots_dir, "attention_matrix.png"), num_sequences=3)
     plot_output_matrix(model, X_fixed, itos, save_path=os.path.join(plots_dir, "output_matrix.png"))
     plot_learned_lookup(model, vocab_size, itos, save_path=os.path.join(plots_dir, "learned_lookup.png"))
-    plot_position_embeddings(model, X_fixed, itos, save_path=os.path.join(plots_dir, "position_embeddings.png"))
+    plot_position_embeddings(model, X_list, itos, save_path=os.path.join(plots_dir, "position_embeddings.png"), num_sequences=3)
 
 
 
