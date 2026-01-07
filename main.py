@@ -315,16 +315,41 @@ def plot_bigram_probability_heatmap(model, itos, save_path=None):
         plt.close()
     else:
         plt.show()
-def plot_learning_curve(steps, train_losses, val_losses, save_path=None, eval_interval=None):
-    plt.figure(figsize=(10, 6))
-    plt.plot(steps, train_losses, label="Training Loss")
-    plt.plot(steps, val_losses, label="Validation Loss")
-    plt.title("Learning Curve: Training vs Validation Loss")
-    eval_interval_str = f" (evaluated every {eval_interval} steps)" if eval_interval else ""
-    plt.xlabel(f"Training Steps{eval_interval_str}")
-    plt.ylabel("Cross-entropy loss")
-    plt.grid(True)
-    plt.legend()
+def plot_learning_curve(steps, train_losses, val_losses, rule_accuracy_history=None, save_path=None, eval_interval=None):
+    """
+    Plot learning curve with loss and optionally rule accuracy on the same figure.
+    Uses dual y-axes: left for loss, right for accuracy.
+    """
+    fig, ax1 = plt.subplots(figsize=(12, 6))
+    
+    # Left y-axis: Loss
+    color1 = 'tab:blue'
+    ax1.set_xlabel(f"Training Steps{' (evaluated every ' + str(eval_interval) + ' steps)' if eval_interval else ''}", fontsize=11)
+    ax1.set_ylabel("Cross-entropy loss", color=color1, fontsize=11)
+    line1 = ax1.plot(steps, train_losses, label="Training Loss", color='tab:blue', linewidth=2)
+    line2 = ax1.plot(steps, val_losses, label="Validation Loss", color='tab:orange', linewidth=2)
+    ax1.tick_params(axis='y', labelcolor=color1)
+    ax1.grid(True, alpha=0.3)
+    
+    # Right y-axis: Rule Accuracy (if provided)
+    if rule_accuracy_history is not None:
+        ax2 = ax1.twinx()
+        color2 = 'tab:green'
+        ax2.set_ylabel("Rule Accuracy (fraction of positions following the rule)", color=color2, fontsize=11)
+        line3 = ax2.plot(steps, rule_accuracy_history, label="Rule Accuracy", color=color2, linewidth=2, linestyle='--')
+        ax2.tick_params(axis='y', labelcolor=color2)
+        ax2.set_ylim(0, 1.05)
+        
+        # Combine legends
+        lines = line1 + line2 + line3
+        labels = [l.get_label() for l in lines]
+        ax1.legend(lines, labels, loc='best')
+        
+        plt.title("Learning Curve: Loss and Rule Accuracy During Training", fontsize=13)
+    else:
+        ax1.legend(loc='best')
+        plt.title("Learning Curve: Training vs Validation Loss", fontsize=13)
+    
     plt.tight_layout()
     if save_path:
         plt.savefig(save_path)
@@ -1715,6 +1740,211 @@ def estimate_loss(model, train_sequences, val_sequences, block_size, batch_size,
     model.train()
     return out
 
+@torch.no_grad()
+def estimate_rule_accuracy(model, generator, decode, block_size, num_samples=20, seq_length=30):
+    """
+    Generate sequences and check rule accuracy.
+    Returns the fraction of positions that follow the rule.
+    """
+    model.eval()
+    
+    total_positions = 0
+    correct_positions = 0
+    
+    vocab_size = model.token_embedding.weight.shape[0]
+    
+    for _ in range(num_samples):
+        # Generate a sequence
+        start_token = random.randint(0, vocab_size - 1)
+        start = torch.tensor([[start_token]], dtype=torch.long)
+        sample = model.generate(start, max_new_tokens=seq_length - 1)[0].tolist()
+        generated_integers = decode(sample)
+        
+        # Verify the sequence
+        correctness, _ = generator.verify_sequence(generated_integers)
+        
+        total_positions += len(correctness)
+        correct_positions += sum(correctness)
+    
+    model.train()
+    return correct_positions / total_positions if total_positions > 0 else 0.0
+
+
+def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=None, num_sequences=5, max_length=30):
+    """
+    Plot generated sequences as an annotated heatmap showing correctness.
+    Red = incorrect, White/Green = correct.
+    """
+    sequences_to_show = generated_sequences[:num_sequences]
+    
+    # Truncate to max_length and pad to same length
+    max_len = min(max_length, max(len(seq) for seq in sequences_to_show))
+    
+    # Create data matrix and correctness matrix
+    data_matrix = []
+    correctness_matrix = []
+    
+    for seq in sequences_to_show:
+        seq_truncated = seq[:max_len]
+        correctness, _ = generator.verify_sequence(seq_truncated)
+        
+        # Pad if necessary
+        while len(seq_truncated) < max_len:
+            seq_truncated.append(-1)  # Padding value
+            correctness.append(-1)  # Padding marker
+        
+        data_matrix.append(seq_truncated)
+        correctness_matrix.append(correctness)
+    
+    data_matrix = np.array(data_matrix)
+    correctness_matrix = np.array(correctness_matrix)
+    
+    # Create figure - scale appropriately for number of sequences
+    fig_height = max(6, min(20, num_sequences * 0.6 + 2))
+    fig_width = min(24, max(12, max_len * 0.5))
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+    
+    # Create color matrix: 1 (correct) = light green, 0 (incorrect) = red, -1 (padding) = gray
+    from matplotlib.colors import ListedColormap
+    colors = ['#ff6b6b', '#90EE90', '#d3d3d3']  # red, light green, gray
+    cmap = ListedColormap(colors)
+    
+    # Map correctness to color indices: 0->0 (red), 1->1 (green), -1->2 (gray)
+    color_indices = np.where(correctness_matrix == -1, 2, correctness_matrix)
+    
+    # Plot the heatmap
+    im = ax.imshow(color_indices, cmap=cmap, aspect='auto', vmin=0, vmax=2)
+    
+    # Add text annotations (the actual numbers)
+    # Adjust font size based on number of sequences
+    fontsize = max(7, min(10, 12 - num_sequences // 5))
+    for i in range(len(sequences_to_show)):
+        for j in range(max_len):
+            val = data_matrix[i, j]
+            if val != -1:  # Not padding
+                text_color = 'black'
+                ax.text(j, i, str(val), ha='center', va='center', fontsize=fontsize, color=text_color, fontweight='bold')
+    
+    # Set labels
+    ax.set_xlabel("Position in Sequence", fontsize=11)
+    ax.set_ylabel("Sequence #", fontsize=11)
+    ax.set_title("Generated Sequences with Rule Correctness\n(Green = Correct, Red = Incorrect)", fontsize=12)
+    
+    # Set ticks
+    ax.set_xticks(range(0, max_len, max(1, max_len // 15)))
+    ax.set_yticks(range(num_sequences))
+    ax.set_yticklabels([f"Seq {i+1}" for i in range(num_sequences)])
+    
+    # Add colorbar/legend
+    from matplotlib.patches import Patch
+    legend_elements = [
+        Patch(facecolor='#90EE90', label='Correct'),
+        Patch(facecolor='#ff6b6b', label='Incorrect'),
+    ]
+    ax.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1.15, 1))
+    
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150)
+        plt.close()
+    else:
+        plt.show()
+    
+    # Return summary statistics
+    total_correct = np.sum(correctness_matrix == 1)
+    total_incorrect = np.sum(correctness_matrix == 0)
+    total_valid = total_correct + total_incorrect
+    accuracy = total_correct / total_valid if total_valid > 0 else 0
+    return accuracy, total_correct, total_incorrect
+
+def plot_training_data_heatmap(training_sequences, generator, save_path=None, num_sequences=50, max_length=50):
+    """
+    Plot training data sequences as an annotated heatmap showing correctness.
+    Red = incorrect, Green = correct.
+    Same style as generated sequences heatmap.
+    """
+    sequences_to_show = training_sequences[:num_sequences]
+    
+    # Truncate to max_length and pad to same length
+    max_len = min(max_length, max(len(seq) for seq in sequences_to_show))
+    
+    # Create data matrix and correctness matrix
+    data_matrix = []
+    correctness_matrix = []
+    
+    for seq in sequences_to_show:
+        seq_truncated = seq[:max_len]
+        correctness, _ = generator.verify_sequence(seq_truncated)
+        
+        # Pad if necessary
+        while len(seq_truncated) < max_len:
+            seq_truncated.append(-1)  # Padding value
+            correctness.append(-1)  # Padding marker
+        
+        data_matrix.append(seq_truncated)
+        correctness_matrix.append(correctness)
+    
+    data_matrix = np.array(data_matrix)
+    correctness_matrix = np.array(correctness_matrix)
+    
+    # Create figure - scale appropriately for number of sequences
+    fig_height = max(8, min(30, num_sequences * 0.4 + 2))
+    fig_width = min(24, max(12, max_len * 0.4))
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+    
+    # Create color matrix: 1 (correct) = light green, 0 (incorrect) = red, -1 (padding) = gray
+    from matplotlib.colors import ListedColormap
+    colors = ['#ff6b6b', '#90EE90', '#d3d3d3']  # red, light green, gray
+    cmap = ListedColormap(colors)
+    
+    # Map correctness to color indices: 0->0 (red), 1->1 (green), -1->2 (gray)
+    color_indices = np.where(correctness_matrix == -1, 2, correctness_matrix)
+    
+    # Plot the heatmap
+    im = ax.imshow(color_indices, cmap=cmap, aspect='auto', vmin=0, vmax=2)
+    
+    # Add text annotations (the actual numbers)
+    # Adjust font size based on number of sequences
+    fontsize = max(6, min(9, 11 - num_sequences // 10))
+    for i in range(len(sequences_to_show)):
+        for j in range(max_len):
+            val = data_matrix[i, j]
+            if val != -1:  # Not padding
+                text_color = 'black'
+                ax.text(j, i, str(val), ha='center', va='center', fontsize=fontsize, color=text_color, fontweight='bold')
+    
+    # Set labels
+    ax.set_xlabel("Position in Sequence", fontsize=11)
+    ax.set_ylabel("Sequence #", fontsize=11)
+    ax.set_title("Training Data Sequences with Rule Correctness\n(Green = Correct, Red = Incorrect)", fontsize=12)
+    
+    # Set ticks
+    ax.set_xticks(range(0, max_len, max(1, max_len // 15)))
+    ax.set_yticks(range(0, num_sequences, max(1, num_sequences // 20)))
+    ax.set_yticklabels([f"Seq {i+1}" for i in range(0, num_sequences, max(1, num_sequences // 20))])
+    
+    # Add colorbar/legend
+    from matplotlib.patches import Patch
+    legend_elements = [
+        Patch(facecolor='#90EE90', label='Correct'),
+        Patch(facecolor='#ff6b6b', label='Incorrect'),
+    ]
+    ax.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1.15, 1))
+    
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150)
+        plt.close()
+    else:
+        plt.show()
+    
+    # Return summary statistics
+    total_correct = np.sum(correctness_matrix == 1)
+    total_incorrect = np.sum(correctness_matrix == 0)
+    total_valid = total_correct + total_incorrect
+    accuracy = total_correct / total_valid if total_valid > 0 else 0
+    return accuracy, total_correct, total_incorrect
+
 class Head(nn.Module):
         """One head of self-attention (Version 4)."""
 
@@ -1878,6 +2108,25 @@ def main(config_name: str = "copy_modulo"):
     # 4) Split sequences into train/val
     train_sequences, val_sequences = split_train_val_sequences(encoded_sequences, train_ratio=0.9)
     print(f"Train: {len(train_sequences)} sequences, Val: {len(val_sequences)} sequences")
+    
+    # 4.5) Save some training data to a text file
+    num_samples_to_save = min(50, len(sequences))  # Save up to 50 sample sequences
+    with open(os.path.join(plots_dir, "training_data_samples.txt"), "w", encoding="utf-8") as f:
+        f.write(f"# Training Data Samples for: {config_name_actual}\n")
+        f.write(f"# {num_samples_to_save} sample sequences (original integer values before encoding)\n")
+        f.write(f"# Format: space-separated integers, one sequence per line\n\n")
+        for i, seq in enumerate(sequences[:num_samples_to_save]):
+            f.write(" ".join(str(val) for val in seq) + "\n")
+    print(f"Saved {num_samples_to_save} training data samples to {os.path.join(plots_dir, 'training_data_samples.txt')}")
+    
+    # 4.6) Visualize training data with rule correctness
+    train_heatmap_accuracy, train_correct_count, train_incorrect_count = plot_training_data_heatmap(
+        sequences, generator,  # Use original sequences (before encoding)
+        save_path=os.path.join(plots_dir, "training_data_heatmap.png"),
+        num_sequences=min(50, len(sequences)),  # Show up to 50 training sequences
+        max_length=50
+    )
+    print(f"Training data heatmap: {train_correct_count} correct, {train_incorrect_count} incorrect positions ({train_heatmap_accuracy:.1%} accuracy)")
 
     # 5) Create model + optimizer
     n_embd = model_config['n_embd']
@@ -1892,6 +2141,7 @@ def main(config_name: str = "copy_modulo"):
     steps_for_plot = []
     train_loss_history = []
     val_loss_history = []
+    rule_accuracy_history = []
 
     batch_size = training_config['batch_size']
     max_steps = training_config['max_steps']
@@ -1904,12 +2154,14 @@ def main(config_name: str = "copy_modulo"):
         # Evaluate occasionally
         if step % eval_interval == 0:
             losses = estimate_loss(model, train_sequences, val_sequences, block_size, batch_size, eval_iterations)
+            rule_acc = estimate_rule_accuracy(model, generator, decode, block_size, num_samples=20, seq_length=30)
 
             steps_for_plot.append(step)
             train_loss_history.append(losses["train"])
             val_loss_history.append(losses["validation"])
+            rule_accuracy_history.append(rule_acc)
 
-            print(f"step {step}: train loss {losses['train']:.4f}, val loss {losses['validation']:.4f}")
+            print(f"step {step}: train loss {losses['train']:.4f}, val loss {losses['validation']:.4f}, rule acc {rule_acc:.4f}")
 
         # One batch
         X, Y = get_batch_from_sequences(train_sequences, block_size, batch_size)
@@ -1922,6 +2174,7 @@ def main(config_name: str = "copy_modulo"):
 
     # 4) Show results
     print("Final loss:", loss.item())
+    print(f"Final rule accuracy: {rule_accuracy_history[-1]:.4f}" if rule_accuracy_history else "")
 
     # Generate multiple integer sequences
     num_sequences_to_generate = 10  # Number of sequences to generate
@@ -1944,9 +2197,20 @@ def main(config_name: str = "copy_modulo"):
     print(f"First sequence (length {len(generated_sequences[0])}): {generated_sequences[0][:50]}...")
 
     # 5) Plots - keep only: QKV (2 rows: weights W_Q/W_K/W_V, activations Q/K/V), embeddings (1x3: raw/hierarchical/PCA), attention matrix, output matrix, learning curve
+    # Combined learning curve with loss and rule accuracy
     plot_learning_curve(steps_for_plot, train_loss_history, val_loss_history, 
+                       rule_accuracy_history=rule_accuracy_history,
                        save_path=os.path.join(plots_dir, "learning_curve.png"), 
                        eval_interval=eval_interval)
+    
+    # Plot annotated heatmap of generated sequences showing correctness (all sequences on one figure)
+    heatmap_accuracy, correct_count, incorrect_count = plot_generated_sequences_heatmap(
+        generated_sequences, generator,
+        save_path=os.path.join(plots_dir, "generated_sequences_heatmap.png"),
+        num_sequences=len(generated_sequences),  # Show all generated sequences
+        max_length=50  # Show more positions
+    )
+    print(f"Generated sequences heatmap: {correct_count} correct, {incorrect_count} incorrect positions ({heatmap_accuracy:.1%} accuracy)")
     
     # Create multiple example sequences for plotting
     X1, _ = get_batch_from_sequences(train_sequences, block_size, 1)
@@ -1966,5 +2230,5 @@ def main(config_name: str = "copy_modulo"):
 
 if __name__ == "__main__":
     # Get config name from command line argument, default to "default"
-    config_name = sys.argv[1] if len(sys.argv) > 1 else "copy_modulo"
+    config_name = sys.argv[1] if len(sys.argv) > 1 else "parity_based"
     main(config_name=config_name)

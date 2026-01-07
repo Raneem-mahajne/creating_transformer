@@ -16,15 +16,15 @@ data:
 
 # Model architecture
 model:
-  n_embd: 8           # Embedding dimension
-  block_size: 32       # Context length
-  num_heads: 2         # Number of attention heads
-  head_size: 8         # Head size
+  n_embd: 32          # Embedding dimension (increased from 8 to capture relationships)
+  block_size: 16      # Context length (REDUCED - model only needs to see previous 2 tokens for parity rule)
+  num_heads: 2        # Number of attention heads (increased from 1 to learn different patterns)
+  head_size: 32       # Head size (increased from 16 for more capacity)
 
 # Training configuration
 training:
   max_steps: 20000     # Training steps
-  batch_size: 4
+  batch_size: 8        # Increased from 4 for more stable gradients
   learning_rate: 0.001
   eval_interval: 200
   eval_iterations: 50

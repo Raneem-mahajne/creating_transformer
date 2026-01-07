@@ -34,6 +34,21 @@ class IntegerStringGenerator(ABC):
         """
         pass
     
+    @abstractmethod
+    def verify_sequence(self, sequence: list[int]) -> tuple[list[int], bool]:
+        """
+        Verify whether each position in the sequence follows the rule.
+        
+        Args:
+            sequence: List of integers to verify
+            
+        Returns:
+            Tuple of:
+            - List of 1s and 0s (1 = correct, 0 = incorrect) for each position
+            - Boolean indicating if the entire sequence is correct (no mistakes)
+        """
+        pass
+    
     def generate_dataset(self, num_sequences: int, min_length: int = 10, max_length: int = 100) -> list[list[int]]:
         """
         Generate multiple sequences for training.
@@ -91,6 +106,16 @@ class OddEvenIndexRule(IntegerStringGenerator):
             else:  # Odd index
                 sequence.append(random.choice(self.odd_nums) if self.odd_nums else self.odd_fallback)
         return sequence
+    
+    def verify_sequence(self, sequence: list[int]) -> tuple[list[int], bool]:
+        """Verify: even indices should have even numbers, odd indices should have odd numbers."""
+        correctness = []
+        for i, val in enumerate(sequence):
+            if i % 2 == 0:  # Even index should have even number
+                correctness.append(1 if val % 2 == 0 else 0)
+            else:  # Odd index should have odd number
+                correctness.append(1 if val % 2 == 1 else 0)
+        return correctness, all(c == 1 for c in correctness)
 
 
 class EvenToOddTransitionRule(IntegerStringGenerator):
@@ -134,6 +159,20 @@ class EvenToOddTransitionRule(IntegerStringGenerator):
             sequence.append(current)
         
         return sequence
+    
+    def verify_sequence(self, sequence: list[int]) -> tuple[list[int], bool]:
+        """Verify: if previous is even, current must be odd. First position is always correct."""
+        if len(sequence) == 0:
+            return [], True
+        correctness = [1]  # First position is always correct (random start)
+        for i in range(1, len(sequence)):
+            prev = sequence[i - 1]
+            curr = sequence[i]
+            if prev % 2 == 0:  # Previous is even, current must be odd
+                correctness.append(1 if curr % 2 == 1 else 0)
+            else:  # Previous is odd, current can be anything
+                correctness.append(1)
+        return correctness, all(c == 1 for c in correctness)
 
 
 class EvenRepeatLastOddRule(IntegerStringGenerator):
@@ -181,6 +220,27 @@ class EvenRepeatLastOddRule(IntegerStringGenerator):
                 last_odd = current
         
         return sequence
+    
+    def verify_sequence(self, sequence: list[int]) -> tuple[list[int], bool]:
+        """Verify: if previous is even and there was a last odd, current must equal that last odd."""
+        if len(sequence) == 0:
+            return [], True
+        correctness = [1]  # First position is always correct
+        last_odd = sequence[0] if sequence[0] % 2 == 1 else None
+        
+        for i in range(1, len(sequence)):
+            prev = sequence[i - 1]
+            curr = sequence[i]
+            if prev % 2 == 0:  # Previous is even
+                if last_odd is not None:
+                    correctness.append(1 if curr == last_odd else 0)
+                else:
+                    correctness.append(1)  # No last odd, anything is fine
+            else:  # Previous is odd, current can be anything
+                correctness.append(1)
+            if curr % 2 == 1:
+                last_odd = curr
+        return correctness, all(c == 1 for c in correctness)
 
 
 class EvenAbsDiffRule(IntegerStringGenerator):
@@ -226,6 +286,27 @@ class EvenAbsDiffRule(IntegerStringGenerator):
             sequence.append(current)
         
         return sequence
+    
+    def verify_sequence(self, sequence: list[int]) -> tuple[list[int], bool]:
+        """Verify: if prev is even and we have 2+ history, current must be |seq[i-1] - seq[i-2]|."""
+        if len(sequence) == 0:
+            return [], True
+        correctness = [1]  # First position is always correct
+        if len(sequence) == 1:
+            return correctness, True
+        correctness.append(1)  # Second position is always correct (not enough history)
+        
+        for i in range(2, len(sequence)):
+            prev = sequence[i - 1]
+            prev_prev = sequence[i - 2]
+            curr = sequence[i]
+            if prev % 2 == 0:  # Previous is even and we have enough history
+                expected = abs(prev - prev_prev)
+                expected = max(self.min_value, min(self.max_value, expected))
+                correctness.append(1 if curr == expected else 0)
+            else:  # Previous is odd, current can be anything
+                correctness.append(1)
+        return correctness, all(c == 1 for c in correctness)
 
 
 class CopyModuloRule(IntegerStringGenerator):
@@ -273,6 +354,18 @@ class CopyModuloRule(IntegerStringGenerator):
             sequence.append(sequence[source_pos])
         
         return sequence
+    
+    def verify_sequence(self, sequence: list[int]) -> tuple[list[int], bool]:
+        """Verify: position i should equal position (i mod k) for i >= k. First k are free."""
+        if len(sequence) == 0:
+            return [], True
+        k = self.period
+        correctness = [1] * min(k, len(sequence))  # First k positions are always correct
+        
+        for i in range(k, len(sequence)):
+            source_pos = i % k
+            correctness.append(1 if sequence[i] == sequence[source_pos] else 0)
+        return correctness, all(c == 1 for c in correctness)
 
 
 class SuccessorRule(IntegerStringGenerator):
@@ -313,6 +406,18 @@ class SuccessorRule(IntegerStringGenerator):
             sequence.append(current)
         
         return sequence
+    
+    def verify_sequence(self, sequence: list[int]) -> tuple[list[int], bool]:
+        """Verify: each token should be (previous + 1) mod vocab_size. First is free."""
+        if len(sequence) == 0:
+            return [], True
+        correctness = [1]  # First position is always correct
+        
+        for i in range(1, len(sequence)):
+            prev = sequence[i - 1]
+            expected = self.min_value + ((prev - self.min_value + 1) % self.vocab_size)
+            correctness.append(1 if sequence[i] == expected else 0)
+        return correctness, all(c == 1 for c in correctness)
 
 
 class ConditionalTransformRule(IntegerStringGenerator):
@@ -356,6 +461,22 @@ class ConditionalTransformRule(IntegerStringGenerator):
             sequence.append(current)
         
         return sequence
+    
+    def verify_sequence(self, sequence: list[int]) -> tuple[list[int], bool]:
+        """Verify: if prev is even, curr = prev//2; if prev is odd, curr = (prev+1) mod vocab. First is free."""
+        if len(sequence) == 0:
+            return [], True
+        correctness = [1]  # First position is always correct
+        
+        for i in range(1, len(sequence)):
+            prev = sequence[i - 1]
+            if prev % 2 == 0:  # Even
+                expected = prev // 2
+            else:  # Odd
+                expected = (prev + 1) % self.vocab_size
+            expected = max(self.min_value, min(self.max_value, expected))
+            correctness.append(1 if sequence[i] == expected else 0)
+        return correctness, all(c == 1 for c in correctness)
 
 
 class LookupPermutationRule(IntegerStringGenerator):
@@ -400,6 +521,18 @@ class LookupPermutationRule(IntegerStringGenerator):
             sequence.append(current)
         
         return sequence
+    
+    def verify_sequence(self, sequence: list[int]) -> tuple[list[int], bool]:
+        """Verify: each token should be permutation[previous]. First is free."""
+        if len(sequence) == 0:
+            return [], True
+        correctness = [1]  # First position is always correct
+        
+        for i in range(1, len(sequence)):
+            prev = sequence[i - 1]
+            expected = self.permutation[prev - self.min_value]
+            correctness.append(1 if sequence[i] == expected else 0)
+        return correctness, all(c == 1 for c in correctness)
 
 
 class ParityBasedRule(IntegerStringGenerator):
@@ -464,6 +597,28 @@ class ParityBasedRule(IntegerStringGenerator):
             current = next_val
         
         return sequence
+    
+    def verify_sequence(self, sequence: list[int]) -> tuple[list[int], bool]:
+        """Verify: if prev two have same parity, curr is even; different parity, curr is odd. First two are free."""
+        if len(sequence) == 0:
+            return [], True
+        if len(sequence) == 1:
+            return [1], True
+        correctness = [1, 1]  # First two positions are always correct (random starts)
+        
+        for i in range(2, len(sequence)):
+            prev_prev = sequence[i - 2]
+            prev = sequence[i - 1]
+            curr = sequence[i]
+            same_parity = (prev_prev % 2) == (prev % 2)
+            
+            if same_parity:
+                # Same parity → current should be even
+                correctness.append(1 if curr % 2 == 0 else 0)
+            else:
+                # Different parity → current should be odd
+                correctness.append(1 if curr % 2 == 1 else 0)
+        return correctness, all(c == 1 for c in correctness)
 
 
 def main():
