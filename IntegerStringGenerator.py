@@ -62,13 +62,17 @@ class IntegerStringGenerator(ABC):
             List of sequences (each sequence is a list of integers)
         """
         sequences = []
-        for _ in range(num_sequences):
+        print(f"Generating {num_sequences} sequences...", end="", flush=True)
+        for i in range(num_sequences):
             if self.sequence_length is not None:
                 length = self.sequence_length
             else:
                 length = random.randint(min_length, max_length)
             sequence = self.generate_sequence(length)
             sequences.append(sequence)
+            if (i + 1) % 1000 == 0:
+                print(f" {i+1}...", end="", flush=True)
+        print(" done")
         return sequences
     
 

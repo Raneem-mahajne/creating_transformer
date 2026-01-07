@@ -2170,7 +2170,7 @@ def main(config_name: str = "copy_modulo"):
             val_loss_history.append(losses["validation"])
             rule_accuracy_history.append(rule_acc)
 
-            print(f"step {step}: train loss {losses['train']:.4f}, val loss {losses['validation']:.4f}, rule acc {rule_acc:.4f}")
+            print(f"step {step}: train loss {losses['train']:.4f}, val loss {losses['validation']:.4f}, rule acc {rule_acc:.4f}", flush=True)
 
         # One batch
         X, Y = get_batch_from_sequences(train_sequences, block_size, batch_size)
@@ -2182,8 +2182,8 @@ def main(config_name: str = "copy_modulo"):
         optimizer.step()
 
     # 4) Show results
-    print("Final loss:", loss.item())
-    print(f"Final rule accuracy: {rule_accuracy_history[-1]:.4f}" if rule_accuracy_history else "")
+    print("Final loss:", loss.item(), flush=True)
+    print(f"Final rule accuracy: {rule_accuracy_history[-1]:.4f}" if rule_accuracy_history else "", flush=True)
 
     # Generate multiple integer sequences
     num_sequences_to_generate = 10  # Number of sequences to generate
