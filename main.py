@@ -1523,7 +1523,7 @@ def plot_position_embeddings(model, X_list, itos, save_path=None, num_sequences=
                 X_data = X_data - X_data.mean(axis=0, keepdims=True)
                 _, _, Vt = np.linalg.svd(X_data, full_matrices=False)
                 X2 = X_data @ Vt[:2].T
-                colors = positions_np if color_by_position else range(T)
+                colors = positions_np if color_by_position else np.arange(T)
                 sc = ax.scatter(X2[:, 0], X2[:, 1], c=colors, s=100, alpha=0.7, cmap="viridis")
                 ax.set_title(title, fontsize=11)
                 ax.set_xlabel("PC1")
@@ -1996,11 +1996,12 @@ class MultiHeadAttention(nn.Module):
 
 class FeedForward(nn.Module):
 
-    def __init__(self, n_embd):
+    def __init__(self, n_embd, ffwd_mult=4):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(n_embd, n_embd),
+            nn.Linear(n_embd, ffwd_mult * n_embd),
             nn.ReLU(),
+            nn.Linear(ffwd_mult * n_embd, n_embd),
         )
 
     def forward(self, x):
@@ -2016,8 +2017,12 @@ class BigramLanguageModel(nn.Module):
         self.token_embedding = nn.Embedding(vocab_size, n_embd)           # (vocab, n_embd)
         self.position_embedding_table = nn.Embedding(block_size, n_embd)  # (block_size, n_embd)
         self.sa_heads = MultiHeadAttention(num_heads, n_embd, head_size, block_size)
-        # lm_head takes attention output (num_heads * head_size), not n_embd
-        self.lm_head = nn.Linear(num_heads * head_size, vocab_size)       # (num_heads*head_size -> vocab)
+        # Project attention output back to n_embd for residual connection
+        self.proj = nn.Linear(num_heads * head_size, n_embd)
+        # Feedforward layer for computation after attention
+        self.ffwd = FeedForward(n_embd, ffwd_mult=16)
+        # lm_head maps n_embd -> vocab
+        self.lm_head = nn.Linear(n_embd, vocab_size)
         self.block_size = block_size
 
     def forward(self, idx: torch.Tensor, targets: torch.Tensor | None = None, return_wei: bool = False):
@@ -2027,9 +2032,12 @@ class BigramLanguageModel(nn.Module):
         positions = torch.arange(T, device=idx.device) % self.block_size
         pos_emb = self.position_embedding_table(positions)  # (T,C)
 
-        x = token_emb + pos_emb  # (B,T,C)
+        x = token_emb + pos_emb  # (B,T,n_embd)
 
-        x, wei = self.sa_heads(x)  # (B,T,C) + (B,T,T)
+        attn_out, wei = self.sa_heads(x)  # (B,T,num_heads*head_size)
+        attn_out = self.proj(attn_out)    # (B,T,n_embd)
+        x = x + attn_out                  # residual connection
+        x = x + self.ffwd(x)              # feedforward + residual
 
         logits = self.lm_head(x)  # (B,T,vocab)
 
@@ -2068,6 +2076,7 @@ def main(config_name: str = "copy_modulo"):
     Args:
         config_name: Name of the config file (without .yaml extension) in the configs folder
     """
+    print(f"Starting training with config: {config_name}")
     torch.manual_seed(0)
 
     # Load configuration

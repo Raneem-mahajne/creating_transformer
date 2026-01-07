@@ -621,6 +621,142 @@ class ParityBasedRule(IntegerStringGenerator):
         return correctness, all(c == 1 for c in correctness)
 
 
+class TwoTokenParityRule(IntegerStringGenerator):
+    """
+    Rule: Look at the last TWO tokens' parities.
+    - Same parity (both even or both odd) → next number < 10
+    - Different parity (one even, one odd) → next number >= 10
+    
+    This rule REQUIRES attention because the model must look at both position i and i-1.
+    """
+    
+    def __init__(self, min_value: int = 0, max_value: int = 20, sequence_length: int = None):
+        super().__init__(min_value, max_value, sequence_length)
+        # Numbers < 10 and >= 10
+        self.less_than_10 = [n for n in range(min_value, min(10, max_value + 1))]
+        self.gte_10 = [n for n in range(max(10, min_value), max_value + 1)]
+        self.all_nums = list(range(min_value, max_value + 1))
+        
+        # Fallbacks
+        self.lt10_fallback = 0 if 0 >= min_value else min_value
+        self.gt10_fallback = 11 if 11 <= max_value else max_value
+    
+    def generate_sequence(self, length: int) -> list[int]:
+        if length == 0:
+            return []
+        
+        sequence = []
+        
+        # First two tokens are random (need 2 to establish the pattern)
+        if length >= 1:
+            sequence.append(random.choice(self.all_nums))
+        if length >= 2:
+            sequence.append(random.choice(self.all_nums))
+        
+        # Generate rest based on rule
+        for _ in range(length - 2):
+            prev_prev = sequence[-2]
+            prev = sequence[-1]
+            same_parity = (prev_prev % 2) == (prev % 2)
+            
+            if same_parity:
+                # Same parity → next < 10
+                next_val = random.choice(self.less_than_10) if self.less_than_10 else self.lt10_fallback
+            else:
+                # Different parity → next >= 10
+                next_val = random.choice(self.gte_10) if self.gte_10 else self.gt10_fallback
+            
+            sequence.append(next_val)
+        
+        return sequence
+    
+    def verify_sequence(self, sequence: list[int]) -> tuple[list[int], bool]:
+        """Verify: same parity of prev two → curr < 10; different parity → curr >= 10. First two are free."""
+        if len(sequence) == 0:
+            return [], True
+        if len(sequence) == 1:
+            return [1], True
+        correctness = [1, 1]  # First two are always correct
+        
+        for i in range(2, len(sequence)):
+            prev_prev = sequence[i - 2]
+            prev = sequence[i - 1]
+            curr = sequence[i]
+            same_parity = (prev_prev % 2) == (prev % 2)
+            
+            if same_parity:
+                correctness.append(1 if curr < 10 else 0)
+            else:
+                correctness.append(1 if curr >= 10 else 0)
+        return correctness, all(c == 1 for c in correctness)
+
+
+class EvenGreaterThan10Rule(IntegerStringGenerator):
+    """
+    Rule: If the current number is even, the next number must be greater than 10.
+    If the current number is odd, the next number must be less than 10.
+    """
+    
+    def __init__(self, min_value: int = 0, max_value: int = 20, sequence_length: int = None):
+        super().__init__(min_value, max_value, sequence_length)
+        # Precompute numbers greater than 10 and less than 10
+        self.greater_than_10 = [n for n in range(min_value, max_value + 1) if n > 10]
+        self.less_than_10 = [n for n in range(min_value, max_value + 1) if n < 10]
+        self.all_nums = list(range(min_value, max_value + 1))
+        
+        # Fallback values
+        self.gt10_fallback = min(11, max_value) if max_value >= 11 else max_value
+        self.lt10_fallback = min(9, max_value) if max_value >= 9 else max_value
+        self.fallback = min_value
+    
+    def generate_sequence(self, length: int) -> list[int]:
+        """
+        Generate a sequence where:
+        - If current is even → next is > 10
+        - If current is odd → next is < 10
+        """
+        if length == 0:
+            return []
+        
+        sequence = []
+        
+        # Start with a random number
+        current = random.choice(self.all_nums) if self.all_nums else self.fallback
+        sequence.append(current)
+        
+        # Generate the rest based on the rule
+        for _ in range(length - 1):
+            if current % 2 == 0:  # Current is even
+                # Next must be > 10
+                next_val = random.choice(self.greater_than_10) if self.greater_than_10 else self.gt10_fallback
+            else:  # Current is odd
+                # Next must be < 10
+                next_val = random.choice(self.less_than_10) if self.less_than_10 else self.lt10_fallback
+            
+            sequence.append(next_val)
+            current = next_val
+        
+        return sequence
+    
+    def verify_sequence(self, sequence: list[int]) -> tuple[list[int], bool]:
+        """Verify: if prev is even, curr > 10; if prev is odd, curr < 10. First is free."""
+        if len(sequence) == 0:
+            return [], True
+        correctness = [1]  # First position is always correct
+        
+        for i in range(1, len(sequence)):
+            prev = sequence[i - 1]
+            curr = sequence[i]
+            
+            if prev % 2 == 0:  # Previous is even
+                # Current should be > 10
+                correctness.append(1 if curr > 10 else 0)
+            else:  # Previous is odd
+                # Current should be < 10
+                correctness.append(1 if curr < 10 else 0)
+        return correctness, all(c == 1 for c in correctness)
+
+
 def main():
     generator = OddEvenIndexRule(min_value=0, max_value=20)
     sequences = generator.generate_dataset(5, min_length=10, max_length=20)

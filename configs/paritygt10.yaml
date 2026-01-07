@@ -1,0 +1,28 @@
+# Two Token Parity Rule - REQUIRES ATTENTION
+# Rule: Look at last two tokens' parities
+#   - Same parity (both even or both odd) → next < 10
+#   - Different parity → next >= 10
+
+name: "paritygt10"
+
+data:
+  generator_type: "TwoTokenParityRule"
+  min_value: 0
+  max_value: 20
+  min_length: 33
+  max_length: 64
+  num_sequences: 5000
+
+model:
+  n_embd: 2
+  block_size: 10
+  num_heads: 1
+  head_size: 128
+
+training:
+  batch_size: 64
+  learning_rate: 0.01
+  max_steps: 15000
+  eval_interval: 200
+  eval_iterations: 20
+

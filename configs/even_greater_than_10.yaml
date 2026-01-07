@@ -1,0 +1,31 @@
+# Configuration file for EvenGreaterThan10Rule
+# Rule: If current is even → next is > 10
+#       If current is odd → next is < 10
+
+# Configuration name (used for output folder)
+name: "even_greater_than_10"
+
+# Data generation configuration
+data:
+  generator_type: "EvenGreaterThan10Rule"
+  min_value: 0
+  max_value: 20
+  num_sequences: 1500
+  min_length: 33
+  max_length: 64
+
+# Model architecture - minimal sizes
+model:
+  n_embd: 3           # Embedding dimension
+  block_size: 10
+  num_heads: 1        # Single head
+  head_size: 16       # Head size
+
+# Training configuration
+training:
+  max_steps: 5000     # Reduced training steps
+  batch_size: 8
+  learning_rate: 0.001
+  eval_interval: 200
+  eval_iterations: 50
+
