@@ -380,10 +380,10 @@ def plot_bigram_probability_heatmap(model, itos, save_path=None):
         plt.close()
     else:
         plt.show()
-def plot_learning_curve(steps, train_losses, val_losses, rule_accuracy_history=None, save_path=None, eval_interval=None):
+def plot_learning_curve(steps, train_losses, val_losses, rule_error_history=None, save_path=None, eval_interval=None):
     """
-    Plot learning curve with loss and optionally rule accuracy on the same figure.
-    Uses dual y-axes: left for loss, right for accuracy.
+    Plot learning curve with loss and optionally rule error on the same figure.
+    Uses dual y-axes: left for loss, right for error (both should decrease).
     """
     fig, ax1 = plt.subplots(figsize=(12, 6))
     
@@ -396,12 +396,12 @@ def plot_learning_curve(steps, train_losses, val_losses, rule_accuracy_history=N
     ax1.tick_params(axis='y', labelcolor=color1)
     ax1.grid(True, alpha=0.3)
     
-    # Right y-axis: Rule Accuracy (if provided)
-    if rule_accuracy_history is not None:
+    # Right y-axis: Rule Error (if provided)
+    if rule_error_history is not None:
         ax2 = ax1.twinx()
-        color2 = 'tab:green'
-        ax2.set_ylabel("Rule Accuracy (fraction of positions following the rule)", color=color2, fontsize=11)
-        line3 = ax2.plot(steps, rule_accuracy_history, label="Rule Accuracy", color=color2, linewidth=2, linestyle='--')
+        color2 = 'tab:red'
+        ax2.set_ylabel("Rule Error (fraction of constrained positions wrong)", color=color2, fontsize=11)
+        line3 = ax2.plot(steps, rule_error_history, label="Rule Error", color=color2, linewidth=2, linestyle='--')
         ax2.tick_params(axis='y', labelcolor=color2)
         ax2.set_ylim(0, 1.05)
         
@@ -410,7 +410,7 @@ def plot_learning_curve(steps, train_losses, val_losses, rule_accuracy_history=N
         labels = [l.get_label() for l in lines]
         ax1.legend(lines, labels, loc='best')
         
-        plt.title("Learning Curve: Loss and Rule Accuracy During Training", fontsize=13)
+        plt.title("Learning Curve: Loss and Rule Error During Training", fontsize=13)
     else:
         ax1.legend(loc='best')
         plt.title("Learning Curve: Training vs Validation Loss", fontsize=13)
@@ -2325,15 +2325,16 @@ def estimate_loss(model, train_sequences, val_sequences, block_size, batch_size,
     return out
 
 @torch.no_grad()
-def estimate_rule_accuracy(model, generator, decode, block_size, num_samples=20, seq_length=30):
+def estimate_rule_error(model, generator, decode, block_size, num_samples=20, seq_length=30):
     """
-    Generate sequences and check rule accuracy.
-    Returns the fraction of positions that follow the rule.
+    Generate sequences and check rule error.
+    Returns the fraction of CONSTRAINED positions that violate the rule.
+    For operator-based generators, only counts positions immediately after operators.
     """
     model.eval()
     
-    total_positions = 0
-    correct_positions = 0
+    total_constrained = 0
+    incorrect_constrained = 0
     
     vocab_size = model.token_embedding.weight.shape[0]
     
@@ -2347,11 +2348,22 @@ def estimate_rule_accuracy(model, generator, decode, block_size, num_samples=20,
         # Verify the sequence
         correctness, _ = generator.verify_sequence(generated_integers)
         
-        total_positions += len(correctness)
-        correct_positions += sum(correctness)
+        # For operator-based generators, only count positions after operators
+        if isinstance(generator, OperatorBasedGenerator):
+            for i, token in enumerate(generated_integers[:-1]):
+                if generator.is_operator(token):
+                    # Position i+1 is constrained by the rule
+                    if i + 1 < len(correctness):
+                        total_constrained += 1
+                        if correctness[i + 1] == 0:
+                            incorrect_constrained += 1
+        else:
+            # For non-operator generators, count all positions except first
+            total_constrained += len(correctness) - 1
+            incorrect_constrained += sum(1 for c in correctness[1:] if c == 0)
     
     model.train()
-    return correct_positions / total_positions if total_positions > 0 else 0.0
+    return incorrect_constrained / total_constrained if total_constrained > 0 else 0.0
 
 
 def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=None, num_sequences=5, max_length=30):
@@ -2744,7 +2756,7 @@ def main(config_name: str = "copy_modulo"):
     steps_for_plot = []
     train_loss_history = []
     val_loss_history = []
-    rule_accuracy_history = []
+    rule_error_history = []
 
     batch_size = training_config['batch_size']
     max_steps = training_config['max_steps']
@@ -2757,14 +2769,14 @@ def main(config_name: str = "copy_modulo"):
         # Evaluate occasionally
         if step % eval_interval == 0:
             losses = estimate_loss(model, train_sequences, val_sequences, block_size, batch_size, eval_iterations)
-            rule_acc = estimate_rule_accuracy(model, generator, decode, block_size, num_samples=20, seq_length=30)
+            rule_err = estimate_rule_error(model, generator, decode, block_size, num_samples=20, seq_length=30)
 
             steps_for_plot.append(step)
             train_loss_history.append(losses["train"])
             val_loss_history.append(losses["validation"])
-            rule_accuracy_history.append(rule_acc)
+            rule_error_history.append(rule_err)
 
-            print(f"step {step}: train loss {losses['train']:.4f}, val loss {losses['validation']:.4f}, rule acc {rule_acc:.4f}", flush=True)
+            print(f"step {step}: train loss {losses['train']:.4f}, val loss {losses['validation']:.4f}, rule err {rule_err:.4f}", flush=True)
 
         # One batch
         X, Y = get_batch_from_sequences(train_sequences, block_size, batch_size)
@@ -2780,7 +2792,7 @@ def main(config_name: str = "copy_modulo"):
 
     # 4) Show results
     print("Final loss:", loss.item(), flush=True)
-    print(f"Final rule accuracy: {rule_accuracy_history[-1]:.4f}" if rule_accuracy_history else "", flush=True)
+    print(f"Final rule error: {rule_error_history[-1]:.4f}" if rule_error_history else "", flush=True)
 
     # Generate multiple integer sequences
     num_sequences_to_generate = 10  # Number of sequences to generate
@@ -2805,7 +2817,7 @@ def main(config_name: str = "copy_modulo"):
     # 5) Plots - keep only: QKV (2 rows: weights W_Q/W_K/W_V, activations Q/K/V), embeddings (1x3: raw/hierarchical/PCA), attention matrix, output matrix, learning curve
     # Combined learning curve with loss and rule accuracy
     plot_learning_curve(steps_for_plot, train_loss_history, val_loss_history, 
-                       rule_accuracy_history=rule_accuracy_history,
+                       rule_error_history=rule_error_history,
                        save_path=os.path.join(plots_dir, "learning_curve.png"), 
                        eval_interval=eval_interval)
     
