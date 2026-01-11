@@ -775,11 +775,12 @@ def plot_embeddings_pca(model, itos, save_path=None):
     W_K = np.stack(Wk_all, axis=0).mean(axis=0).T  # (C, hs)
     W_V = np.stack(Wv_all, axis=0).mean(axis=0).T  # (C, hs)
     
-    # Create figure: 3 rows, 3 columns
+    # Create figure: 4 rows, 3 columns
     # Row 1: Token embeddings (raw, clustered, PCA)
     # Row 2: Position embeddings (raw, clustered, PCA)
     # Row 3: QKV weights (W_Q, W_K, W_V)
-    fig, axes = plt.subplots(3, 3, figsize=(18, 14))
+    # Row 4: Token+Position embeddings (dim 0 heatmap, dim 1 heatmap, PCA)
+    fig, axes = plt.subplots(4, 3, figsize=(18, 18))
     
     # Row 1: Token embeddings
     # Embeddings heatmap
@@ -803,7 +804,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
     if n_embd >= 2:
         _, _, Vt = np.linalg.svd(X_emb, full_matrices=False)
         X2 = X_emb @ Vt[:2].T
-        sc = ax3.scatter(X2[:, 0], X2[:, 1], c=clusters, s=45, alpha=0.85, cmap="tab10")
+        sc = ax3.scatter(X2[:, 0], X2[:, 1], c=clusters, s=0, alpha=0.85, cmap="tab10")
         ax3.set_title(f"Token Embeddings PCA 2D (vocab={vocab_size})", fontsize=11)
         ax3.set_xlabel("PC1")
         ax3.set_ylabel("PC2")
@@ -815,7 +816,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
     else:
         # For 1D embeddings, just plot the single dimension
         X1 = X_emb[:, 0]
-        sc = ax3.scatter(X1, np.zeros_like(X1), c=clusters, s=45, alpha=0.85, cmap="tab10")
+        sc = ax3.scatter(X1, np.zeros_like(X1), c=clusters, s=0, alpha=0.85, cmap="tab10")
         ax3.set_title(f"Token Embeddings 1D (vocab={vocab_size})", fontsize=11)
         ax3.set_xlabel("Embedding value")
         ax3.set_ylabel("")
@@ -849,7 +850,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
     if n_embd >= 2:
         _, _, Vt_pos = np.linalg.svd(X_pos, full_matrices=False)
         X2_pos = X_pos @ Vt_pos[:2].T
-        sc_pos = ax6.scatter(X2_pos[:, 0], X2_pos[:, 1], c=clusters_pos, s=45, alpha=0.85, cmap="tab10")
+        sc_pos = ax6.scatter(X2_pos[:, 0], X2_pos[:, 1], c=clusters_pos, s=0, alpha=0.85, cmap="tab10")
         ax6.set_title(f"Position Embeddings PCA 2D (block_size={block_size})", fontsize=11)
         ax6.set_xlabel("PC1")
         ax6.set_ylabel("PC2")
@@ -861,7 +862,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
     else:
         # For 1D embeddings, just plot the single dimension
         X1_pos = X_pos[:, 0]
-        sc_pos = ax6.scatter(X1_pos, np.arange(block_size), c=clusters_pos, s=45, alpha=0.85, cmap="tab10")
+        sc_pos = ax6.scatter(X1_pos, np.arange(block_size), c=clusters_pos, s=0, alpha=0.85, cmap="tab10")
         ax6.set_title(f"Position Embeddings 1D (block_size={block_size})", fontsize=11)
         ax6.set_xlabel("Embedding value")
         ax6.set_ylabel("Position index")
@@ -898,6 +899,92 @@ def plot_embeddings_pca(model, itos, save_path=None):
     ax9.set_title(f"W_V (C×hs={W_V.shape[0]}×{W_V.shape[1]})", fontsize=11)
     ax9.set_xlabel("hs")
     ax9.set_ylabel("C")
+    
+    # Row 4: Token+Position embeddings (heatmaps for each dimension, then PCA)
+    # Create all token-position combinations (only for tokens 0-9 for easier visualization)
+    max_token_idx = min(10, vocab_size)  # Only show tokens 0-9
+    num_combinations = max_token_idx * block_size
+    all_combinations = np.zeros((num_combinations, n_embd))
+    
+    for token_idx in range(max_token_idx):
+        for pos_idx in range(block_size):
+            idx = token_idx * block_size + pos_idx
+            all_combinations[idx] = embeddings[token_idx] + pos_emb_all[pos_idx]
+    
+    # Column 1: Heatmap for dimension 0 (rows: tokens, columns: positions)
+    ax10 = axes[3, 0]
+    dim0_heatmap = np.zeros((max_token_idx, block_size))
+    for token_idx in range(max_token_idx):
+        for pos_idx in range(block_size):
+            idx = token_idx * block_size + pos_idx
+            dim0_heatmap[token_idx, pos_idx] = all_combinations[idx, 0]
+    
+    token_labels = [itos[i] for i in range(max_token_idx)]
+    pos_labels = [f"p{i}" for i in range(block_size)]
+    sns.heatmap(dim0_heatmap, yticklabels=token_labels, xticklabels=pos_labels, cmap="RdBu_r", center=0, ax=ax10)
+    ax10.set_title(f"Token+Position: Dim 0 (tokens×positions)", fontsize=11)
+    ax10.set_xlabel("Position")
+    ax10.set_ylabel("Token")
+    
+    # Column 2: Heatmap for dimension 1 (rows: tokens, columns: positions)
+    ax11 = axes[3, 1]
+    if n_embd >= 2:
+        dim1_heatmap = np.zeros((max_token_idx, block_size))
+        for token_idx in range(max_token_idx):
+            for pos_idx in range(block_size):
+                idx = token_idx * block_size + pos_idx
+                dim1_heatmap[token_idx, pos_idx] = all_combinations[idx, 1]
+        
+        sns.heatmap(dim1_heatmap, yticklabels=token_labels, xticklabels=pos_labels, cmap="RdBu_r", center=0, ax=ax11)
+        ax11.set_title(f"Token+Position: Dim 1 (tokens×positions)", fontsize=11)
+        ax11.set_xlabel("Position")
+        ax11.set_ylabel("Token")
+    else:
+        # For 1D embeddings, just show a placeholder or repeat dim 0
+        ax11.text(0.5, 0.5, "N/A (1D embeddings)", ha='center', va='center', transform=ax11.transAxes)
+        ax11.set_title("Token+Position: Dim 1 (N/A)", fontsize=11)
+    
+    # Column 3: PCA of all token-position combinations
+    ax12 = axes[3, 2]
+    if n_embd >= 2:
+        X_comb = all_combinations.astype(np.float64)
+        X_comb = X_comb - X_comb.mean(axis=0, keepdims=True)
+        _, _, Vt_comb = np.linalg.svd(X_comb, full_matrices=False)
+        X2_comb = X_comb @ Vt_comb[:2].T
+        
+        # Plot with s=0 so only annotations are visible
+        ax12.scatter(X2_comb[:, 0], X2_comb[:, 1], s=0, alpha=0)
+        labels_comb = []
+        for token_idx in range(max_token_idx):
+            token_str = str(itos[token_idx])
+            for pos_idx in range(block_size):
+                labels_comb.append(f"{token_str}p{pos_idx}")  # No underscore
+        
+        for i in range(len(labels_comb)):
+            ax12.text(X2_comb[i, 0], X2_comb[i, 1], labels_comb[i], fontsize=6, ha='center', va='center')
+        
+        ax12.set_title(f"Token+Position: PCA (tokens 0-9)", fontsize=11)
+        ax12.set_xlabel("PC1")
+        ax12.set_ylabel("PC2")
+        ax12.grid(True, alpha=0.2)
+    else:
+        # For 1D embeddings
+        X1_comb = all_combinations[:, 0]
+        ax12.scatter(X1_comb, np.zeros_like(X1_comb), s=0, alpha=0)
+        labels_comb = []
+        for token_idx in range(max_token_idx):
+            token_str = str(itos[token_idx])
+            for pos_idx in range(block_size):
+                labels_comb.append(f"{token_str}p{pos_idx}")  # No underscore
+        
+        for i in range(len(labels_comb)):
+            ax12.text(X1_comb[i], 0, labels_comb[i], fontsize=6, ha='center', va='center', rotation=90)
+        
+        ax12.set_title(f"Token+Position: 1D (tokens 0-9)", fontsize=11)
+        ax12.set_xlabel("Embedding value")
+        ax12.set_ylabel("")
+        ax12.grid(True, alpha=0.2)
+        ax12.set_yticks([])
     
     plt.tight_layout()
     if save_path:
@@ -1058,6 +1145,190 @@ def plot_weights_qkv(model, X, itos, save_path=None, sequence_str=None):
         fig.suptitle(sequence_str, fontsize=14, y=0.995)
     
     plt.tight_layout(rect=[0, 0, 1, 0.98])  # Leave space for supertitle
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150)
+        plt.close()
+    else:
+        plt.show()
+    model.train()
+
+@torch.no_grad()
+def plot_qkv_transformations(model, itos, save_path=None):
+    """
+    Plot QKV weights and their transformations of all token-position combinations.
+    Row 1: W_Q, W_K, W_V weights
+    Row 2: All token-position combinations transformed by Q, K, V respectively
+    """
+    model.eval()
+    
+    # Get token and position embeddings
+    embeddings = model.token_embedding.weight.detach().cpu().numpy()  # (vocab, N_EMBD)
+    vocab_size, n_embd = embeddings.shape
+    block_size = model.block_size
+    pos_emb_all = model.position_embedding_table.weight.detach().cpu().numpy()  # (block_size, n_embd)
+    
+    # Get QKV weights - average across heads
+    Wq_all, Wk_all, Wv_all = [], [], []
+    for h in model.sa_heads.heads:
+        Wq_all.append(h.query.weight.cpu().numpy())  # (hs, C)
+        Wk_all.append(h.key.weight.cpu().numpy())    # (hs, C)
+        Wv_all.append(h.value.weight.cpu().numpy())  # (hs, C)
+    
+    # Average weights across heads
+    W_Q = np.stack(Wq_all, axis=0).mean(axis=0)  # (hs, C)
+    W_K = np.stack(Wk_all, axis=0).mean(axis=0)  # (hs, C)
+    W_V = np.stack(Wv_all, axis=0).mean(axis=0)  # (hs, C)
+    
+    head_size = W_Q.shape[0]
+    
+    # Create all token-position combinations (only for tokens 0-9 for easier visualization)
+    max_token_idx = min(10, vocab_size)  # Only show tokens 0-9
+    num_combinations = max_token_idx * block_size
+    all_combinations = np.zeros((num_combinations, n_embd))
+    labels = []
+    
+    for token_idx in range(max_token_idx):
+        token_str = str(itos[token_idx])
+        for pos_idx in range(block_size):
+            idx = token_idx * block_size + pos_idx
+            all_combinations[idx] = embeddings[token_idx] + pos_emb_all[pos_idx]
+            labels.append(f"{token_str}p{pos_idx}")  # No underscore
+    
+    # Transform by Q, K, V
+    # all_combinations is (N, n_embd), W_Q is (hs, n_embd)
+    # Transform: (N, n_embd) @ (n_embd, hs) = (N, hs) -> transpose W_Q first
+    Q_transformed = all_combinations @ W_Q.T  # (N, hs)
+    K_transformed = all_combinations @ W_K.T  # (N, hs)
+    V_transformed = all_combinations @ W_V.T  # (N, hs)
+    
+    # Create figure: 3 rows, 3 columns
+    # Row 1: Original token+position embeddings (spanning all 3 columns)
+    # Row 2: QKV weights
+    # Row 3: Transformed token-position combinations
+    fig = plt.figure(figsize=(24, 20))
+    gs = GridSpec(3, 3, figure=fig, hspace=0.4, wspace=0.3)
+    
+    # Row 1: Original token+position embeddings (spanning all 3 columns)
+    ax0 = fig.add_subplot(gs[0, :])
+    if n_embd >= 2:
+        # Plot original embeddings in first 2 dimensions
+        X_orig = all_combinations[:, [0, 1]]
+        ax0.scatter(X_orig[:, 0], X_orig[:, 1], s=0, alpha=0)
+        for i in range(len(labels)):
+            ax0.text(X_orig[i, 0], X_orig[i, 1], labels[i], fontsize=6, ha='center', va='center')
+        ax0.set_title(f"Original Token+Position Embeddings: Dim 0 vs Dim 1\n(Tokens 0-9, {num_combinations} combinations)", fontsize=12)
+        ax0.set_xlabel("Embedding Dim 0")
+        ax0.set_ylabel("Embedding Dim 1")
+        ax0.grid(True, alpha=0.3)
+        ax0.axis('equal')
+    else:
+        # 1D case
+        X_orig_1d = all_combinations[:, 0]
+        ax0.scatter(X_orig_1d, np.zeros_like(X_orig_1d), s=0, alpha=0)
+        for i in range(len(labels)):
+            ax0.text(X_orig_1d[i], 0, labels[i], fontsize=6, ha='center', va='center', rotation=90)
+        ax0.set_title(f"Original Token+Position Embeddings: Dim 0\n(Tokens 0-9, {num_combinations} combinations)", fontsize=12)
+        ax0.set_xlabel("Embedding Dim 0")
+        ax0.set_ylabel("")
+        ax0.grid(True, alpha=0.3)
+        ax0.set_yticks([])
+    
+    # Row 2: QKV weights
+    # W_Q
+    ax1 = fig.add_subplot(gs[1, 0])
+    x_labels = list(range(n_embd))
+    y_labels_local = list(range(head_size))
+    sns.heatmap(W_Q, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax1)
+    ax1.set_title(f"W_Q (hs×C={head_size}×{n_embd})", fontsize=12)
+    ax1.set_xlabel("C (embedding dim)")
+    ax1.set_ylabel("hs (head_size)")
+    
+    # W_K
+    ax2 = fig.add_subplot(gs[1, 1])
+    sns.heatmap(W_K, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax2)
+    ax2.set_title(f"W_K (hs×C={head_size}×{n_embd})", fontsize=12)
+    ax2.set_xlabel("C (embedding dim)")
+    ax2.set_ylabel("hs (head_size)")
+    
+    # W_V
+    ax3 = fig.add_subplot(gs[1, 2])
+    sns.heatmap(W_V, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax3)
+    ax3.set_title(f"W_V (hs×C={head_size}×{n_embd})", fontsize=12)
+    ax3.set_xlabel("C (embedding dim)")
+    ax3.set_ylabel("hs (head_size)")
+    
+    # Row 3: Transformed token-position combinations
+    # Q-transformed
+    ax4 = fig.add_subplot(gs[2, 0])
+    if head_size >= 2:
+        Q_2d = Q_transformed[:, [0, 1]]
+        ax4.scatter(Q_2d[:, 0], Q_2d[:, 1], s=0, alpha=0)
+        for i in range(len(labels)):
+            ax4.text(Q_2d[i, 0], Q_2d[i, 1], labels[i], fontsize=7, ha='center', va='center')
+        ax4.set_title(f"Q-Transformed: Dim 0 vs Dim 1\n(Tokens 0-9, {num_combinations} combinations)", fontsize=12)
+        ax4.set_xlabel("Head Dim 0")
+        ax4.set_ylabel("Head Dim 1")
+        ax4.grid(True, alpha=0.3)
+        ax4.axis('equal')
+    else:
+        # 1D case
+        Q_1d = Q_transformed[:, 0]
+        ax4.scatter(Q_1d, np.zeros_like(Q_1d), s=0, alpha=0)
+        for i in range(len(labels)):
+            ax4.text(Q_1d[i], 0, labels[i], fontsize=7, ha='center', va='center', rotation=90)
+        ax4.set_title(f"Q-Transformed: Dim 0\n(Tokens 0-9, {num_combinations} combinations)", fontsize=12)
+        ax4.set_xlabel("Head Dim 0")
+        ax4.set_ylabel("")
+        ax4.grid(True, alpha=0.3)
+        ax4.set_yticks([])
+    
+    # K-transformed
+    ax5 = fig.add_subplot(gs[2, 1])
+    if head_size >= 2:
+        K_2d = K_transformed[:, [0, 1]]
+        ax5.scatter(K_2d[:, 0], K_2d[:, 1], s=0, alpha=0)
+        for i in range(len(labels)):
+            ax5.text(K_2d[i, 0], K_2d[i, 1], labels[i], fontsize=7, ha='center', va='center')
+        ax5.set_title(f"K-Transformed: Dim 0 vs Dim 1\n(Tokens 0-9, {num_combinations} combinations)", fontsize=12)
+        ax5.set_xlabel("Head Dim 0")
+        ax5.set_ylabel("Head Dim 1")
+        ax5.grid(True, alpha=0.3)
+        ax5.axis('equal')
+    else:
+        K_1d = K_transformed[:, 0]
+        ax5.scatter(K_1d, np.zeros_like(K_1d), s=0, alpha=0)
+        for i in range(len(labels)):
+            ax5.text(K_1d[i], 0, labels[i], fontsize=7, ha='center', va='center', rotation=90)
+        ax5.set_title(f"K-Transformed: Dim 0\n(Tokens 0-9, {num_combinations} combinations)", fontsize=12)
+        ax5.set_xlabel("Head Dim 0")
+        ax5.set_ylabel("")
+        ax5.grid(True, alpha=0.3)
+        ax5.set_yticks([])
+    
+    # V-transformed
+    ax6 = fig.add_subplot(gs[2, 2])
+    if head_size >= 2:
+        V_2d = V_transformed[:, [0, 1]]
+        ax6.scatter(V_2d[:, 0], V_2d[:, 1], s=0, alpha=0)
+        for i in range(len(labels)):
+            ax6.text(V_2d[i, 0], V_2d[i, 1], labels[i], fontsize=7, ha='center', va='center')
+        ax6.set_title(f"V-Transformed: Dim 0 vs Dim 1\n(Tokens 0-9, {num_combinations} combinations)", fontsize=12)
+        ax6.set_xlabel("Head Dim 0")
+        ax6.set_ylabel("Head Dim 1")
+        ax6.grid(True, alpha=0.3)
+        ax6.axis('equal')
+    else:
+        V_1d = V_transformed[:, 0]
+        ax6.scatter(V_1d, np.zeros_like(V_1d), s=0, alpha=0)
+        for i in range(len(labels)):
+            ax6.text(V_1d[i], 0, labels[i], fontsize=7, ha='center', va='center', rotation=90)
+        ax6.set_title(f"V-Transformed: Dim 0\n(Tokens 0-9, {num_combinations} combinations)", fontsize=12)
+        ax6.set_xlabel("Head Dim 0")
+        ax6.set_ylabel("")
+        ax6.grid(True, alpha=0.3)
+        ax6.set_yticks([])
+    
+    plt.tight_layout()
     if save_path:
         plt.savefig(save_path, bbox_inches='tight', dpi=150)
         plt.close()
@@ -2465,6 +2736,7 @@ def main(config_name: str = "copy_modulo"):
     # Plot QKV for multiple sequences (shown as rows)
     plot_weights_qkv_two_sequences(model, X_list, itos, save_path=os.path.join(plots_dir, "qkv.png"), num_sequences=3)
     plot_embeddings_pca(model, itos, save_path=os.path.join(plots_dir, "embeddings.png"))
+    plot_qkv_transformations(model, itos, save_path=os.path.join(plots_dir, "qkv_transformations.png"))
     plot_attention_matrix(model, X_list, itos, save_path=os.path.join(plots_dir, "attention_matrix.png"), num_sequences=3)
     plot_output_matrix(model, X_fixed, itos, save_path=os.path.join(plots_dir, "output_matrix.png"))
     plot_learned_lookup(model, vocab_size, itos, save_path=os.path.join(plots_dir, "learned_lookup.png"))
