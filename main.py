@@ -1251,12 +1251,14 @@ def plot_qkv_transformations(model, itos, save_path=None):
     K_transformed = all_combinations @ W_K.T  # (N, hs)
     V_transformed = all_combinations @ W_V.T  # (N, hs)
     
-    # Create figure: 3 rows, 3 columns
+    # Create figure: 5 rows, 3 columns
     # Row 1: Original token+position embeddings (spanning all 3 columns)
     # Row 2: QKV weights
-    # Row 3: Transformed token-position combinations
-    fig = plt.figure(figsize=(24, 20))
-    gs = GridSpec(3, 3, figure=fig, hspace=0.4, wspace=0.3)
+    # Row 3: Transformed token-position combinations (scatter)
+    # Row 4: Q/K/V Dim 0 heatmaps (tokens × positions)
+    # Row 5: Q/K/V Dim 1 heatmaps (tokens × positions)
+    fig = plt.figure(figsize=(24, 32))
+    gs = GridSpec(5, 3, figure=fig, hspace=0.4, wspace=0.3)
     
     # Row 1: Original token+position embeddings (spanning all 3 columns)
     ax0 = fig.add_subplot(gs[0, :])
@@ -1377,6 +1379,68 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax6.set_ylabel("")
         ax6.grid(True, alpha=0.3)
         ax6.set_yticks([])
+    
+    # Row 4: Q/K/V Dim 0 heatmaps (tokens × positions)
+    # Create heatmap data: reshape transformed values into (tokens, positions) grid
+    token_labels = [str(itos[i]) for i in range(vocab_size)]
+    pos_labels = [f"p{i}" for i in range(block_size)]
+    
+    # Q Dim 0 heatmap
+    ax7 = fig.add_subplot(gs[3, 0])
+    Q_dim0_heatmap = Q_transformed[:, 0].reshape(vocab_size, block_size)
+    sns.heatmap(Q_dim0_heatmap, cmap="RdBu_r", center=0, xticklabels=pos_labels, yticklabels=token_labels, cbar=True, ax=ax7)
+    ax7.set_title(f"Q-Transformed: Dim 0 (tokens×positions)", fontsize=12)
+    ax7.set_xlabel("Position")
+    ax7.set_ylabel("Token")
+    
+    # K Dim 0 heatmap
+    ax8 = fig.add_subplot(gs[3, 1])
+    K_dim0_heatmap = K_transformed[:, 0].reshape(vocab_size, block_size)
+    sns.heatmap(K_dim0_heatmap, cmap="RdBu_r", center=0, xticklabels=pos_labels, yticklabels=token_labels, cbar=True, ax=ax8)
+    ax8.set_title(f"K-Transformed: Dim 0 (tokens×positions)", fontsize=12)
+    ax8.set_xlabel("Position")
+    ax8.set_ylabel("Token")
+    
+    # V Dim 0 heatmap
+    ax9 = fig.add_subplot(gs[3, 2])
+    V_dim0_heatmap = V_transformed[:, 0].reshape(vocab_size, block_size)
+    sns.heatmap(V_dim0_heatmap, cmap="RdBu_r", center=0, xticklabels=pos_labels, yticklabels=token_labels, cbar=True, ax=ax9)
+    ax9.set_title(f"V-Transformed: Dim 0 (tokens×positions)", fontsize=12)
+    ax9.set_xlabel("Position")
+    ax9.set_ylabel("Token")
+    
+    # Row 5: Q/K/V Dim 1 heatmaps (tokens × positions) - only if head_size >= 2
+    if head_size >= 2:
+        # Q Dim 1 heatmap
+        ax10 = fig.add_subplot(gs[4, 0])
+        Q_dim1_heatmap = Q_transformed[:, 1].reshape(vocab_size, block_size)
+        sns.heatmap(Q_dim1_heatmap, cmap="RdBu_r", center=0, xticklabels=pos_labels, yticklabels=token_labels, cbar=True, ax=ax10)
+        ax10.set_title(f"Q-Transformed: Dim 1 (tokens×positions)", fontsize=12)
+        ax10.set_xlabel("Position")
+        ax10.set_ylabel("Token")
+        
+        # K Dim 1 heatmap
+        ax11 = fig.add_subplot(gs[4, 1])
+        K_dim1_heatmap = K_transformed[:, 1].reshape(vocab_size, block_size)
+        sns.heatmap(K_dim1_heatmap, cmap="RdBu_r", center=0, xticklabels=pos_labels, yticklabels=token_labels, cbar=True, ax=ax11)
+        ax11.set_title(f"K-Transformed: Dim 1 (tokens×positions)", fontsize=12)
+        ax11.set_xlabel("Position")
+        ax11.set_ylabel("Token")
+        
+        # V Dim 1 heatmap
+        ax12 = fig.add_subplot(gs[4, 2])
+        V_dim1_heatmap = V_transformed[:, 1].reshape(vocab_size, block_size)
+        sns.heatmap(V_dim1_heatmap, cmap="RdBu_r", center=0, xticklabels=pos_labels, yticklabels=token_labels, cbar=True, ax=ax12)
+        ax12.set_title(f"V-Transformed: Dim 1 (tokens×positions)", fontsize=12)
+        ax12.set_xlabel("Position")
+        ax12.set_ylabel("Token")
+    else:
+        # For 1D head_size, show placeholder
+        for col in range(3):
+            ax = fig.add_subplot(gs[4, col])
+            ax.text(0.5, 0.5, "N/A (1D head_size)", ha='center', va='center', transform=ax.transAxes, fontsize=12)
+            ax.set_title(f"{'QKV'[col]}-Transformed: Dim 1 (N/A)", fontsize=12)
+            ax.axis('off')
     
     plt.tight_layout()
     if save_path:
