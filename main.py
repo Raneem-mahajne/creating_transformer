@@ -726,7 +726,7 @@ def get_multihead_snapshot_from_X(model, X, itos):
 @torch.no_grad()
 def plot_embeddings_pca(model, itos, save_path=None):
     """
-    Plot embeddings: token embeddings (heatmap, clustered, PCA), position embeddings, and QKV weights.
+    Plot embeddings: token embeddings (heatmap, clustered, PCA), position embeddings, and token+position combinations.
     """
     model.eval()
     
@@ -763,24 +763,11 @@ def plot_embeddings_pca(model, itos, save_path=None):
     X_pos = X_pos - X_pos.mean(axis=0, keepdims=True)
     clusters_pos = fcluster(Z_pos, t=6, criterion="maxclust")
     
-    # Get QKV weights - average across heads
-    Wq_all, Wk_all, Wv_all = [], [], []
-    for h in model.sa_heads.heads:
-        Wq_all.append(h.query.weight.cpu().numpy())  # (hs, C)
-        Wk_all.append(h.key.weight.cpu().numpy())    # (hs, C)
-        Wv_all.append(h.value.weight.cpu().numpy())  # (hs, C)
-    
-    # Average weights across heads and transpose for display (C, hs)
-    W_Q = np.stack(Wq_all, axis=0).mean(axis=0).T  # (C, hs)
-    W_K = np.stack(Wk_all, axis=0).mean(axis=0).T  # (C, hs)
-    W_V = np.stack(Wv_all, axis=0).mean(axis=0).T  # (C, hs)
-    
-    # Create figure: 4 rows, 3 columns
+    # Create figure: 3 rows, 3 columns
     # Row 1: Token embeddings (raw, clustered, PCA)
     # Row 2: Position embeddings (raw, clustered, PCA)
-    # Row 3: QKV weights (W_Q, W_K, W_V)
-    # Row 4: Token+Position embeddings (dim 0 heatmap, dim 1 heatmap, PCA)
-    fig, axes = plt.subplots(4, 3, figsize=(18, 18))
+    # Row 3: Token+Position embeddings (dim 0 heatmap, dim 1 heatmap, PCA)
+    fig, axes = plt.subplots(3, 3, figsize=(18, 14))
     
     # Row 1: Token embeddings
     # Embeddings heatmap
@@ -872,35 +859,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
                 ax6.text(X1_pos[i], i, f"p{i}", fontsize=8, ha='center')
         plt.colorbar(sc_pos, ax=ax6, label="Cluster ID")
     
-    # Row 3: QKV weights (W_Q, W_K, W_V)
-    # W_Q
-    ax7 = axes[2, 0]
-    x_labels = list(range(W_Q.shape[1]))
-    y_labels_local = list(range(W_Q.shape[0]))
-    sns.heatmap(W_Q, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax7)
-    ax7.set_title(f"W_Q (C×hs={W_Q.shape[0]}×{W_Q.shape[1]})", fontsize=11)
-    ax7.set_xlabel("hs")
-    ax7.set_ylabel("C")
-    
-    # W_K
-    ax8 = axes[2, 1]
-    x_labels = list(range(W_K.shape[1]))
-    y_labels_local = list(range(W_K.shape[0]))
-    sns.heatmap(W_K, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax8)
-    ax8.set_title(f"W_K (C×hs={W_K.shape[0]}×{W_K.shape[1]})", fontsize=11)
-    ax8.set_xlabel("hs")
-    ax8.set_ylabel("C")
-    
-    # W_V
-    ax9 = axes[2, 2]
-    x_labels = list(range(W_V.shape[1]))
-    y_labels_local = list(range(W_V.shape[0]))
-    sns.heatmap(W_V, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax9)
-    ax9.set_title(f"W_V (C×hs={W_V.shape[0]}×{W_V.shape[1]})", fontsize=11)
-    ax9.set_xlabel("hs")
-    ax9.set_ylabel("C")
-    
-    # Row 4: Token+Position embeddings (heatmaps for each dimension, then PCA)
+    # Row 3: Token+Position embeddings (heatmaps for each dimension, then PCA)
     # Create all token-position combinations (ALL tokens including special characters)
     max_token_idx = vocab_size  # Show all tokens including special characters
     num_combinations = max_token_idx * block_size
@@ -912,7 +871,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
             all_combinations[idx] = embeddings[token_idx] + pos_emb_all[pos_idx]
     
     # Column 1: Heatmap for dimension 0 (rows: tokens, columns: positions)
-    ax10 = axes[3, 0]
+    ax10 = axes[2, 0]
     dim0_heatmap = np.zeros((max_token_idx, block_size))
     for token_idx in range(max_token_idx):
         for pos_idx in range(block_size):
@@ -927,7 +886,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
     ax10.set_ylabel("Token")
     
     # Column 2: Heatmap for dimension 1 (rows: tokens, columns: positions)
-    ax11 = axes[3, 1]
+    ax11 = axes[2, 1]
     if n_embd >= 2:
         dim1_heatmap = np.zeros((max_token_idx, block_size))
         for token_idx in range(max_token_idx):
@@ -945,7 +904,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
         ax11.set_title("Token+Position: Dim 1 (N/A)", fontsize=11)
     
     # Column 3: PCA of all token-position combinations
-    ax12 = axes[3, 2]
+    ax12 = axes[2, 2]
     if n_embd >= 2:
         X_comb = all_combinations.astype(np.float64)
         X_comb = X_comb - X_comb.mean(axis=0, keepdims=True)
@@ -2013,238 +1972,6 @@ def plot_attention_matrix(model, X_list, itos, save_path=None, num_sequences=3):
         plt.show()
     model.train()
 
-@torch.no_grad()
-def plot_position_embeddings(model, X_list, itos, save_path=None, num_sequences=3):
-    """
-    Plot token embeddings, positional embeddings, their sum, and PCAs for multiple sequences
-    Each sequence gets 2 rows: Row 1: Heatmaps (token, position, combined), Row 2: PCAs (token, position, combined)
-    
-    Args:
-        model: The model
-        X_list: List of input sequences, or single sequence (will be converted to list)
-        itos: Index to string mapping
-        save_path: Path to save figure
-        num_sequences: Number of sequences to show
-    """
-    model.eval()
-    
-    # Handle single sequence input
-    if not isinstance(X_list, list):
-        X_list = [X_list]
-    
-    # Use provided sequences up to num_sequences
-    sequences_to_plot = X_list[:num_sequences]
-    num_sequences = len(sequences_to_plot)
-    
-    # Get embedding dimension from the model
-    n_embd = model.position_embedding_table.weight.shape[1]
-    
-    # Create figure: (num_sequences * 2) rows, 3 columns
-    fig, axes = plt.subplots(num_sequences * 2, 3, figsize=(20, 6 * num_sequences))
-    if num_sequences == 1:
-        axes = axes.reshape(2, -1)
-    
-    for seq_idx, X in enumerate(sequences_to_plot):
-        B, T = X.shape
-        
-        # Get position indices (0, 1, 2, ..., T-1, wrapped by block_size)
-        positions = torch.arange(T, device=X.device) % model.block_size
-        positions_np = positions.cpu().numpy()  # (T,)
-        
-        # Get positional embeddings
-        pos_emb = model.position_embedding_table(positions)  # (T, n_embd)
-        pos_emb_np = pos_emb.detach().cpu().numpy()  # (T, n_embd)
-        
-        # Get token embeddings
-        token_emb = model.token_embedding(X)  # (B, T, n_embd)
-        token_emb_np = token_emb[0].detach().cpu().numpy()  # (T, n_embd)
-        
-        # Get sum (token + position)
-        combined_emb = token_emb + pos_emb  # (B, T, n_embd)
-        combined_emb_np = combined_emb[0].detach().cpu().numpy()  # (T, n_embd)
-        
-        # Get tokens for labels
-        tokens = [itos[i.item()] for i in X[0]]
-        
-        # Calculate row indices for this sequence
-        row_heatmap = seq_idx * 2
-        row_pca = seq_idx * 2 + 1
-        
-        # Get sequence string for title
-        seq_str = " ".join(tokens[:20])  # First 20 tokens
-        if len(tokens) > 20:
-            seq_str += "..."
-        
-        # Row 1: Heatmaps
-        # Token embeddings heatmap
-        ax1 = axes[row_heatmap, 0]
-        sns.heatmap(token_emb_np, cmap="RdBu_r", center=0, xticklabels=list(range(n_embd)),
-                    yticklabels=tokens, cbar=True, ax=ax1)
-        ax1.set_title(f"Token Embeddings (T×n_embd={T}×{n_embd}) - Seq {seq_idx+1}", fontsize=11)
-        ax1.set_xlabel("Embedding dim")
-        ax1.set_ylabel("Position (token)")
-        
-        # Positional embeddings heatmap
-        ax2 = axes[row_heatmap, 1]
-        sns.heatmap(pos_emb_np, cmap="RdBu_r", center=0, xticklabels=list(range(n_embd)),
-                    yticklabels=tokens, cbar=True, ax=ax2)
-        ax2.set_title(f"Positional Embeddings (T×n_embd={T}×{n_embd}) - Seq {seq_idx+1}", fontsize=11)
-        ax2.set_xlabel("Embedding dim")
-        ax2.set_ylabel("Position (token)")
-        
-        # Combined embeddings heatmap
-        ax3 = axes[row_heatmap, 2]
-        sns.heatmap(combined_emb_np, cmap="RdBu_r", center=0, xticklabels=list(range(n_embd)),
-                    yticklabels=tokens, cbar=True, ax=ax3)
-        ax3.set_title(f"Token + Position (T×n_embd={T}×{n_embd}) - Seq {seq_idx+1}", fontsize=11)
-        ax3.set_xlabel("Embedding dim")
-        ax3.set_ylabel("Position (token)")
-        
-        # Row 2: PCAs
-        def plot_pca(ax, data, title, color_by_position=True):
-            if n_embd >= 2:
-                X_data = data.astype(np.float64)
-                X_data = X_data - X_data.mean(axis=0, keepdims=True)
-                _, _, Vt = np.linalg.svd(X_data, full_matrices=False)
-                X2 = X_data @ Vt[:2].T
-                colors = positions_np if color_by_position else np.arange(T)
-                sc = ax.scatter(X2[:, 0], X2[:, 1], c=colors, s=100, alpha=0.7, cmap="viridis")
-                ax.set_title(title, fontsize=11)
-                ax.set_xlabel("PC1")
-                ax.set_ylabel("PC2")
-                ax.grid(True, alpha=0.2)
-                for i, token in enumerate(tokens):
-                    ax.text(X2[i, 0], X2[i, 1], token, fontsize=8, ha='center', va='center')
-                plt.colorbar(sc, ax=ax, label="Position mod k")
-            else:
-                X1 = data[:, 0]
-                sc = ax.scatter(X1, positions_np, c=positions_np, s=100, alpha=0.7, cmap="viridis")
-                ax.set_title(title, fontsize=11)
-                ax.set_xlabel("Embedding value")
-                ax.set_ylabel("Position index")
-                ax.grid(True, alpha=0.2)
-                for i, token in enumerate(tokens):
-                    ax.text(X1[i], positions_np[i], token, fontsize=8, ha='center', va='bottom')
-                plt.colorbar(sc, ax=ax, label="Position index")
-        
-        # PCA of token embeddings
-        plot_pca(axes[row_pca, 0], token_emb_np, f"PCA: Token Embeddings (T={T}) - Seq {seq_idx+1}")
-        
-        # PCA of positional embeddings
-        plot_pca(axes[row_pca, 1], pos_emb_np, f"PCA: Positional Embeddings (T={T}) - Seq {seq_idx+1}")
-        
-        # PCA of combined embeddings
-        plot_pca(axes[row_pca, 2], combined_emb_np, f"PCA: Combined Embeddings (T={T}) - Seq {seq_idx+1}")
-    
-    plt.tight_layout()
-    if save_path:
-        plt.savefig(save_path, bbox_inches='tight', dpi=150)
-        plt.close()
-    else:
-        plt.show()
-    model.train()
-
-@torch.no_grad()
-def plot_learned_lookup(model, vocab_size, itos, save_path=None):
-    """
-    Plot what the model predicts for each input token (the learned lookup table).
-    This directly shows the V matrix's role in encoding token-to-token mappings.
-    """
-    model.eval()
-    device = next(model.parameters()).device
-    
-    # Create a sequence with each token appearing once, with context
-    # We'll query position 1 for each pair (context_token, query_token)
-    predictions = np.zeros((vocab_size, vocab_size))
-    
-    # For each possible input token, what does the model predict next?
-    for token in range(vocab_size):
-        # Create input: [token] and predict next
-        # Use a minimal context with just the token
-        x = torch.tensor([[token]], dtype=torch.long, device=device)
-        logits, _ = model(x)
-        probs = torch.softmax(logits[0, 0], dim=-1).cpu().numpy()
-        predictions[token] = probs
-    
-    # Find the argmax prediction for each token
-    predicted_next = np.argmax(predictions, axis=1)
-    
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
-    
-    # Left: Probability matrix (what probabilities does model assign)
-    ax1 = axes[0]
-    sns.heatmap(predictions, cmap="viridis", xticklabels=[itos[i] for i in range(vocab_size)],
-                yticklabels=[itos[i] for i in range(vocab_size)], cbar=True, ax=ax1,
-                vmin=0, vmax=1)
-    ax1.set_title("Learned Lookup Table\n(P(next_token | current_token))", fontsize=12)
-    ax1.set_xlabel("Predicted Next Token")
-    ax1.set_ylabel("Current Token")
-    
-    # Right: The argmax mapping as a simple table
-    ax2 = axes[1]
-    # Create a mapping visualization
-    mapping_text = "Learned Mapping:\n\n"
-    for i in range(vocab_size):
-        pred = predicted_next[i]
-        conf = predictions[i, pred] * 100
-        mapping_text += f"{itos[i]} → {itos[pred]} ({conf:.1f}%)\n"
-    
-    ax2.text(0.1, 0.95, mapping_text, transform=ax2.transAxes, fontsize=11,
-             verticalalignment='top', fontfamily='monospace',
-             bbox=dict(boxstyle='round', facecolor='lightgray', alpha=0.8))
-    ax2.axis('off')
-    ax2.set_title("Token Mappings (argmax)", fontsize=12)
-    
-    plt.tight_layout()
-    if save_path:
-        plt.savefig(save_path, bbox_inches='tight', dpi=150)
-        plt.close()
-    else:
-        plt.show()
-    model.train()
-
-
-@torch.no_grad()
-def plot_output_matrix(model, X, itos, save_path=None):
-    """
-    Plot output matrix after attention (averaged across heads)
-    """
-    model.eval()
-    B, T = X.shape
-    
-    # Get embeddings and positional encodings
-    token_emb = model.token_embedding(X)
-    pos = torch.arange(T, device=X.device) % model.block_size
-    pos_emb = model.position_embedding_table(pos)
-    x = token_emb + pos_emb
-    
-    # Get output from all heads
-    out_all = []
-    for h in model.sa_heads.heads:
-        out, _ = h(x)  # out: (B, T, head_size)
-        out_all.append(out[0].cpu().numpy())  # (T, head_size)
-    
-    # Average across heads
-    output_matrix = np.stack(out_all, axis=0).mean(axis=0)  # (T, head_size)
-    
-    # Plot
-    plt.figure(figsize=(8, 7))
-    x_labels = list(range(output_matrix.shape[1]))
-    y_labels = list(range(output_matrix.shape[0]))
-    sns.heatmap(output_matrix, cmap="viridis", 
-                xticklabels=x_labels, yticklabels=y_labels, cbar=True)
-    plt.title(f"Output Matrix (T×hs={T}×{output_matrix.shape[1]})", fontsize=12)
-    plt.xlabel("Head dimension (hs)")
-    plt.ylabel("Time position (T)")
-    plt.tight_layout()
-    
-    if save_path:
-        plt.savefig(save_path)
-        plt.close()
-    else:
-        plt.show()
-    model.train()
-
 def plot_embedding_triplet_matrix(model, X, itos, title="Embeddings: pos, token, x", save_path=None):
     model.eval()
     B, T = X.shape
@@ -2842,9 +2569,6 @@ def main(config_name: str = "copy_modulo"):
     plot_qkv_transformations(model, itos, save_path=os.path.join(plots_dir, "qkv_transformations.png"))
     plot_token_position_embedding_space(model, itos, save_path=os.path.join(plots_dir, "token_position_embedding_space.png"))
     plot_attention_matrix(model, X_list, itos, save_path=os.path.join(plots_dir, "attention_matrix.png"), num_sequences=3)
-    plot_output_matrix(model, X_fixed, itos, save_path=os.path.join(plots_dir, "output_matrix.png"))
-    plot_learned_lookup(model, vocab_size, itos, save_path=os.path.join(plots_dir, "learned_lookup.png"))
-    plot_position_embeddings(model, X_list, itos, save_path=os.path.join(plots_dir, "position_embeddings.png"), num_sequences=3)
 
 
 
