@@ -1,0 +1,33 @@
+# Configuration file for PlusMaxOfTwoRule
+# Rule: If you see a '+' operator, the next number must be the larger of the previous two numbers.
+# Example: 5, 3, +, 5, 7, 2, +, 7, ...
+#                ^-- max(5,3)=5    ^-- max(7,2)=7
+
+# Configuration name (used for output folder)
+name: "plus_max_of_two"
+
+# Data generation configuration
+data:
+  generator_type: "PlusMaxOfTwoRule"
+  min_value: 0
+  max_value: 20
+  num_sequences: 2000
+  min_length: 20
+  max_length: 50
+  operator_probability: 0.3  # How often to insert a '+' operator
+
+# Model architecture
+model:
+  n_embd: 2           # Embedding dimension (minimal)
+  block_size: 8       # Context length (model needs to see previous two numbers for '+')
+  num_heads: 1       # Number of attention heads (minimal)
+  head_size: 3        # Head size (minimal)
+
+# Training configuration
+training:
+  max_steps: 100000    # Training steps (increased for longer training)
+  batch_size: 8
+  learning_rate: 0.001
+  eval_interval: 500  # Evaluate less frequently to reduce output
+  eval_iterations: 50
+

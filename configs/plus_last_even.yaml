@@ -1,0 +1,33 @@
+# Configuration file for PlusLastEvenRule
+# Rule: If you see a '+' operator, the next number must be the most recent even number before the '+'.
+# Example: 5, 3, 8, 7, +, 8, 11, 2, 4, +, 4, ...
+#                            ^-- last even=8    ^-- last even=4
+
+# Configuration name (used for output folder)
+name: "plus_last_even"
+
+# Data generation configuration
+data:
+  generator_type: "PlusLastEvenRule"
+  min_value: 0
+  max_value: 20
+  num_sequences: 2000
+  min_length: 20
+  max_length: 50
+  operator_probability: 0.3  # How often to insert a '+' operator
+
+# Model architecture
+model:
+  n_embd: 2           # Embedding dimension (minimal)
+  block_size: 16       # Context length (model needs to see previous even numbers for '+')
+  num_heads: 1        # Number of attention heads (minimal)
+  head_size: 2        # Head size (minimal)
+
+# Training configuration
+training:
+  max_steps: 50000    # Training steps
+  batch_size: 8
+  learning_rate: 0.001
+  eval_interval: 200
+  eval_iterations: 50
+

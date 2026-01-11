@@ -11,7 +11,7 @@ import numpy as np
 import os
 import random
 import sys
-from IntegerStringGenerator import IntegerStringGenerator, OddEvenIndexRule
+from IntegerStringGenerator import IntegerStringGenerator, OddEvenIndexRule, OperatorBasedGenerator
 from config_loader import load_config, get_generator_from_config
 
 def annotate_sequence(ax, chars, y=1.02, fontsize=10):
@@ -92,6 +92,71 @@ def build_encoder_for_integers(min_value: int = 0, max_value: int = 20):
         return [idx + min_value for idx in token_indices]
     
     return encode, decode, vocab_size, index_to_string, string_to_index
+
+
+def build_encoder_with_operators(min_value: int, max_value: int, operators: list[str]):
+    """
+    Build encoder/decoder for mixed vocabulary (integers + operators).
+    
+    Args:
+        min_value: Minimum integer value (inclusive)
+        max_value: Maximum integer value (inclusive)
+        operators: List of operator strings (e.g., ["+", "-"])
+        
+    Returns:
+        encode, decode, vocab_size, index_to_string, string_to_index
+    """
+    # Vocabulary: integers first, then operators
+    # Integers: indices 0 to (max_value - min_value)
+    # Operators: indices after integers
+    num_integers = max_value - min_value + 1
+    vocab_size = num_integers + len(operators)
+    
+    # Build mappings
+    # token_to_index: maps actual token (int or str) -> index
+    # index_to_token: maps index -> actual token (int or str)
+    token_to_index = {}
+    index_to_token = {}
+    
+    # Add integers
+    for i in range(num_integers):
+        val = min_value + i
+        token_to_index[val] = i
+        index_to_token[i] = val
+    
+    # Add operators
+    for i, op in enumerate(operators):
+        idx = num_integers + i
+        token_to_index[op] = idx
+        index_to_token[idx] = op
+    
+    # index_to_string for display purposes
+    index_to_string = {i: str(index_to_token[i]) for i in range(vocab_size)}
+    string_to_index = {str(index_to_token[i]): i for i in range(vocab_size)}
+    
+    def encode(tokens: list) -> list[int]:
+        """
+        Encode mixed tokens (integers and operators) to token indices.
+        Args:
+            tokens: List of tokens (can be int or str)
+        Returns:
+            List of token indices
+        """
+        return [token_to_index[t] for t in tokens]
+    
+    def decode(token_indices) -> list:
+        """
+        Decode token indices back to original tokens (int or str).
+        Args:
+            token_indices: List of token indices
+        Returns:
+            List of tokens (can be int or str)
+        """
+        return [index_to_token[idx] for idx in token_indices]
+    
+    return encode, decode, vocab_size, index_to_string, string_to_index
+
+
 def split_train_val_sequences(sequences: list[list[int]], train_ratio: float = 0.9):
     """Split sequences into training and validation sets."""
     n_train = int(train_ratio * len(sequences))
@@ -2104,12 +2169,22 @@ def main(config_name: str = "copy_modulo"):
     print(f"Generated {len(sequences)} sequences")
     print(f"Sequence lengths: min={min(len(s) for s in sequences)}, max={max(len(s) for s in sequences)}, avg={sum(len(s) for s in sequences)/len(sequences):.1f}")
     
-    # 2) Build encoder/decoder for integers
+    # 2) Build encoder/decoder for integers (or integers + operators)
     min_value = data_config['min_value']
     max_value = data_config['max_value']
-    encode, decode, vocab_size, itos, stoi = build_encoder_for_integers(min_value=min_value, max_value=max_value)
-    print("Vocabulary size:", vocab_size)
-    print("Vocabulary (integers):", [itos[i] for i in range(vocab_size)])
+    
+    # Check if generator uses operators
+    if isinstance(generator, OperatorBasedGenerator):
+        operators = generator.operators
+        encode, decode, vocab_size, itos, stoi = build_encoder_with_operators(
+            min_value=min_value, max_value=max_value, operators=operators
+        )
+        print("Vocabulary size:", vocab_size)
+        print("Vocabulary (integers + operators):", [itos[i] for i in range(vocab_size)])
+    else:
+        encode, decode, vocab_size, itos, stoi = build_encoder_for_integers(min_value=min_value, max_value=max_value)
+        print("Vocabulary size:", vocab_size)
+        print("Vocabulary (integers):", [itos[i] for i in range(vocab_size)])
 
     # 3) Encode sequences (integer values -> token indices)
     encoded_sequences = [encode(seq) for seq in sequences]
@@ -2181,6 +2256,9 @@ def main(config_name: str = "copy_modulo"):
         loss.backward()
         optimizer.step()
 
+    # Beep to signal training is complete
+    print('\a', end='', flush=True)
+
     # 4) Show results
     print("Final loss:", loss.item(), flush=True)
     print(f"Final rule accuracy: {rule_accuracy_history[-1]:.4f}" if rule_accuracy_history else "", flush=True)
@@ -2239,5 +2317,5 @@ def main(config_name: str = "copy_modulo"):
 
 if __name__ == "__main__":
     # Get config name from command line argument, default to "default"
-    config_name = sys.argv[1] if len(sys.argv) > 1 else "parity_based"
+    config_name = sys.argv[1] if len(sys.argv) > 1 else "plus_last_even"
     main(config_name=config_name)

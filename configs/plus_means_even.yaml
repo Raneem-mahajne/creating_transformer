@@ -1,0 +1,33 @@
+# Configuration file for PlusMeansEvenRule
+# Rule: If you see a '+' operator, the next number must be even.
+# Example: 5, 3, +, 4, 7, +, 8, ...
+#                ^-- even    ^-- even
+
+# Configuration name (used for output folder)
+name: "plus_means_even"
+
+# Data generation configuration
+data:
+  generator_type: "PlusMeansEvenRule"
+  min_value: 0
+  max_value: 20
+  num_sequences: 2000
+  min_length: 20
+  max_length: 50
+  operator_probability: 0.3  # How often to insert a '+' operator
+
+# Model architecture
+model:
+  n_embd: 2           # Embedding dimension (minimal)
+  block_size: 8       # Context length (reduced - model needs to see previous token for '+')
+  num_heads: 1        # Number of attention heads (minimal)
+  head_size: 2        # Head size (minimal)
+
+# Training configuration
+training:
+  max_steps: 15000    # Training steps
+  batch_size: 8
+  learning_rate: 0.001
+  eval_interval: 200
+  eval_iterations: 50
+

@@ -4,7 +4,13 @@ Configuration loader for transformer training
 import yaml
 import os
 from pathlib import Path
-from IntegerStringGenerator import OddEvenIndexRule, EvenToOddTransitionRule, EvenRepeatLastOddRule, EvenAbsDiffRule, CopyModuloRule, SuccessorRule, ConditionalTransformRule, LookupPermutationRule, ParityBasedRule, EvenGreaterThan10Rule, TwoTokenParityRule, IntegerStringGenerator
+from IntegerStringGenerator import (
+    OddEvenIndexRule, EvenToOddTransitionRule, EvenRepeatLastOddRule, 
+    EvenAbsDiffRule, CopyModuloRule, SuccessorRule, ConditionalTransformRule, 
+    LookupPermutationRule, ParityBasedRule, EvenGreaterThan10Rule, TwoTokenParityRule,
+    IntegerStringGenerator, OperatorBasedGenerator, PlusMeansEvenRule, PlusMaxOfTwoRule,
+    PlusLastEvenRule
+)
 
 
 def load_config(config_name: str):
@@ -73,6 +79,18 @@ def get_generator_from_config(config: dict) -> IntegerStringGenerator:
         return EvenGreaterThan10Rule(min_value=min_value, max_value=max_value)
     elif generator_type == "TwoTokenParityRule":
         return TwoTokenParityRule(min_value=min_value, max_value=max_value)
+    elif generator_type == "PlusMeansEvenRule":
+        operator_probability = data_config.get('operator_probability', 0.3)
+        return PlusMeansEvenRule(min_value=min_value, max_value=max_value, 
+                                  operator_probability=operator_probability)
+    elif generator_type == "PlusMaxOfTwoRule":
+        operator_probability = data_config.get('operator_probability', 0.3)
+        return PlusMaxOfTwoRule(min_value=min_value, max_value=max_value, 
+                                 operator_probability=operator_probability)
+    elif generator_type == "PlusLastEvenRule":
+        operator_probability = data_config.get('operator_probability', 0.3)
+        return PlusLastEvenRule(min_value=min_value, max_value=max_value, 
+                                operator_probability=operator_probability)
     else:
         raise ValueError(f"Unknown generator type: {generator_type}")
 

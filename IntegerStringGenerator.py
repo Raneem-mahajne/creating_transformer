@@ -761,6 +761,361 @@ class EvenGreaterThan10Rule(IntegerStringGenerator):
         return correctness, all(c == 1 for c in correctness)
 
 
+class OperatorBasedGenerator(IntegerStringGenerator):
+    """
+    Base class for generators that use special operator characters.
+    Sequences contain a mix of integers and operator strings (e.g., "+", "-", "*").
+    
+    Subclasses define what each operator means for determining the next token.
+    """
+    
+    def __init__(self, min_value: int = 0, max_value: int = 20, sequence_length: int = None,
+                 operators: list[str] = None, operator_probability: float = 0.3):
+        """
+        Args:
+            min_value: Minimum integer value (inclusive)
+            max_value: Maximum integer value (inclusive)
+            sequence_length: Length of sequences to generate
+            operators: List of operator strings to use (e.g., ["+", "-"])
+            operator_probability: Probability of inserting an operator at each step
+        """
+        super().__init__(min_value, max_value, sequence_length)
+        self.operators = operators or ["+"]
+        self.operator_probability = operator_probability
+        self.all_nums = list(range(min_value, max_value + 1))
+        self.fallback = min_value
+    
+    def get_vocabulary(self) -> list:
+        """
+        Returns the full vocabulary: integers + operators.
+        This is used for encoding/decoding.
+        """
+        return list(range(self.min_value, self.max_value + 1)) + self.operators
+    
+    def is_operator(self, token) -> bool:
+        """Check if a token is an operator."""
+        return isinstance(token, str) and token in self.operators
+
+
+class PlusMeansEvenRule(OperatorBasedGenerator):
+    """
+    Rule: If you see a '+' operator, the next number must be even.
+    Otherwise, the next number can be anything.
+    
+    Example sequence: 5, 3, +, 4, 7, +, 8, 11, 2, +, 6, ...
+                             ^-- even    ^-- even       ^-- even
+    
+    This tests whether the model can learn that '+' is a signal/command
+    that constrains the following token.
+    """
+    
+    def __init__(self, min_value: int = 0, max_value: int = 20, sequence_length: int = None,
+                 operator_probability: float = 0.3):
+        super().__init__(min_value, max_value, sequence_length, 
+                        operators=["+"], operator_probability=operator_probability)
+        # Precompute even and odd numbers
+        self.even_nums = [n for n in range(min_value, max_value + 1) if n % 2 == 0]
+        self.even_fallback = min_value if min_value % 2 == 0 else min(min_value + 1, max_value)
+    
+    def generate_sequence(self, length: int) -> list:
+        """
+        Generate a sequence where:
+        - '+' can appear randomly
+        - After '+', the next number MUST be even
+        - Otherwise, any number is fine
+        """
+        if length == 0:
+            return []
+        
+        sequence = []
+        
+        # Start with a random number
+        current = random.choice(self.all_nums) if self.all_nums else self.fallback
+        sequence.append(current)
+        
+        i = 1
+        while i < length:
+            prev = sequence[-1]
+            
+            if self.is_operator(prev):
+                # Previous was '+', so this number must be even
+                next_val = random.choice(self.even_nums) if self.even_nums else self.even_fallback
+                sequence.append(next_val)
+            else:
+                # Previous was a number - maybe insert an operator, maybe a number
+                if random.random() < self.operator_probability:
+                    # Insert a '+' operator
+                    sequence.append("+")
+                else:
+                    # Insert a random number
+                    next_val = random.choice(self.all_nums) if self.all_nums else self.fallback
+                    sequence.append(next_val)
+            i += 1
+        
+        return sequence
+    
+    def verify_sequence(self, sequence: list) -> tuple[list[int], bool]:
+        """
+        Verify: if previous token was '+', current must be an even number.
+        First position is always correct. Operators themselves are always correct.
+        """
+        if len(sequence) == 0:
+            return [], True
+        correctness = [1]  # First position is always correct
+        
+        for i in range(1, len(sequence)):
+            prev = sequence[i - 1]
+            curr = sequence[i]
+            
+            if self.is_operator(prev):
+                # Previous was '+', current must be even number
+                if self.is_operator(curr):
+                    # Operator after operator - that's fine (no constraint)
+                    correctness.append(1)
+                elif isinstance(curr, int):
+                    correctness.append(1 if curr % 2 == 0 else 0)
+                else:
+                    correctness.append(0)  # Unknown type
+            else:
+                # Previous was a number, no constraint on current
+                correctness.append(1)
+        
+        return correctness, all(c == 1 for c in correctness)
+
+
+class PlusMaxOfTwoRule(OperatorBasedGenerator):
+    """
+    Rule: If you see a '+' operator, the next number must be the larger of the previous two numbers.
+    Otherwise, the next number can be anything.
+    
+    Example sequence: 5, 3, +, 5, 7, 2, +, 7, 11, 8, +, 11, ...
+                             ^-- max(5,3)=5    ^-- max(7,2)=7    ^-- max(11,8)=11
+    
+    This tests whether the model can learn that '+' is a signal that requires
+    looking back at the previous two numbers and outputting the maximum.
+    """
+    
+    def __init__(self, min_value: int = 0, max_value: int = 20, sequence_length: int = None,
+                 operator_probability: float = 0.3):
+        super().__init__(min_value, max_value, sequence_length, 
+                        operators=["+"], operator_probability=operator_probability)
+    
+    def generate_sequence(self, length: int) -> list:
+        """
+        Generate a sequence where:
+        - '+' can appear randomly
+        - After '+', the next number MUST be max(previous_two_numbers)
+        - Otherwise, any number is fine
+        """
+        if length == 0:
+            return []
+        
+        sequence = []
+        
+        # Start with a random number
+        current = random.choice(self.all_nums) if self.all_nums else self.fallback
+        sequence.append(current)
+        
+        i = 1
+        while i < length:
+            prev = sequence[-1]
+            
+            if self.is_operator(prev):
+                # Previous was '+', so we need to find the max of the previous two numbers
+                # Look backwards to find the last two numbers (skipping operators)
+                prev_numbers = []
+                for j in range(len(sequence) - 2, -1, -1):
+                    token = sequence[j]
+                    if not self.is_operator(token):
+                        prev_numbers.append(token)
+                        if len(prev_numbers) >= 2:
+                            break
+                
+                if len(prev_numbers) >= 2:
+                    # We have at least two previous numbers, use their max
+                    next_val = max(prev_numbers[0], prev_numbers[1])
+                elif len(prev_numbers) == 1:
+                    # Only one previous number, use it as the max
+                    next_val = prev_numbers[0]
+                else:
+                    # No previous numbers (shouldn't happen), use random
+                    next_val = random.choice(self.all_nums) if self.all_nums else self.fallback
+                
+                # Clamp to valid range
+                next_val = max(self.min_value, min(self.max_value, next_val))
+                sequence.append(next_val)
+            else:
+                # Previous was a number - maybe insert an operator, maybe a number
+                if random.random() < self.operator_probability:
+                    # Insert a '+' operator
+                    sequence.append("+")
+                else:
+                    # Insert a random number
+                    next_val = random.choice(self.all_nums) if self.all_nums else self.fallback
+                    sequence.append(next_val)
+            i += 1
+        
+        return sequence
+    
+    def verify_sequence(self, sequence: list) -> tuple[list[int], bool]:
+        """
+        Verify: if previous token was '+', current must be max(previous_two_numbers).
+        First position is always correct. Operators themselves are always correct.
+        """
+        if len(sequence) == 0:
+            return [], True
+        correctness = [1]  # First position is always correct
+        
+        for i in range(1, len(sequence)):
+            prev = sequence[i - 1]
+            curr = sequence[i]
+            
+            if self.is_operator(prev):
+                # Previous was '+', current must be max of previous two numbers
+                if self.is_operator(curr):
+                    # Operator after operator - that's fine (no constraint)
+                    correctness.append(1)
+                elif isinstance(curr, int):
+                    # Find the previous two numbers (skipping operators)
+                    prev_numbers = []
+                    for j in range(i - 2, -1, -1):
+                        token = sequence[j]
+                        if not self.is_operator(token):
+                            prev_numbers.append(token)
+                            if len(prev_numbers) >= 2:
+                                break
+                    
+                    if len(prev_numbers) >= 2:
+                        expected = max(prev_numbers[0], prev_numbers[1])
+                        expected = max(self.min_value, min(self.max_value, expected))
+                        correctness.append(1 if curr == expected else 0)
+                    elif len(prev_numbers) == 1:
+                        # Only one previous number, current should equal it
+                        correctness.append(1 if curr == prev_numbers[0] else 0)
+                    else:
+                        # No previous numbers, anything is fine
+                        correctness.append(1)
+                else:
+                    correctness.append(0)  # Unknown type
+            else:
+                # Previous was a number, no constraint on current
+                correctness.append(1)
+        
+        return correctness, all(c == 1 for c in correctness)
+
+
+class PlusLastEvenRule(OperatorBasedGenerator):
+    """
+    Rule: If you see a '+' operator, the next number must be the most recent even number
+    that appeared before the '+'. If there is no previous even number, use a random even number.
+    Otherwise, the next number can be anything.
+    
+    Example sequence: 5, 3, 8, 7, +, 8, 11, 2, 4, +, 4, ...
+                                 ^-- last even=8    ^-- last even=4
+    
+    This is simpler than PlusMaxOfTwoRule because it only requires finding the last even number,
+    not computing a maximum of two numbers.
+    """
+    
+    def __init__(self, min_value: int = 0, max_value: int = 20, sequence_length: int = None,
+                 operator_probability: float = 0.3):
+        super().__init__(min_value, max_value, sequence_length, 
+                        operators=["+"], operator_probability=operator_probability)
+        # Precompute even numbers for fallback
+        self.even_nums = [n for n in range(min_value, max_value + 1) if n % 2 == 0]
+        self.even_fallback = min_value if min_value % 2 == 0 else min(min_value + 1, max_value)
+    
+    def generate_sequence(self, length: int) -> list:
+        """
+        Generate a sequence where:
+        - '+' can appear randomly
+        - After '+', the next number MUST be the most recent even number before the '+'
+        - If no previous even number exists, use a random even number
+        - Otherwise, any number is fine
+        """
+        if length == 0:
+            return []
+        
+        sequence = []
+        
+        # Start with a random number
+        current = random.choice(self.all_nums) if self.all_nums else self.fallback
+        sequence.append(current)
+        
+        i = 1
+        while i < length:
+            prev = sequence[-1]
+            
+            if self.is_operator(prev):
+                # Previous was '+', so we need to find the most recent even number
+                last_even = None
+                for j in range(len(sequence) - 2, -1, -1):
+                    token = sequence[j]
+                    if not self.is_operator(token) and isinstance(token, int) and token % 2 == 0:
+                        last_even = token
+                        break
+                
+                if last_even is not None:
+                    next_val = last_even
+                else:
+                    # No previous even number, use random even
+                    next_val = random.choice(self.even_nums) if self.even_nums else self.even_fallback
+                
+                sequence.append(next_val)
+            else:
+                # Previous was a number - maybe insert an operator, maybe a number
+                if random.random() < self.operator_probability:
+                    # Insert a '+' operator
+                    sequence.append("+")
+                else:
+                    # Insert a random number
+                    next_val = random.choice(self.all_nums) if self.all_nums else self.fallback
+                    sequence.append(next_val)
+            i += 1
+        
+        return sequence
+    
+    def verify_sequence(self, sequence: list) -> tuple[list[int], bool]:
+        """
+        Verify: if previous token was '+', current must be the most recent even number before it.
+        First position is always correct. Operators themselves are always correct.
+        """
+        if len(sequence) == 0:
+            return [], True
+        correctness = [1]  # First position is always correct
+        
+        for i in range(1, len(sequence)):
+            prev = sequence[i - 1]
+            curr = sequence[i]
+            
+            if self.is_operator(prev):
+                # Previous was '+', current must be the most recent even number
+                if self.is_operator(curr):
+                    # Operator after operator - that's fine (no constraint)
+                    correctness.append(1)
+                elif isinstance(curr, int):
+                    # Find the most recent even number before the '+'
+                    last_even = None
+                    for j in range(i - 2, -1, -1):
+                        token = sequence[j]
+                        if not self.is_operator(token) and isinstance(token, int) and token % 2 == 0:
+                            last_even = token
+                            break
+                    
+                    if last_even is not None:
+                        correctness.append(1 if curr == last_even else 0)
+                    else:
+                        # No previous even number, current should be even
+                        correctness.append(1 if curr % 2 == 0 else 0)
+                else:
+                    correctness.append(0)  # Unknown type
+            else:
+                # Previous was a number, no constraint on current
+                correctness.append(1)
+        
+        return correctness, all(c == 1 for c in correctness)
+
+
 def main():
     generator = OddEvenIndexRule(min_value=0, max_value=20)
     sequences = generator.generate_dataset(5, min_length=10, max_length=20)
