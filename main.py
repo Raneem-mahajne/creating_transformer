@@ -901,8 +901,8 @@ def plot_embeddings_pca(model, itos, save_path=None):
     ax9.set_ylabel("C")
     
     # Row 4: Token+Position embeddings (heatmaps for each dimension, then PCA)
-    # Create all token-position combinations (only for tokens 0-9 for easier visualization)
-    max_token_idx = min(10, vocab_size)  # Only show tokens 0-9
+    # Create all token-position combinations (ALL tokens including special characters)
+    max_token_idx = vocab_size  # Show all tokens including special characters
     num_combinations = max_token_idx * block_size
     all_combinations = np.zeros((num_combinations, n_embd))
     
@@ -963,7 +963,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
         for i in range(len(labels_comb)):
             ax12.text(X2_comb[i, 0], X2_comb[i, 1], labels_comb[i], fontsize=6, ha='center', va='center')
         
-        ax12.set_title(f"Token+Position: PCA (tokens 0-9)", fontsize=11)
+        ax12.set_title(f"Token+Position: PCA (all tokens)", fontsize=11)
         ax12.set_xlabel("PC1")
         ax12.set_ylabel("PC2")
         ax12.grid(True, alpha=0.2)
@@ -980,7 +980,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
         for i in range(len(labels_comb)):
             ax12.text(X1_comb[i], 0, labels_comb[i], fontsize=6, ha='center', va='center', rotation=90)
         
-        ax12.set_title(f"Token+Position: 1D (tokens 0-9)", fontsize=11)
+        ax12.set_title(f"Token+Position: 1D (all tokens)", fontsize=11)
         ax12.set_xlabel("Embedding value")
         ax12.set_ylabel("")
         ax12.grid(True, alpha=0.2)
@@ -989,6 +989,97 @@ def plot_embeddings_pca(model, itos, save_path=None):
     plt.tight_layout()
     if save_path:
         plt.savefig(save_path)
+        plt.close()
+    else:
+        plt.show()
+    model.train()
+
+@torch.no_grad()
+def plot_token_position_embedding_space(model, itos, save_path=None):
+    """
+    BIG figure showing all token-position combinations in original embedding space and PCA space.
+    Shows both RAW (first 2 dims) and PCA scatter plots side by side.
+    """
+    model.eval()
+    
+    # Get token and position embeddings
+    embeddings = model.token_embedding.weight.detach().cpu().numpy()  # (vocab, N_EMBD)
+    vocab_size, n_embd = embeddings.shape
+    block_size = model.block_size
+    pos_emb_all = model.position_embedding_table.weight.detach().cpu().numpy()  # (block_size, n_embd)
+    
+    # Create all token-position combinations (ALL tokens including special characters)
+    num_combinations = vocab_size * block_size
+    all_combinations = np.zeros((num_combinations, n_embd))
+    labels = []
+    
+    for token_idx in range(vocab_size):
+        token_str = str(itos[token_idx])
+        for pos_idx in range(block_size):
+            idx = token_idx * block_size + pos_idx
+            all_combinations[idx] = embeddings[token_idx] + pos_emb_all[pos_idx]
+            labels.append(f"{token_str}p{pos_idx}")  # No underscore
+    
+    # Create BIG figure: 1 row, 2 columns (RAW and PCA)
+    fig, axes = plt.subplots(1, 2, figsize=(24, 12))
+    
+    # Left plot: Original embedding space (Dim 0 vs Dim 1)
+    ax1 = axes[0]
+    if n_embd >= 2:
+        X_orig = all_combinations[:, [0, 1]]
+        ax1.scatter(X_orig[:, 0], X_orig[:, 1], s=0, alpha=0)  # s=0 for invisible dots
+        for i in range(len(labels)):
+            ax1.text(X_orig[i, 0], X_orig[i, 1], labels[i], fontsize=6, ha='center', va='center')
+        ax1.set_title(f"Original Token+Position Embeddings: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=14)
+        ax1.set_xlabel("Embedding Dim 0", fontsize=12)
+        ax1.set_ylabel("Embedding Dim 1", fontsize=12)
+        ax1.grid(True, alpha=0.3)
+        ax1.axis('equal')
+    else:
+        # 1D case
+        X_orig_1d = all_combinations[:, 0]
+        ax1.scatter(X_orig_1d, np.zeros_like(X_orig_1d), s=0, alpha=0)
+        for i in range(len(labels)):
+            ax1.text(X_orig_1d[i], 0, labels[i], fontsize=6, ha='center', va='center', rotation=90)
+        ax1.set_title(f"Original Token+Position Embeddings: Dim 0\n(All tokens, {num_combinations} combinations)", fontsize=14)
+        ax1.set_xlabel("Embedding Dim 0", fontsize=12)
+        ax1.set_ylabel("")
+        ax1.grid(True, alpha=0.3)
+        ax1.set_yticks([])
+    
+    # Right plot: PCA space
+    ax2 = axes[1]
+    if n_embd >= 2:
+        X_comb = all_combinations.astype(np.float64)
+        X_comb = X_comb - X_comb.mean(axis=0, keepdims=True)
+        _, _, Vt_comb = np.linalg.svd(X_comb, full_matrices=False)
+        X2_comb = X_comb @ Vt_comb[:2].T
+        
+        # Plot with s=0 so only annotations are visible
+        ax2.scatter(X2_comb[:, 0], X2_comb[:, 1], s=0, alpha=0)
+        for i in range(len(labels)):
+            ax2.text(X2_comb[i, 0], X2_comb[i, 1], labels[i], fontsize=6, ha='center', va='center')
+        
+        ax2.set_title(f"Token+Position Embeddings: PCA 2D\n(All tokens, {num_combinations} combinations)", fontsize=14)
+        ax2.set_xlabel("PC1", fontsize=12)
+        ax2.set_ylabel("PC2", fontsize=12)
+        ax2.grid(True, alpha=0.3)
+        ax2.axis('equal')
+    else:
+        # 1D embeddings
+        X1_comb = all_combinations[:, 0]
+        ax2.scatter(X1_comb, np.zeros_like(X1_comb), s=0, alpha=0)
+        for i in range(len(labels)):
+            ax2.text(X1_comb[i], 0, labels[i], fontsize=6, ha='center', va='center', rotation=90)
+        ax2.set_title(f"Token+Position Embeddings: PCA 1D\n(All tokens, {num_combinations} combinations)", fontsize=14)
+        ax2.set_xlabel("PC1", fontsize=12)
+        ax2.set_ylabel("")
+        ax2.grid(True, alpha=0.3)
+        ax2.set_yticks([])
+    
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150)
         plt.close()
     else:
         plt.show()
@@ -1181,8 +1272,8 @@ def plot_qkv_transformations(model, itos, save_path=None):
     
     head_size = W_Q.shape[0]
     
-    # Create all token-position combinations (only for tokens 0-9 for easier visualization)
-    max_token_idx = min(10, vocab_size)  # Only show tokens 0-9
+    # Create all token-position combinations (ALL tokens including special characters)
+    max_token_idx = vocab_size  # Show all tokens including special characters
     num_combinations = max_token_idx * block_size
     all_combinations = np.zeros((num_combinations, n_embd))
     labels = []
@@ -1216,7 +1307,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax0.scatter(X_orig[:, 0], X_orig[:, 1], s=0, alpha=0)
         for i in range(len(labels)):
             ax0.text(X_orig[i, 0], X_orig[i, 1], labels[i], fontsize=6, ha='center', va='center')
-        ax0.set_title(f"Original Token+Position Embeddings: Dim 0 vs Dim 1\n(Tokens 0-9, {num_combinations} combinations)", fontsize=12)
+        ax0.set_title(f"Original Token+Position Embeddings: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=12)
         ax0.set_xlabel("Embedding Dim 0")
         ax0.set_ylabel("Embedding Dim 1")
         ax0.grid(True, alpha=0.3)
@@ -1227,7 +1318,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax0.scatter(X_orig_1d, np.zeros_like(X_orig_1d), s=0, alpha=0)
         for i in range(len(labels)):
             ax0.text(X_orig_1d[i], 0, labels[i], fontsize=6, ha='center', va='center', rotation=90)
-        ax0.set_title(f"Original Token+Position Embeddings: Dim 0\n(Tokens 0-9, {num_combinations} combinations)", fontsize=12)
+        ax0.set_title(f"Original Token+Position Embeddings: Dim 0\n(All tokens, {num_combinations} combinations)", fontsize=12)
         ax0.set_xlabel("Embedding Dim 0")
         ax0.set_ylabel("")
         ax0.grid(True, alpha=0.3)
@@ -1265,7 +1356,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax4.scatter(Q_2d[:, 0], Q_2d[:, 1], s=0, alpha=0)
         for i in range(len(labels)):
             ax4.text(Q_2d[i, 0], Q_2d[i, 1], labels[i], fontsize=7, ha='center', va='center')
-        ax4.set_title(f"Q-Transformed: Dim 0 vs Dim 1\n(Tokens 0-9, {num_combinations} combinations)", fontsize=12)
+        ax4.set_title(f"Q-Transformed: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=12)
         ax4.set_xlabel("Head Dim 0")
         ax4.set_ylabel("Head Dim 1")
         ax4.grid(True, alpha=0.3)
@@ -1276,7 +1367,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax4.scatter(Q_1d, np.zeros_like(Q_1d), s=0, alpha=0)
         for i in range(len(labels)):
             ax4.text(Q_1d[i], 0, labels[i], fontsize=7, ha='center', va='center', rotation=90)
-        ax4.set_title(f"Q-Transformed: Dim 0\n(Tokens 0-9, {num_combinations} combinations)", fontsize=12)
+        ax4.set_title(f"Q-Transformed: Dim 0\n(All tokens, {num_combinations} combinations)", fontsize=12)
         ax4.set_xlabel("Head Dim 0")
         ax4.set_ylabel("")
         ax4.grid(True, alpha=0.3)
@@ -1289,7 +1380,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax5.scatter(K_2d[:, 0], K_2d[:, 1], s=0, alpha=0)
         for i in range(len(labels)):
             ax5.text(K_2d[i, 0], K_2d[i, 1], labels[i], fontsize=7, ha='center', va='center')
-        ax5.set_title(f"K-Transformed: Dim 0 vs Dim 1\n(Tokens 0-9, {num_combinations} combinations)", fontsize=12)
+        ax5.set_title(f"K-Transformed: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=12)
         ax5.set_xlabel("Head Dim 0")
         ax5.set_ylabel("Head Dim 1")
         ax5.grid(True, alpha=0.3)
@@ -1299,7 +1390,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax5.scatter(K_1d, np.zeros_like(K_1d), s=0, alpha=0)
         for i in range(len(labels)):
             ax5.text(K_1d[i], 0, labels[i], fontsize=7, ha='center', va='center', rotation=90)
-        ax5.set_title(f"K-Transformed: Dim 0\n(Tokens 0-9, {num_combinations} combinations)", fontsize=12)
+        ax5.set_title(f"K-Transformed: Dim 0\n(All tokens, {num_combinations} combinations)", fontsize=12)
         ax5.set_xlabel("Head Dim 0")
         ax5.set_ylabel("")
         ax5.grid(True, alpha=0.3)
@@ -1312,7 +1403,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax6.scatter(V_2d[:, 0], V_2d[:, 1], s=0, alpha=0)
         for i in range(len(labels)):
             ax6.text(V_2d[i, 0], V_2d[i, 1], labels[i], fontsize=7, ha='center', va='center')
-        ax6.set_title(f"V-Transformed: Dim 0 vs Dim 1\n(Tokens 0-9, {num_combinations} combinations)", fontsize=12)
+        ax6.set_title(f"V-Transformed: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=12)
         ax6.set_xlabel("Head Dim 0")
         ax6.set_ylabel("Head Dim 1")
         ax6.grid(True, alpha=0.3)
@@ -1322,7 +1413,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax6.scatter(V_1d, np.zeros_like(V_1d), s=0, alpha=0)
         for i in range(len(labels)):
             ax6.text(V_1d[i], 0, labels[i], fontsize=7, ha='center', va='center', rotation=90)
-        ax6.set_title(f"V-Transformed: Dim 0\n(Tokens 0-9, {num_combinations} combinations)", fontsize=12)
+        ax6.set_title(f"V-Transformed: Dim 0\n(All tokens, {num_combinations} combinations)", fontsize=12)
         ax6.set_xlabel("Head Dim 0")
         ax6.set_ylabel("")
         ax6.grid(True, alpha=0.3)
@@ -2737,6 +2828,7 @@ def main(config_name: str = "copy_modulo"):
     plot_weights_qkv_two_sequences(model, X_list, itos, save_path=os.path.join(plots_dir, "qkv.png"), num_sequences=3)
     plot_embeddings_pca(model, itos, save_path=os.path.join(plots_dir, "embeddings.png"))
     plot_qkv_transformations(model, itos, save_path=os.path.join(plots_dir, "qkv_transformations.png"))
+    plot_token_position_embedding_space(model, itos, save_path=os.path.join(plots_dir, "token_position_embedding_space.png"))
     plot_attention_matrix(model, X_list, itos, save_path=os.path.join(plots_dir, "attention_matrix.png"), num_sequences=3)
     plot_output_matrix(model, X_fixed, itos, save_path=os.path.join(plots_dir, "output_matrix.png"))
     plot_learned_lookup(model, vocab_size, itos, save_path=os.path.join(plots_dir, "learned_lookup.png"))
