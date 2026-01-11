@@ -726,11 +726,11 @@ def get_multihead_snapshot_from_X(model, X, itos):
 @torch.no_grad()
 def plot_embeddings_pca(model, itos, save_path=None):
     """
-    Plot embeddings: heatmap, clustered heatmap, and PCA 2D
+    Plot embeddings: token embeddings (heatmap, clustered, PCA), position embeddings, and QKV weights.
     """
     model.eval()
     
-    # Get embeddings
+    # Get token embeddings
     embeddings = model.token_embedding.weight.detach().cpu().numpy()  # (vocab, N_EMBD)
     vocab_size, n_embd = embeddings.shape
     y_labels = [itos[i] for i in range(vocab_size)]
@@ -747,32 +747,64 @@ def plot_embeddings_pca(model, itos, save_path=None):
     X_emb = X_emb - X_emb.mean(axis=0, keepdims=True)
     clusters = fcluster(Z, t=6, criterion="maxclust")
     
-    # Create figure: 1 row, 3 columns
-    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+    # Get position embeddings for all positions
+    block_size = model.block_size
+    pos_emb_all = model.position_embedding_table.weight.detach().cpu().numpy()  # (block_size, n_embd)
     
+    # Hierarchical clustering for position embeddings
+    d_pos = pdist(pos_emb_all, metric="cosine")
+    Z_pos = linkage(d_pos, method="average")
+    row_order_pos = leaves_list(Z_pos)
+    pos_emb_clustered = pos_emb_all[row_order_pos]
+    pos_y_labels_clustered = [f"pos {i}" for i in row_order_pos]
+    
+    # PCA for position embeddings
+    X_pos = pos_emb_all.astype(np.float64)
+    X_pos = X_pos - X_pos.mean(axis=0, keepdims=True)
+    clusters_pos = fcluster(Z_pos, t=6, criterion="maxclust")
+    
+    # Get QKV weights - average across heads
+    Wq_all, Wk_all, Wv_all = [], [], []
+    for h in model.sa_heads.heads:
+        Wq_all.append(h.query.weight.cpu().numpy())  # (hs, C)
+        Wk_all.append(h.key.weight.cpu().numpy())    # (hs, C)
+        Wv_all.append(h.value.weight.cpu().numpy())  # (hs, C)
+    
+    # Average weights across heads and transpose for display (C, hs)
+    W_Q = np.stack(Wq_all, axis=0).mean(axis=0).T  # (C, hs)
+    W_K = np.stack(Wk_all, axis=0).mean(axis=0).T  # (C, hs)
+    W_V = np.stack(Wv_all, axis=0).mean(axis=0).T  # (C, hs)
+    
+    # Create figure: 3 rows, 3 columns
+    # Row 1: Token embeddings (raw, clustered, PCA)
+    # Row 2: Position embeddings (raw, clustered, PCA)
+    # Row 3: QKV weights (W_Q, W_K, W_V)
+    fig, axes = plt.subplots(3, 3, figsize=(18, 14))
+    
+    # Row 1: Token embeddings
     # Embeddings heatmap
-    ax1 = axes[0]
+    ax1 = axes[0, 0]
     x_labels = list(range(embeddings.shape[1]))
     sns.heatmap(embeddings, yticklabels=y_labels, xticklabels=x_labels, cmap="RdBu_r", center=0, ax=ax1)
-    ax1.set_title(f"Embeddings (vocab×embd={vocab_size}×{n_embd})", fontsize=11)
+    ax1.set_title(f"Token Embeddings (vocab×embd={vocab_size}×{n_embd})", fontsize=11)
     ax1.set_xlabel("Embedding dim")
     ax1.set_ylabel("Token")
     
     # Clustered embeddings
-    ax2 = axes[1]
+    ax2 = axes[0, 1]
     x_labels = list(range(embeddings_clustered.shape[1]))
     sns.heatmap(embeddings_clustered, yticklabels=y_labels_clustered, xticklabels=x_labels, cmap="RdBu_r", center=0, ax=ax2)
-    ax2.set_title(f"Embeddings Clustered (vocab×embd={vocab_size}×{n_embd})", fontsize=11)
+    ax2.set_title(f"Token Embeddings Clustered (vocab×embd={vocab_size}×{n_embd})", fontsize=11)
     ax2.set_xlabel("Embedding dim")
     ax2.set_ylabel("Token (clustered)")
     
     # PCA - handle 1D case
-    ax3 = axes[2]
+    ax3 = axes[0, 2]
     if n_embd >= 2:
         _, _, Vt = np.linalg.svd(X_emb, full_matrices=False)
         X2 = X_emb @ Vt[:2].T
         sc = ax3.scatter(X2[:, 0], X2[:, 1], c=clusters, s=45, alpha=0.85, cmap="tab10")
-        ax3.set_title(f"PCA 2D (vocab={vocab_size})", fontsize=11)
+        ax3.set_title(f"Token Embeddings PCA 2D (vocab={vocab_size})", fontsize=11)
         ax3.set_xlabel("PC1")
         ax3.set_ylabel("PC2")
         ax3.grid(True, alpha=0.2)
@@ -784,7 +816,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
         # For 1D embeddings, just plot the single dimension
         X1 = X_emb[:, 0]
         sc = ax3.scatter(X1, np.zeros_like(X1), c=clusters, s=45, alpha=0.85, cmap="tab10")
-        ax3.set_title(f"Embeddings 1D (vocab={vocab_size})", fontsize=11)
+        ax3.set_title(f"Token Embeddings 1D (vocab={vocab_size})", fontsize=11)
         ax3.set_xlabel("Embedding value")
         ax3.set_ylabel("")
         ax3.grid(True, alpha=0.2)
@@ -793,6 +825,79 @@ def plot_embeddings_pca(model, itos, save_path=None):
                 ax3.text(X1[i], 0, itos[i], fontsize=8, ha='center')
         plt.colorbar(sc, ax=ax3, label="Cluster ID")
         ax3.set_yticks([])
+    
+    # Row 2: Position embeddings (raw, clustered, PCA)
+    # Position embeddings heatmap
+    ax4 = axes[1, 0]
+    pos_y_labels = [f"pos {i}" for i in range(block_size)]
+    x_labels = list(range(pos_emb_all.shape[1]))
+    sns.heatmap(pos_emb_all, yticklabels=pos_y_labels, xticklabels=x_labels, cmap="RdBu_r", center=0, ax=ax4)
+    ax4.set_title(f"Position Embeddings (block_size×embd={block_size}×{n_embd})", fontsize=11)
+    ax4.set_xlabel("Embedding dim")
+    ax4.set_ylabel("Position")
+    
+    # Clustered position embeddings
+    ax5 = axes[1, 1]
+    x_labels = list(range(pos_emb_clustered.shape[1]))
+    sns.heatmap(pos_emb_clustered, yticklabels=pos_y_labels_clustered, xticklabels=x_labels, cmap="RdBu_r", center=0, ax=ax5)
+    ax5.set_title(f"Position Embeddings Clustered (block_size×embd={block_size}×{n_embd})", fontsize=11)
+    ax5.set_xlabel("Embedding dim")
+    ax5.set_ylabel("Position (clustered)")
+    
+    # PCA for position embeddings - handle 1D case
+    ax6 = axes[1, 2]
+    if n_embd >= 2:
+        _, _, Vt_pos = np.linalg.svd(X_pos, full_matrices=False)
+        X2_pos = X_pos @ Vt_pos[:2].T
+        sc_pos = ax6.scatter(X2_pos[:, 0], X2_pos[:, 1], c=clusters_pos, s=45, alpha=0.85, cmap="tab10")
+        ax6.set_title(f"Position Embeddings PCA 2D (block_size={block_size})", fontsize=11)
+        ax6.set_xlabel("PC1")
+        ax6.set_ylabel("PC2")
+        ax6.grid(True, alpha=0.2)
+        if block_size <= 80:
+            for i in range(block_size):
+                ax6.text(X2_pos[i, 0], X2_pos[i, 1], f"p{i}", fontsize=8)
+        plt.colorbar(sc_pos, ax=ax6, label="Cluster ID")
+    else:
+        # For 1D embeddings, just plot the single dimension
+        X1_pos = X_pos[:, 0]
+        sc_pos = ax6.scatter(X1_pos, np.arange(block_size), c=clusters_pos, s=45, alpha=0.85, cmap="tab10")
+        ax6.set_title(f"Position Embeddings 1D (block_size={block_size})", fontsize=11)
+        ax6.set_xlabel("Embedding value")
+        ax6.set_ylabel("Position index")
+        ax6.grid(True, alpha=0.2)
+        if block_size <= 80:
+            for i in range(block_size):
+                ax6.text(X1_pos[i], i, f"p{i}", fontsize=8, ha='center')
+        plt.colorbar(sc_pos, ax=ax6, label="Cluster ID")
+    
+    # Row 3: QKV weights (W_Q, W_K, W_V)
+    # W_Q
+    ax7 = axes[2, 0]
+    x_labels = list(range(W_Q.shape[1]))
+    y_labels_local = list(range(W_Q.shape[0]))
+    sns.heatmap(W_Q, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax7)
+    ax7.set_title(f"W_Q (C×hs={W_Q.shape[0]}×{W_Q.shape[1]})", fontsize=11)
+    ax7.set_xlabel("hs")
+    ax7.set_ylabel("C")
+    
+    # W_K
+    ax8 = axes[2, 1]
+    x_labels = list(range(W_K.shape[1]))
+    y_labels_local = list(range(W_K.shape[0]))
+    sns.heatmap(W_K, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax8)
+    ax8.set_title(f"W_K (C×hs={W_K.shape[0]}×{W_K.shape[1]})", fontsize=11)
+    ax8.set_xlabel("hs")
+    ax8.set_ylabel("C")
+    
+    # W_V
+    ax9 = axes[2, 2]
+    x_labels = list(range(W_V.shape[1]))
+    y_labels_local = list(range(W_V.shape[0]))
+    sns.heatmap(W_V, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax9)
+    ax9.set_title(f"W_V (C×hs={W_V.shape[0]}×{W_V.shape[1]})", fontsize=11)
+    ax9.set_xlabel("hs")
+    ax9.set_ylabel("C")
     
     plt.tight_layout()
     if save_path:
@@ -963,9 +1068,8 @@ def plot_weights_qkv(model, X, itos, save_path=None, sequence_str=None):
 @torch.no_grad()
 def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequences=3):
     """
-    Plot QKV for multiple sequences shown as different rows.
-    Weights (W_Q, W_K, W_V) are shown once at the top since they're shared model parameters.
-    Activations (Q, K, V, etc.) are shown for each sequence.
+    Plot QKV for multiple sequences, transposed: rows are sequences, columns are matrices.
+    Column order: Q, K^T, Q*K^T, Softmax(QK^T), V, Attention
     
     Args:
         model: The model
@@ -984,51 +1088,104 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
     sequences_to_plot = X_list[:num_sequences]
     num_sequences = len(sequences_to_plot)
     
-    # Get weights once (they're the same for all sequences)
-    Wq_all, Wk_all, Wv_all = [], [], []
-    for h in model.sa_heads.heads:
-        Wq_all.append(h.query.weight.cpu().numpy())  # (hs, C)
-        Wk_all.append(h.key.weight.cpu().numpy())    # (hs, C)
-        Wv_all.append(h.value.weight.cpu().numpy())  # (hs, C)
+    # Columns: Q, K^T, Q*K^T, Softmax(QK^T), V, Attention
+    num_matrix_types = 6
     
-    # Average weights across heads
-    W_Q = np.stack(Wq_all, axis=0).mean(axis=0).T  # (C, hs) averaged
-    W_K = np.stack(Wk_all, axis=0).mean(axis=0).T  # (C, hs) averaged
-    W_V = np.stack(Wv_all, axis=0).mean(axis=0).T  # (C, hs) averaged
+    # Create figure: num_sequences rows, num_matrix_types columns
+    fig = plt.figure(figsize=(6 * num_matrix_types, 4 * num_sequences))
+    gs = GridSpec(num_sequences, num_matrix_types, figure=fig, hspace=0.4, wspace=0.3)
     
-    # Create figure: 1 row for weights + (num_sequences * 2) rows for activations, 5 columns
-    # Total: (1 + num_sequences * 2) rows, 5 columns
-    fig = plt.figure(figsize=(25, 3 + 5 * num_sequences))
-    gs = GridSpec(1 + num_sequences * 2, 5, figure=fig, hspace=0.3, wspace=0.3)
-    
-    # Row 0: Show weights once (W_Q, W_K, W_V, empty, empty)
-    for j, (data, title) in enumerate(zip([W_Q, W_K, W_V], ["W_Q", "W_K", "W_V"])):
-        ax = fig.add_subplot(gs[0, j])
-        x_labels = list(range(data.shape[1]))
-        y_labels_local = list(range(data.shape[0]))
-        dim_str = f"(C×hs={data.shape[0]}×{data.shape[1]})"
-        
-        sns.heatmap(data, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
-        ax.set_title(f"{title} {dim_str}", fontsize=11)
-        if j == 0:
-            ax.set_ylabel("C", fontsize=10)
-        ax.set_xlabel("hs", fontsize=10)
-    
-    # Leave columns 3 and 4 empty in the weights row
-    for j in [3, 4]:
-        ax = fig.add_subplot(gs[0, j])
-        ax.axis('off')
-    
-    # For each sequence, show activations
+    # For each sequence (row)
     for seq_idx, X in enumerate(sequences_to_plot):
         # Get sequence string
-        seq_str = " ".join([itos[i.item()] for i in X[0]])
+        tokens = [itos[i.item()] for i in X[0]]
+        seq_str = " ".join(tokens)
+        B, T = X.shape
         
-        # Calculate row offset for this sequence (1 row for weights + seq_idx * 2 rows for previous sequences)
-        row_offset = 1 + seq_idx * 2
+        # Get activations Q, K, V from input X
+        token_emb = model.token_embedding(X)
+        pos = torch.arange(T, device=X.device) % model.block_size
+        pos_emb = model.position_embedding_table(pos)
+        x = token_emb + pos_emb
         
-        # Plot this sequence's activations
-        plot_weights_qkv_single_rows(model, X, itos, fig, gs, row_offset, seq_str, seq_idx, show_weights=False)
+        q_all, k_all, v_all = [], [], []
+        for h in model.sa_heads.heads:
+            q_all.append(h.query(x)[0].cpu().numpy())  # (T, hs)
+            k_all.append(h.key(x)[0].cpu().numpy())    # (T, hs)
+            v_all.append(h.value(x)[0].cpu().numpy())  # (T, hs)
+        
+        # Average activations across heads
+        Q = np.stack(q_all, axis=0).mean(axis=0)  # (T, hs)
+        K = np.stack(k_all, axis=0).mean(axis=0)  # (T, hs)
+        V = np.stack(v_all, axis=0).mean(axis=0)  # (T, hs)
+        
+        # Compute K^T (transpose of K)
+        K_T = K.T  # (hs, T)
+        
+        # Compute QK^T (attention formula: Q @ K^T)
+        QK_T = Q @ K.T  # (T, hs) @ (hs, T) = (T, T)
+        
+        # Compute Softmax(QK^T) without masking
+        QK_T_torch = torch.from_numpy(QK_T).float()
+        Softmax_QK_T = F.softmax(QK_T_torch, dim=-1).numpy()  # (T, T)
+        
+        # Get attention weights (softmax(QK^T) after masking) from all heads
+        wei_all = []
+        for h in model.sa_heads.heads:
+            _, wei = h(x)  # wei: (B, T, T)
+            wei_all.append(wei[0].cpu().numpy())  # (T, T)
+        
+        # Average attention weights across heads
+        Attention = np.stack(wei_all, axis=0).mean(axis=0)  # (T, T)
+        
+        # Plot all matrices in this row (one per column)
+        # Order: Q, K^T, Q*K^T, Softmax(QK^T), V, Attention
+        plots_data = [
+            (Q, "Q", "viridis", (T, Q.shape[1]), True, False),  # (data, title, cmap, shape, is_activation, is_transpose)
+            (K_T, "K^T", "viridis", (K_T.shape[0], K_T.shape[1]), True, True),  # K^T is (hs, T)
+            (QK_T, "Q*K^T", "viridis", (T, T), False, False),  # (T, T) matrix
+            (Softmax_QK_T, "Softmax(QK^T)", "magma", (T, T), False, False),  # (T, T) matrix
+            (V, "V", "viridis", (T, V.shape[1]), True, False),  # (T, hs)
+            (Attention, "Attention", "magma", (T, T), False, False),  # (T, T) matrix
+        ]
+        
+        for col_idx, (data, title, cmap, shape, is_activation, is_transpose) in enumerate(plots_data):
+            ax = fig.add_subplot(gs[seq_idx, col_idx])
+            
+            if is_activation:
+                # Q, K^T, V are activations
+                if is_transpose:
+                    # K^T is (hs, T) - use numeric labels for rows, tokens for columns
+                    x_labels = tokens
+                    y_labels_local = list(range(data.shape[0]))
+                    dim_str = f"(hs×T={shape[0]}×{shape[1]})"
+                    sns.heatmap(data, cmap=cmap, xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
+                    ax.set_xlabel("T", fontsize=10)
+                    ax.set_ylabel("hs", fontsize=10)
+                else:
+                    # Q, V are (T, hs) - use tokens for y-axis
+                    x_labels = list(range(data.shape[1]))
+                    y_labels_local = tokens
+                    dim_str = f"(T×hs={shape[0]}×{shape[1]})"
+                    sns.heatmap(data, cmap=cmap, xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
+                    ax.set_xlabel("hs", fontsize=10)
+                    ax.set_ylabel("T", fontsize=10)
+            else:
+                # QK^T, Softmax(QK^T), Attention are (T, T) - use tokens for both axes
+                x_labels = tokens
+                y_labels_local = tokens
+                dim_str = f"(T×T={shape[0]}×{shape[1]})"
+                vmin, vmax = (0.0, 1.0) if title in ["Softmax(QK^T)", "Attention"] else (None, None)
+                sns.heatmap(data, cmap=cmap, vmin=vmin, vmax=vmax, 
+                           xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
+                ax.set_xlabel("T", fontsize=10)
+                ax.set_ylabel("T", fontsize=10)
+            
+            # Set ylabel with sequence info only on first column
+            if col_idx == 0:
+                ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
+            
+            ax.set_title(f"{title} {dim_str}", fontsize=11)
     
     plt.tight_layout(rect=[0, 0, 1, 0.98])
     if save_path:
