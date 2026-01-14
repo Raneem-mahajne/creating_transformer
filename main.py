@@ -786,12 +786,13 @@ def plot_embeddings_pca(model, itos, save_path=None):
     ax2.set_xlabel("Embedding dim")
     ax2.set_ylabel("Token (clustered)")
     
-    # PCA - handle 1D case
+    # PCA or raw data
     ax3 = axes[0, 2]
-    if n_embd >= 2:
+    if n_embd > 2:
+        # Do PCA for dimensions > 2
         _, _, Vt = np.linalg.svd(X_emb, full_matrices=False)
         X2 = X_emb @ Vt[:2].T
-        sc = ax3.scatter(X2[:, 0], X2[:, 1], c=clusters, s=0, alpha=0.85, cmap="tab10")
+        ax3.scatter(X2[:, 0], X2[:, 1], s=0, alpha=0)  # Invisible points for layout
         ax3.set_title(f"Token Embeddings PCA 2D (vocab={vocab_size})", fontsize=11)
         ax3.set_xlabel("PC1")
         ax3.set_ylabel("PC2")
@@ -799,11 +800,20 @@ def plot_embeddings_pca(model, itos, save_path=None):
         if vocab_size <= 80:
             for i in range(vocab_size):
                 ax3.text(X2[i, 0], X2[i, 1], itos[i], fontsize=8)
-        plt.colorbar(sc, ax=ax3, label="Cluster ID")
+    elif n_embd == 2:
+        # For 2D embeddings, show raw data
+        ax3.scatter(X_emb[:, 0], X_emb[:, 1], s=0, alpha=0)  # Invisible points for layout
+        ax3.set_title(f"Token Embeddings (vocab={vocab_size})", fontsize=11)
+        ax3.set_xlabel("Dim 0")
+        ax3.set_ylabel("Dim 1")
+        ax3.grid(True, alpha=0.2)
+        if vocab_size <= 80:
+            for i in range(vocab_size):
+                ax3.text(X_emb[i, 0], X_emb[i, 1], itos[i], fontsize=8)
     else:
         # For 1D embeddings, just plot the single dimension
         X1 = X_emb[:, 0]
-        sc = ax3.scatter(X1, np.zeros_like(X1), c=clusters, s=0, alpha=0.85, cmap="tab10")
+        ax3.scatter(X1, np.zeros_like(X1), s=0, alpha=0)  # Invisible points for layout
         ax3.set_title(f"Token Embeddings 1D (vocab={vocab_size})", fontsize=11)
         ax3.set_xlabel("Embedding value")
         ax3.set_ylabel("")
@@ -811,7 +821,6 @@ def plot_embeddings_pca(model, itos, save_path=None):
         if vocab_size <= 80:
             for i in range(vocab_size):
                 ax3.text(X1[i], 0, itos[i], fontsize=8, ha='center')
-        plt.colorbar(sc, ax=ax3, label="Cluster ID")
         ax3.set_yticks([])
     
     # Row 2: Position embeddings (raw, clustered, PCA)
@@ -832,12 +841,13 @@ def plot_embeddings_pca(model, itos, save_path=None):
     ax5.set_xlabel("Embedding dim")
     ax5.set_ylabel("Position (clustered)")
     
-    # PCA for position embeddings - handle 1D case
+    # PCA or raw data for position embeddings
     ax6 = axes[1, 2]
-    if n_embd >= 2:
+    if n_embd > 2:
+        # Do PCA for dimensions > 2
         _, _, Vt_pos = np.linalg.svd(X_pos, full_matrices=False)
         X2_pos = X_pos @ Vt_pos[:2].T
-        sc_pos = ax6.scatter(X2_pos[:, 0], X2_pos[:, 1], c=clusters_pos, s=0, alpha=0.85, cmap="tab10")
+        ax6.scatter(X2_pos[:, 0], X2_pos[:, 1], s=0, alpha=0)  # Invisible points for layout
         ax6.set_title(f"Position Embeddings PCA 2D (block_size={block_size})", fontsize=11)
         ax6.set_xlabel("PC1")
         ax6.set_ylabel("PC2")
@@ -845,11 +855,20 @@ def plot_embeddings_pca(model, itos, save_path=None):
         if block_size <= 80:
             for i in range(block_size):
                 ax6.text(X2_pos[i, 0], X2_pos[i, 1], f"p{i}", fontsize=8)
-        plt.colorbar(sc_pos, ax=ax6, label="Cluster ID")
+    elif n_embd == 2:
+        # For 2D embeddings, show raw data
+        ax6.scatter(X_pos[:, 0], X_pos[:, 1], s=0, alpha=0)  # Invisible points for layout
+        ax6.set_title(f"Position Embeddings (block_size={block_size})", fontsize=11)
+        ax6.set_xlabel("Dim 0")
+        ax6.set_ylabel("Dim 1")
+        ax6.grid(True, alpha=0.2)
+        if block_size <= 80:
+            for i in range(block_size):
+                ax6.text(X_pos[i, 0], X_pos[i, 1], f"p{i}", fontsize=8)
     else:
         # For 1D embeddings, just plot the single dimension
         X1_pos = X_pos[:, 0]
-        sc_pos = ax6.scatter(X1_pos, np.arange(block_size), c=clusters_pos, s=0, alpha=0.85, cmap="tab10")
+        ax6.scatter(X1_pos, np.arange(block_size), s=0, alpha=0)  # Invisible points for layout
         ax6.set_title(f"Position Embeddings 1D (block_size={block_size})", fontsize=11)
         ax6.set_xlabel("Embedding value")
         ax6.set_ylabel("Position index")
@@ -857,7 +876,6 @@ def plot_embeddings_pca(model, itos, save_path=None):
         if block_size <= 80:
             for i in range(block_size):
                 ax6.text(X1_pos[i], i, f"p{i}", fontsize=8, ha='center')
-        plt.colorbar(sc_pos, ax=ax6, label="Cluster ID")
     
     # Row 3: Token+Position embeddings (heatmaps for each dimension, then PCA)
     # Create all token-position combinations (ALL tokens including special characters)
@@ -903,9 +921,10 @@ def plot_embeddings_pca(model, itos, save_path=None):
         ax11.text(0.5, 0.5, "N/A (1D embeddings)", ha='center', va='center', transform=ax11.transAxes)
         ax11.set_title("Token+Position: Dim 1 (N/A)", fontsize=11)
     
-    # Column 3: PCA of all token-position combinations
+    # Column 3: PCA or raw data of all token-position combinations
     ax12 = axes[2, 2]
-    if n_embd >= 2:
+    if n_embd > 2:
+        # Do PCA for dimensions > 2
         X_comb = all_combinations.astype(np.float64)
         X_comb = X_comb - X_comb.mean(axis=0, keepdims=True)
         _, _, Vt_comb = np.linalg.svd(X_comb, full_matrices=False)
@@ -926,6 +945,23 @@ def plot_embeddings_pca(model, itos, save_path=None):
         ax12.set_xlabel("PC1")
         ax12.set_ylabel("PC2")
         ax12.grid(True, alpha=0.2)
+    elif n_embd == 2:
+        # For 2D embeddings, show raw data
+        X_comb = all_combinations.astype(np.float64)
+        ax12.scatter(X_comb[:, 0], X_comb[:, 1], s=0, alpha=0)
+        labels_comb = []
+        for token_idx in range(max_token_idx):
+            token_str = str(itos[token_idx])
+            for pos_idx in range(block_size):
+                labels_comb.append(f"{token_str}p{pos_idx}")
+        
+        for i in range(len(labels_comb)):
+            ax12.text(X_comb[i, 0], X_comb[i, 1], labels_comb[i], fontsize=6, ha='center', va='center')
+        
+        ax12.set_title(f"Token+Position: Raw (all tokens)", fontsize=11)
+        ax12.set_xlabel("Dim 0")
+        ax12.set_ylabel("Dim 1")
+        ax12.grid(True, alpha=0.2)
     else:
         # For 1D embeddings
         X1_comb = all_combinations[:, 0]
@@ -934,10 +970,16 @@ def plot_embeddings_pca(model, itos, save_path=None):
         for token_idx in range(max_token_idx):
             token_str = str(itos[token_idx])
             for pos_idx in range(block_size):
-                labels_comb.append(f"{token_str}p{pos_idx}")  # No underscore
+                labels_comb.append(f"{token_str}p{pos_idx}")
         
         for i in range(len(labels_comb)):
-            ax12.text(X1_comb[i], 0, labels_comb[i], fontsize=6, ha='center', va='center', rotation=90)
+            ax12.text(X1_comb[i], 0, labels_comb[i], fontsize=6, ha='center', va='center')
+        
+        ax12.set_title(f"Token+Position: Raw 1D (all tokens)", fontsize=11)
+        ax12.set_xlabel("Embedding value")
+        ax12.set_ylabel("")
+        ax12.set_yticks([])
+        ax12.grid(True, alpha=0.2)
         
         ax12.set_title(f"Token+Position: 1D (all tokens)", fontsize=11)
         ax12.set_xlabel("Embedding value")
