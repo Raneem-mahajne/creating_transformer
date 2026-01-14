@@ -1496,7 +1496,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
 def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequences=3):
     """
     Plot QKV for multiple sequences, transposed: rows are sequences, columns are matrices.
-    Column order: Q, K^T, Q*K^T, Softmax(QK^T), V, Attention
+    Column order: Q, K, masked QK^T, Attention, V, Final Output
     
     Args:
         model: The model
@@ -1515,7 +1515,7 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
     sequences_to_plot = X_list[:num_sequences]
     num_sequences = len(sequences_to_plot)
     
-    # Columns: Q, K^T, Q*K^T, Softmax(QK^T), V, Attention
+    # Columns: Q, K, masked QK^T, Attention, V, Final Output
     num_matrix_types = 6
     
     # Create figure: num_sequences rows, num_matrix_types columns
@@ -1546,15 +1546,14 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         K = np.stack(k_all, axis=0).mean(axis=0)  # (T, hs)
         V = np.stack(v_all, axis=0).mean(axis=0)  # (T, hs)
         
-        # Compute K^T (transpose of K)
-        K_T = K.T  # (hs, T)
-        
         # Compute QK^T (attention formula: Q @ K^T)
         QK_T = Q @ K.T  # (T, hs) @ (hs, T) = (T, T)
         
-        # Compute Softmax(QK^T) without masking
+        # Compute masked QK^T (apply causal mask before softmax)
         QK_T_torch = torch.from_numpy(QK_T).float()
-        Softmax_QK_T = F.softmax(QK_T_torch, dim=-1).numpy()  # (T, T)
+        # Create causal mask (lower triangular)
+        tril_mask = torch.tril(torch.ones(T, T))
+        Masked_QK_T = QK_T_torch.masked_fill(tril_mask == 0, float("-inf")).numpy()  # (T, T)
         
         # Get attention weights (softmax(QK^T) after masking) from all heads
         wei_all = []
@@ -1565,44 +1564,37 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         # Average attention weights across heads
         Attention = np.stack(wei_all, axis=0).mean(axis=0)  # (T, T)
         
+        # Compute final output: Attention @ V (this is what actually gets used)
+        Final_Output = Attention @ V  # (T, T) @ (T, hs) = (T, hs)
+        
         # Plot all matrices in this row (one per column)
-        # Order: Q, K^T, Q*K^T, Softmax(QK^T), V, Attention
+        # Order: Q, K, masked QK^T, Attention, V, Final Output
         plots_data = [
             (Q, "Q", "viridis", (T, Q.shape[1]), True, False),  # (data, title, cmap, shape, is_activation, is_transpose)
-            (K_T, "K^T", "viridis", (K_T.shape[0], K_T.shape[1]), True, True),  # K^T is (hs, T)
-            (QK_T, "Q*K^T", "viridis", (T, T), False, False),  # (T, T) matrix
-            (Softmax_QK_T, "Softmax(QK^T)", "magma", (T, T), False, False),  # (T, T) matrix
-            (V, "V", "viridis", (T, V.shape[1]), True, False),  # (T, hs)
+            (K, "K", "viridis", (K.shape[0], K.shape[1]), True, False),  # K is (T, hs)
+            (Masked_QK_T, "masked QK^T", "viridis", (T, T), False, False),  # (T, T) matrix
             (Attention, "Attention", "magma", (T, T), False, False),  # (T, T) matrix
+            (V, "V", "viridis", (T, V.shape[1]), True, False),  # (T, hs)
+            (Final_Output, "Final Output", "viridis", (T, Final_Output.shape[1]), True, False),  # (T, hs)
         ]
         
         for col_idx, (data, title, cmap, shape, is_activation, is_transpose) in enumerate(plots_data):
             ax = fig.add_subplot(gs[seq_idx, col_idx])
             
             if is_activation:
-                # Q, K^T, V are activations
-                if is_transpose:
-                    # K^T is (hs, T) - use numeric labels for rows, tokens for columns
-                    x_labels = tokens
-                    y_labels_local = list(range(data.shape[0]))
-                    dim_str = f"(hs×T={shape[0]}×{shape[1]})"
-                    sns.heatmap(data, cmap=cmap, xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
-                    ax.set_xlabel("T", fontsize=10)
-                    ax.set_ylabel("hs", fontsize=10)
-                else:
-                    # Q, V are (T, hs) - use tokens for y-axis
-                    x_labels = list(range(data.shape[1]))
-                    y_labels_local = tokens
-                    dim_str = f"(T×hs={shape[0]}×{shape[1]})"
-                    sns.heatmap(data, cmap=cmap, xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
-                    ax.set_xlabel("hs", fontsize=10)
-                    ax.set_ylabel("T", fontsize=10)
+                # Q, K, V, Final Output are activations (T, hs) - use tokens for y-axis
+                x_labels = list(range(data.shape[1]))
+                y_labels_local = tokens
+                dim_str = f"(T×hs={shape[0]}×{shape[1]})"
+                sns.heatmap(data, cmap=cmap, xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
+                ax.set_xlabel("hs", fontsize=10)
+                ax.set_ylabel("T", fontsize=10)
             else:
-                # QK^T, Softmax(QK^T), Attention are (T, T) - use tokens for both axes
+                # masked QK^T, Attention are (T, T) - use tokens for both axes
                 x_labels = tokens
                 y_labels_local = tokens
                 dim_str = f"(T×T={shape[0]}×{shape[1]})"
-                vmin, vmax = (0.0, 1.0) if title in ["Softmax(QK^T)", "Attention"] else (None, None)
+                vmin, vmax = (0.0, 1.0) if title == "Attention" else (None, None)
                 sns.heatmap(data, cmap=cmap, vmin=vmin, vmax=vmax, 
                            xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
                 ax.set_xlabel("T", fontsize=10)
@@ -1654,9 +1646,11 @@ def plot_weights_qkv_single_rows(model, X, itos, fig, gs, row_offset, sequence_s
     # Compute QK^T (attention formula: Q @ K^T)
     QK_T = Q @ K.T  # (T, hs) @ (hs, T) = (T, T)
     
-    # Compute softmax(QK^T) without masking
+    # Compute masked QK^T (apply causal mask before softmax)
     QK_T_torch = torch.from_numpy(QK_T).float()
-    Softmax_QK_T = F.softmax(QK_T_torch, dim=-1).numpy()  # (T, T)
+    # Create causal mask (lower triangular)
+    tril_mask = torch.tril(torch.ones(T, T))
+    Masked_QK_T = QK_T_torch.masked_fill(tril_mask == 0, float("-inf")).numpy()  # (T, T)
     
     # Get attention weights (softmax(QK^T) after masking) from all heads
     wei_all = []
@@ -1671,6 +1665,9 @@ def plot_weights_qkv_single_rows(model, X, itos, fig, gs, row_offset, sequence_s
     
     # Average output across heads
     Output = np.stack(out_all, axis=0).mean(axis=0)  # (T, head_size)
+    
+    # Compute final output: Attention @ V (this is what actually gets used)
+    Final_Output = Attention @ V  # (T, T) @ (T, hs) = (T, hs)
     
     if show_weights:
         # Row 1: W_Q, W_K, QK^T, W_V, Attention (old behavior for backward compatibility)
@@ -1758,26 +1755,29 @@ def plot_weights_qkv_single_rows(model, X, itos, fig, gs, row_offset, sequence_s
                         ax.set_ylabel("T", fontsize=10)
                 ax.set_xlabel("hs", fontsize=10)
     
-    # Row 2: Q, K, softmax(QK^T), V, Output
-    row2_titles = ["Q", "K", "softmax(QK^T)", "V", "Output"]
-    row2_data = [Q, K, Softmax_QK_T, V, Output]
+    # Row 2: Q, K, masked QK^T, Attention, V, Final Output
+    row2_titles = ["Q", "K", "masked QK^T", "Attention", "V", "Final Output"]
+    row2_data = [Q, K, Masked_QK_T, Attention, V, Final_Output]
     
     for j, (data, title) in enumerate(zip(row2_data, row2_titles)):
         ax = fig.add_subplot(gs[row_offset + 1, j])
-        if title == "softmax(QK^T)":
-            # softmax(QK^T) is (T, T) matrix - use tokens for both axes
+        if title in ["masked QK^T", "Attention"]:
+            # masked QK^T and Attention are (T, T) matrices - use tokens for both axes
             x_labels = tokens
             y_labels_local = tokens
             dim_str = f"(T×T={data.shape[0]}×{data.shape[1]})"
             
-            sns.heatmap(data, cmap="magma", vmin=0.0, vmax=1.0,
+            cmap = "magma" if title == "Attention" else "viridis"
+            vmin, vmax = (0.0, 1.0) if title == "Attention" else (None, None)
+            
+            sns.heatmap(data, cmap=cmap, vmin=vmin, vmax=vmax,
                         xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
             ax.set_title(f"{title} {dim_str}", fontsize=11)
             if j == 0:
                 ax.set_ylabel("T", fontsize=10)
             ax.set_xlabel("T", fontsize=10)
-        elif title == "Output":
-            # Output is (T, head_size) matrix - use tokens for y-axis
+        elif title == "Final Output":
+            # Final Output is (T, head_size) matrix - use tokens for y-axis
             x_labels = list(range(data.shape[1]))
             y_labels_local = tokens
             dim_str = f"(T×hs={data.shape[0]}×{data.shape[1]})"
@@ -1980,20 +1980,20 @@ def plot_attention_matrix(model, X_list, itos, save_path=None, num_sequences=3):
         # Get tokens for this sequence
         tokens = [itos[i.item()] for i in X[0]]
         tokens_list.append(tokens)
-        
-        # Get embeddings and positional encodings
-        token_emb = model.token_embedding(X)
-        pos = torch.arange(T, device=X.device) % model.block_size
-        pos_emb = model.position_embedding_table(pos)
-        x = token_emb + pos_emb
-        
-        # Get attention weights from all heads
-        wei_all = []
-        for h in model.sa_heads.heads:
-            _, wei = h(x)  # wei: (B, T, T)
-            wei_all.append(wei[0].cpu().numpy())  # (T, T)
-        
-        # Average across heads
+    
+    # Get embeddings and positional encodings
+    token_emb = model.token_embedding(X)
+    pos = torch.arange(T, device=X.device) % model.block_size
+    pos_emb = model.position_embedding_table(pos)
+    x = token_emb + pos_emb
+    
+    # Get attention weights from all heads
+    wei_all = []
+    for h in model.sa_heads.heads:
+        _, wei = h(x)  # wei: (B, T, T)
+        wei_all.append(wei[0].cpu().numpy())  # (T, T)
+    
+    # Average across heads
         attention_matrix = np.stack(wei_all, axis=0).mean(axis=0)  # (T, T)
         attention_matrices.append(attention_matrix)
         
@@ -2547,8 +2547,8 @@ def main(config_name: str = "copy_modulo"):
         print("Vocabulary (integers + operators):", [itos[i] for i in range(vocab_size)])
     else:
         encode, decode, vocab_size, itos, stoi = build_encoder_for_integers(min_value=min_value, max_value=max_value)
-        print("Vocabulary size:", vocab_size)
-        print("Vocabulary (integers):", [itos[i] for i in range(vocab_size)])
+    print("Vocabulary size:", vocab_size)
+    print("Vocabulary (integers):", [itos[i] for i in range(vocab_size)])
 
     # 3) Encode sequences (integer values -> token indices)
     encoded_sequences = [encode(seq) for seq in sequences]
