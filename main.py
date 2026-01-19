@@ -1495,14 +1495,15 @@ def plot_qkv_transformations(model, itos, save_path=None):
 @torch.no_grad()
 def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequences=3):
     """
-    Plot QKV for multiple sequences, transposed: rows are sequences, columns are matrices.
-    Column order: Q, K, masked QK^T, Attention, V, Final Output
+    Plot QKV for multiple sequences, split into two separate plots.
+    Plot 1: Q, K, masked QK^T, Attention, scatter(Q vs K)
+    Plot 2: Attention, V, Final Output, scatter(V vs Final Output with lines)
     
     Args:
         model: The model
         X_list: List of input sequences, or single sequence (will be converted to list)
         itos: Index to string mapping
-        save_path: Path to save figure
+        save_path: Base path to save figures (will save as save_path_part1.png and save_path_part2.png)
         num_sequences: Number of sequences to show (if X_list is single sequence, will use it multiple times)
     """
     model.eval()
@@ -1515,16 +1516,30 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
     sequences_to_plot = X_list[:num_sequences]
     num_sequences = len(sequences_to_plot)
     
-    # Columns: Q, K, masked QK^T, Attention, V, Final Output
-    num_matrix_types = 6
+    # Helper function to compute PCA for 2D visualization
+    def pca_2d(data):
+        """Reduce data to 2D using PCA only when dimension > 2"""
+        if data.shape[1] <= 2:
+            # Use raw data directly when dimension is 2 or less
+            if data.shape[1] == 2:
+                return data
+            elif data.shape[1] == 1:
+                # Pad with zeros if only 1 dimension
+                result = np.zeros((data.shape[0], 2))
+                result[:, 0] = data[:, 0]
+                return result
+            else:
+                return data[:, :2]
+        # Center the data
+        data_centered = data - data.mean(axis=0, keepdims=True)
+        # SVD for PCA
+        U, s, Vt = np.linalg.svd(data_centered, full_matrices=False)
+        # Project to first 2 principal components
+        return data_centered @ Vt[:2].T
     
-    # Create figure: num_sequences rows, num_matrix_types columns
-    fig = plt.figure(figsize=(6 * num_matrix_types, 4 * num_sequences))
-    gs = GridSpec(num_sequences, num_matrix_types, figure=fig, hspace=0.4, wspace=0.3)
-    
-    # For each sequence (row)
+    # Prepare data for all sequences
+    all_data = []
     for seq_idx, X in enumerate(sequences_to_plot):
-        # Get sequence string
         tokens = [itos[i.item()] for i in X[0]]
         seq_str = " ".join(tokens)
         B, T = X.shape
@@ -1567,51 +1582,197 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         # Compute final output: Attention @ V (this is what actually gets used)
         Final_Output = Attention @ V  # (T, T) @ (T, hs) = (T, hs)
         
-        # Plot all matrices in this row (one per column)
-        # Order: Q, K, masked QK^T, Attention, V, Final Output
-        plots_data = [
-            (Q, "Q", "viridis", (T, Q.shape[1]), True, False),  # (data, title, cmap, shape, is_activation, is_transpose)
-            (K, "K", "viridis", (K.shape[0], K.shape[1]), True, False),  # K is (T, hs)
-            (Masked_QK_T, "masked QK^T", "viridis", (T, T), False, False),  # (T, T) matrix
-            (Attention, "Attention", "magma", (T, T), False, False),  # (T, T) matrix
-            (V, "V", "viridis", (T, V.shape[1]), True, False),  # (T, hs)
-            (Final_Output, "Final Output", "viridis", (T, Final_Output.shape[1]), True, False),  # (T, hs)
-        ]
+        all_data.append({
+            'tokens': tokens,
+            'seq_str': seq_str,
+            'seq_idx': seq_idx,
+            'Q': Q,
+            'K': K,
+            'V': V,
+            'Masked_QK_T': Masked_QK_T,
+            'Attention': Attention,
+            'Final_Output': Final_Output,
+            'T': T
+        })
+    
+    # ========== PLOT 1: Q, K, masked QK^T, Attention, scatter(Q vs K) ==========
+    num_cols_plot1 = 5  # Q, K, masked QK^T, Attention, scatter
+    fig1 = plt.figure(figsize=(6 * num_cols_plot1, 4 * num_sequences))
+    gs1 = GridSpec(num_sequences, num_cols_plot1, figure=fig1, hspace=0.4, wspace=0.3)
+    
+    for data_dict in all_data:
+        seq_idx = data_dict['seq_idx']
+        tokens = data_dict['tokens']
+        seq_str = data_dict['seq_str']
+        Q = data_dict['Q']
+        K = data_dict['K']
+        Masked_QK_T = data_dict['Masked_QK_T']
+        Attention = data_dict['Attention']
+        T = data_dict['T']
         
-        for col_idx, (data, title, cmap, shape, is_activation, is_transpose) in enumerate(plots_data):
-            ax = fig.add_subplot(gs[seq_idx, col_idx])
-            
-            if is_activation:
-                # Q, K, V, Final Output are activations (T, hs) - use tokens for y-axis
-                x_labels = list(range(data.shape[1]))
-                y_labels_local = tokens
-                dim_str = f"(T×hs={shape[0]}×{shape[1]})"
-                sns.heatmap(data, cmap=cmap, xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
-                ax.set_xlabel("hs", fontsize=10)
-                ax.set_ylabel("T", fontsize=10)
-            else:
-                # masked QK^T, Attention are (T, T) - use tokens for both axes
-                x_labels = tokens
-                y_labels_local = tokens
-                dim_str = f"(T×T={shape[0]}×{shape[1]})"
-                vmin, vmax = (0.0, 1.0) if title == "Attention" else (None, None)
-                sns.heatmap(data, cmap=cmap, vmin=vmin, vmax=vmax, 
-                           xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax)
-                ax.set_xlabel("T", fontsize=10)
-                ax.set_ylabel("T", fontsize=10)
-            
-            # Set ylabel with sequence info only on first column
-            if col_idx == 0:
-                ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
-            
-            ax.set_title(f"{title} {dim_str}", fontsize=11)
+        # Column 0: Q
+        ax = fig1.add_subplot(gs1[seq_idx, 0])
+        dim_str = f"(T×hs={Q.shape[0]}×{Q.shape[1]})"
+        sns.heatmap(Q, cmap="viridis", xticklabels=list(range(Q.shape[1])), 
+                   yticklabels=tokens, cbar=True, ax=ax)
+        ax.set_xlabel("hs", fontsize=10)
+        ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
+        ax.set_title(f"Q {dim_str}", fontsize=11)
+        
+        # Column 1: K
+        ax = fig1.add_subplot(gs1[seq_idx, 1])
+        dim_str = f"(T×hs={K.shape[0]}×{K.shape[1]})"
+        sns.heatmap(K, cmap="viridis", xticklabels=list(range(K.shape[1])), 
+                   yticklabels=tokens, cbar=True, ax=ax)
+        ax.set_xlabel("hs", fontsize=10)
+        ax.set_ylabel("T", fontsize=10)
+        ax.set_title(f"K {dim_str}", fontsize=11)
+        
+        # Column 2: Scatter plot Q vs K
+        ax = fig1.add_subplot(gs1[seq_idx, 2])
+        Q_2d = pca_2d(Q)
+        K_2d = pca_2d(K)
+        
+        # Plot points with smaller markers
+        ax.scatter(Q_2d[:, 0], Q_2d[:, 1], label='Q', alpha=0.7, s=20)
+        ax.scatter(K_2d[:, 0], K_2d[:, 1], label='K', alpha=0.7, s=20, marker='^')
+        
+        # Annotate all points with token and position
+        for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
+            # Annotate Q points
+            ax.annotate(f'{token}p{pos}', (Q_2d[i, 0], Q_2d[i, 1]), 
+                       fontsize=7, alpha=0.8, xytext=(3, 3), textcoords='offset points')
+            # Annotate K points
+            ax.annotate(f'{token}p{pos}', (K_2d[i, 0], K_2d[i, 1]), 
+                       fontsize=7, alpha=0.8, xytext=(3, 3), textcoords='offset points')
+        
+        # Update axis labels based on whether PCA was used
+        if Q.shape[1] > 2:
+            ax.set_xlabel("PC1", fontsize=10)
+            ax.set_ylabel("PC2", fontsize=10)
+            title_suffix = " (PCA)"
+        else:
+            ax.set_xlabel("Dim 1", fontsize=10)
+            ax.set_ylabel("Dim 2", fontsize=10)
+            title_suffix = " (raw)"
+        ax.set_title(f"Q vs K{title_suffix}", fontsize=11)
+        ax.legend(fontsize=9)
+        ax.grid(True, alpha=0.3)
+        
+        # Column 3: masked QK^T
+        ax = fig1.add_subplot(gs1[seq_idx, 3])
+        dim_str = f"(T×T={T}×{T})"
+        sns.heatmap(Masked_QK_T, cmap="viridis", xticklabels=tokens, 
+                   yticklabels=tokens, cbar=True, ax=ax)
+        ax.set_xlabel("T", fontsize=10)
+        ax.set_ylabel("T", fontsize=10)
+        ax.set_title(f"masked QK^T {dim_str}", fontsize=11)
+        
+        # Column 4: Attention
+        ax = fig1.add_subplot(gs1[seq_idx, 4])
+        dim_str = f"(T×T={T}×{T})"
+        sns.heatmap(Attention, cmap="magma", vmin=0.0, vmax=1.0, 
+                   xticklabels=tokens, yticklabels=tokens, cbar=True, ax=ax)
+        ax.set_xlabel("T", fontsize=10)
+        ax.set_ylabel("T", fontsize=10)
+        ax.set_title(f"Attention {dim_str}", fontsize=11)
     
     plt.tight_layout(rect=[0, 0, 1, 0.98])
     if save_path:
-        plt.savefig(save_path, bbox_inches='tight', dpi=150)
+        # Save with meaningful name: query_key_attention (contains Q, K, masked QK^T, Attention)
+        save_path_part1 = save_path.replace('qkv.png', 'qkv_query_key_attention.png') if 'qkv.png' in save_path else save_path.replace('.png', '_query_key_attention.png') if save_path.endswith('.png') else save_path + '_query_key_attention.png'
+        plt.savefig(save_path_part1, bbox_inches='tight', dpi=150)
         plt.close()
     else:
         plt.show()
+    
+    # ========== PLOT 2: Attention, V, Final Output, scatter(V vs Final Output with lines) ==========
+    num_cols_plot2 = 4  # Attention, V, Final Output, scatter
+    fig2 = plt.figure(figsize=(6 * num_cols_plot2, 4 * num_sequences))
+    gs2 = GridSpec(num_sequences, num_cols_plot2, figure=fig2, hspace=0.4, wspace=0.3)
+    
+    for data_dict in all_data:
+        seq_idx = data_dict['seq_idx']
+        tokens = data_dict['tokens']
+        seq_str = data_dict['seq_str']
+        V = data_dict['V']
+        Attention = data_dict['Attention']
+        Final_Output = data_dict['Final_Output']
+        T = data_dict['T']
+        
+        # Column 0: Attention (same as plot 1)
+        ax = fig2.add_subplot(gs2[seq_idx, 0])
+        dim_str = f"(T×T={T}×{T})"
+        sns.heatmap(Attention, cmap="magma", vmin=0.0, vmax=1.0, 
+                   xticklabels=tokens, yticklabels=tokens, cbar=True, ax=ax)
+        ax.set_xlabel("T", fontsize=10)
+        ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
+        ax.set_title(f"Attention {dim_str}", fontsize=11)
+        
+        # Column 1: V
+        ax = fig2.add_subplot(gs2[seq_idx, 1])
+        dim_str = f"(T×hs={V.shape[0]}×{V.shape[1]})"
+        sns.heatmap(V, cmap="viridis", xticklabels=list(range(V.shape[1])), 
+                   yticklabels=tokens, cbar=True, ax=ax)
+        ax.set_xlabel("hs", fontsize=10)
+        ax.set_ylabel("T", fontsize=10)
+        ax.set_title(f"V {dim_str}", fontsize=11)
+        
+        # Column 2: Final Output
+        ax = fig2.add_subplot(gs2[seq_idx, 2])
+        dim_str = f"(T×hs={Final_Output.shape[0]}×{Final_Output.shape[1]})"
+        sns.heatmap(Final_Output, cmap="viridis", xticklabels=list(range(Final_Output.shape[1])), 
+                   yticklabels=tokens, cbar=True, ax=ax)
+        ax.set_xlabel("hs", fontsize=10)
+        ax.set_ylabel("T", fontsize=10)
+        ax.set_title(f"Final Output {dim_str}", fontsize=11)
+        
+        # Column 3: Scatter plot V vs Final Output with arrows
+        ax = fig2.add_subplot(gs2[seq_idx, 3])
+        V_2d = pca_2d(V)
+        Final_Output_2d = pca_2d(Final_Output)
+        
+        # Plot points with smaller markers
+        ax.scatter(V_2d[:, 0], V_2d[:, 1], label='V', alpha=0.7, s=20, color='blue')
+        ax.scatter(Final_Output_2d[:, 0], Final_Output_2d[:, 1], label='Final Output', alpha=0.7, s=20, color='red', marker='^')
+        
+        # Draw arrows pointing from V to Final Output
+        for i in range(len(V_2d)):
+            ax.annotate('', xy=(Final_Output_2d[i, 0], Final_Output_2d[i, 1]),
+                       xytext=(V_2d[i, 0], V_2d[i, 1]),
+                       arrowprops=dict(arrowstyle='->', color='gray', alpha=0.5, lw=1.5))
+        
+        # Annotate all points with token and position
+        for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
+            # Annotate V points
+            ax.annotate(f'{token}p{pos}', (V_2d[i, 0], V_2d[i, 1]), 
+                       fontsize=7, alpha=0.8, xytext=(3, 3), textcoords='offset points', color='blue')
+            # Annotate Final Output points
+            ax.annotate(f'{token}p{pos}', (Final_Output_2d[i, 0], Final_Output_2d[i, 1]), 
+                       fontsize=7, alpha=0.8, xytext=(3, 3), textcoords='offset points', color='red')
+        
+        # Update axis labels based on whether PCA was used
+        if V.shape[1] > 2:
+            ax.set_xlabel("PC1", fontsize=10)
+            ax.set_ylabel("PC2", fontsize=10)
+            title_suffix = " (PCA)"
+        else:
+            ax.set_xlabel("Dim 1", fontsize=10)
+            ax.set_ylabel("Dim 2", fontsize=10)
+            title_suffix = " (raw)"
+        ax.set_title(f"V vs Final Output{title_suffix}", fontsize=11)
+        ax.legend(fontsize=9)
+        ax.grid(True, alpha=0.3)
+    
+    plt.tight_layout(rect=[0, 0, 1, 0.98])
+    if save_path:
+        # Save with meaningful name: value_output (contains Attention, V, Final Output)
+        save_path_part2 = save_path.replace('qkv.png', 'qkv_value_output.png') if 'qkv.png' in save_path else save_path.replace('.png', '_value_output.png') if save_path.endswith('.png') else save_path + '_value_output.png'
+        plt.savefig(save_path_part2, bbox_inches='tight', dpi=150)
+        plt.close()
+    else:
+        plt.show()
+    
     model.train()
 
 @torch.no_grad()
