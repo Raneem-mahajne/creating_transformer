@@ -3006,11 +3006,21 @@ def plot_qk_full_attention_heatmap(model, itos, save_path: str = None):
     # Compute full attention matrix: Q_all @ K_all.T / sqrt(d)
     attention_matrix = (Q_all @ K_all.T) / np.sqrt(head_size)
     
+    # Apply CAUSAL MASKING: query at position p can only attend to keys at position <= p
+    query_positions = np.array([p for t in range(vocab_size) for p in range(block_size)])
+    key_positions = np.array([p for t in range(vocab_size) for p in range(block_size)])
+    
+    # Create causal mask: mask[i,j] = True if query_pos[i] >= key_pos[j] (can attend)
+    causal_mask = query_positions[:, None] >= key_positions[None, :]  # (132, 132)
+    
+    # Apply mask: set invalid positions to NaN (will show as white/transparent)
+    masked_attention = np.where(causal_mask, attention_matrix, np.nan)
+    
     # Create figure
     fig, ax = plt.subplots(figsize=(20, 16))
     
     # Use 'nipy_spectral' - maximum color divergence across full spectrum
-    im = ax.imshow(attention_matrix, cmap='nipy_spectral', aspect='auto')
+    im = ax.imshow(masked_attention, cmap='nipy_spectral', aspect='auto')
     
     # Simple token labels at center of each token block
     xtick_positions = []
@@ -3084,49 +3094,33 @@ def plot_qk_softmax_attention_heatmap(model, itos, save_path: str = None):
             K_all[idx] = W_K @ combined_emb
             idx += 1
     
-    # Compute attention scores and apply softmax row-wise
+    # Compute attention scores
     attention_scores = (Q_all @ K_all.T) / np.sqrt(head_size)
     
-    # Apply softmax to each row (each query attends to all keys)
+    # Apply CAUSAL MASKING: query at (token_q, pos_q) can only attend to keys at pos_k <= pos_q
+    # Build position indices for masking
+    query_positions = np.array([p for t in range(vocab_size) for p in range(block_size)])  # position of each query
+    key_positions = np.array([p for t in range(vocab_size) for p in range(block_size)])    # position of each key
+    
+    # Create causal mask: mask[i,j] = True if query_pos[i] >= key_pos[j] (can attend)
+    causal_mask = query_positions[:, None] >= key_positions[None, :]  # (132, 132)
+    
+    # Apply mask: set invalid positions to -inf before softmax
+    masked_scores = np.where(causal_mask, attention_scores, -np.inf)
+    
+    # Apply softmax to each row (each query attends to valid keys only)
     def softmax(x):
-        exp_x = np.exp(x - np.max(x, axis=-1, keepdims=True))  # subtract max for numerical stability
-        return exp_x / np.sum(exp_x, axis=-1, keepdims=True)
+        # Handle rows that are all -inf (query at position 0 with no valid keys of same token)
+        x_max = np.max(x, axis=-1, keepdims=True)
+        x_max = np.where(np.isinf(x_max), 0, x_max)  # replace -inf max with 0
+        exp_x = np.exp(x - x_max)
+        exp_x = np.where(np.isinf(x), 0, exp_x)  # -inf -> 0 after exp
+        sum_exp = np.sum(exp_x, axis=-1, keepdims=True)
+        sum_exp = np.where(sum_exp == 0, 1, sum_exp)  # avoid division by zero
+        return exp_x / sum_exp
     
-    attention_probs = softmax(attention_scores)
+    attention_probs = softmax(masked_scores)
     
-    # #region agent log
-    # Debug: verify attention matrix structure
-    import json
-    print(f"\n=== DEBUG: Attention Matrix Analysis ===")
-    print(f"Matrix shape: {attention_probs.shape} (queries x keys)")
-    print(f"Tokens: {[itos[t] for t in range(vocab_size)]}")
-    print(f"'+' token index: {vocab_size - 1}")
-    print(f"'+' query rows: {(vocab_size-1)*block_size} to {vocab_size*block_size - 1}")
-    print(f"'+' key cols: {(vocab_size-1)*block_size} to {vocab_size*block_size - 1}")
-    
-    print(f"\n'+' QUERY (bottom rows) attention to each KEY token:")
-    for t in range(vocab_size):
-        token_name = itos[t]
-        avg_attn = attention_probs[(vocab_size-1)*block_size:(vocab_size)*block_size, t*block_size:(t+1)*block_size].mean()
-        even_odd = "EVEN" if t < vocab_size - 1 and int(itos[t]) % 2 == 0 else ("ODD" if t < vocab_size - 1 else "+")
-        print(f"  '+' query -> '{token_name}' key: {avg_attn:.6f} ({even_odd})")
-    
-    print(f"\nEach QUERY token's attention to '+' KEY (rightmost column):")
-    for t in range(vocab_size):
-        token_name = itos[t]
-        avg_attn = attention_probs[t*block_size:(t+1)*block_size, (vocab_size-1)*block_size:(vocab_size)*block_size].mean()
-        print(f"  '{token_name}' query -> '+' key: {avg_attn:.6f}")
-    
-    print(f"\nMatrix value range: min={attention_probs.min():.6f}, max={attention_probs.max():.6f}")
-    
-    # Verify softmax: each ROW should sum to 1
-    row_sums = attention_probs.sum(axis=1)
-    print(f"\nSoftmax verification (each row should sum to 1):")
-    print(f"  Row sums: min={row_sums.min():.6f}, max={row_sums.max():.6f}, mean={row_sums.mean():.6f}")
-    print(f"  First 5 row sums: {row_sums[:5]}")
-    print(f"  Last 5 row sums ('+' queries): {row_sums[-5:]}")
-    print(f"=== END DEBUG ===\n")
-    # #endregion
     
     # Create figure
     fig, ax = plt.subplots(figsize=(20, 16))
@@ -3458,7 +3452,6 @@ def visualize_from_checkpoint(config_name_actual: str, checkpoint_data: dict, co
     # New Q/K embedding space visualizations
     plot_qk_embedding_space(model, itos, save_path=os.path.join(plots_dir, "qk_embedding_space.png"))
     plot_qk_full_attention_heatmap(model, itos, save_path=os.path.join(plots_dir, "qk_full_attention_heatmap.png"))
-    plot_qk_softmax_attention_heatmap(model, itos, save_path=os.path.join(plots_dir, "qk_softmax_attention_heatmap.png"))
     
     print(f"All visualizations saved to {plots_dir}")
 
