@@ -11,6 +11,9 @@ import numpy as np
 import os
 import random
 import sys
+import pickle
+import json
+from pathlib import Path
 from IntegerStringGenerator import IntegerStringGenerator, OddEvenIndexRule, OperatorBasedGenerator
 from config_loader import load_config, get_generator_from_config
 
@@ -2657,16 +2660,839 @@ class BigramLanguageModel(nn.Module):
         return idx
 
 # -----------------------------
+# Architecture Diagram
+# -----------------------------
+def plot_architecture_diagram(config: dict, save_path: str = None):
+    """Generate a visual diagram of the model architecture based on config.
+    
+    Args:
+        config: Configuration dictionary with model parameters
+        save_path: Path to save the diagram (if None, displays interactively)
+    """
+    model_config = config['model']
+    data_config = config['data']
+    
+    # Extract dimensions
+    vocab_size = data_config['max_value'] - data_config['min_value'] + 1
+    n_embd = model_config['n_embd']
+    block_size = model_config['block_size']
+    num_heads = model_config['num_heads']
+    head_size = model_config['head_size']
+    
+    # Check if generator uses operators (adds to vocab)
+    if data_config.get('generator_type') in ['PlusLastEvenRule']:
+        vocab_size += 1  # +1 for '+' operator
+    
+    fig, ax = plt.subplots(1, 1, figsize=(14, 18))
+    ax.set_xlim(0, 10)
+    ax.set_ylim(0, 20)
+    ax.set_aspect('equal')
+    ax.axis('off')
+    
+    # Colors
+    input_color = '#E8F4FD'
+    embed_color = '#D4E6F1'
+    attention_color = '#FCF3CF'
+    linear_color = '#FADBD8'
+    output_color = '#D5F5E3'
+    arrow_color = '#2C3E50'
+    
+    # Helper function to draw a box
+    def draw_box(x, y, width, height, text, color, fontsize=9, subtext=None):
+        rect = plt.Rectangle((x - width/2, y - height/2), width, height, 
+                              facecolor=color, edgecolor='#2C3E50', linewidth=2, zorder=2)
+        ax.add_patch(rect)
+        ax.text(x, y + (0.15 if subtext else 0), text, ha='center', va='center', 
+                fontsize=fontsize, fontweight='bold', zorder=3)
+        if subtext:
+            ax.text(x, y - 0.25, subtext, ha='center', va='center', 
+                    fontsize=7, color='#555', zorder=3)
+    
+    # Helper function to draw arrow
+    def draw_arrow(x1, y1, x2, y2, label=None):
+        ax.annotate('', xy=(x2, y2), xytext=(x1, y1),
+                    arrowprops=dict(arrowstyle='->', color=arrow_color, lw=1.5))
+        if label:
+            mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
+            ax.text(mid_x + 0.3, mid_y, label, fontsize=7, color='#555')
+    
+    # Title
+    config_name = config.get('name', 'Model')
+    ax.text(5, 19.5, f"Architecture: {config_name}", ha='center', va='center', 
+            fontsize=14, fontweight='bold')
+    
+    # 1. Input tokens
+    y = 18
+    draw_box(5, y, 3, 0.8, "Input Tokens", input_color, subtext=f"shape: (B, T={block_size})")
+    
+    # 2. Token Embedding
+    y = 16.5
+    draw_box(3.5, y, 3.5, 1, "Token Embedding", embed_color, 
+             subtext=f"nn.Embedding({vocab_size}, {n_embd})")
+    draw_arrow(5, 17.6, 3.5, 17)
+    
+    # 3. Position Embedding
+    draw_box(6.5, y, 3.5, 1, "Position Embedding", embed_color,
+             subtext=f"nn.Embedding({block_size}, {n_embd})")
+    draw_arrow(5, 17.6, 6.5, 17)
+    
+    # 4. Add embeddings
+    y = 15
+    draw_box(5, y, 2, 0.6, "+", '#FFF', fontsize=14)
+    draw_arrow(3.5, 16, 4.5, 15.3)
+    draw_arrow(6.5, 16, 5.5, 15.3)
+    ax.text(7.5, y, f"→ (B, T, {n_embd})", fontsize=8, va='center')
+    
+    # 5. Multi-Head Attention block
+    y = 13
+    attn_height = 4.5
+    rect = plt.Rectangle((1.5, y - attn_height/2), 7, attn_height, 
+                          facecolor='#FEF9E7', edgecolor='#F39C12', linewidth=2, 
+                          linestyle='--', zorder=1)
+    ax.add_patch(rect)
+    ax.text(5, y + attn_height/2 - 0.3, f"Multi-Head Attention ({num_heads} head{'s' if num_heads > 1 else ''})", 
+            ha='center', va='center', fontsize=10, fontweight='bold', color='#B7950B')
+    
+    draw_arrow(5, 14.7, 5, 14.2)
+    
+    # Q, K, V linear layers
+    qkv_y = 13.5
+    draw_box(2.5, qkv_y, 1.8, 0.8, "W_Q", attention_color, 
+             subtext=f"({n_embd}→{head_size})")
+    draw_box(5, qkv_y, 1.8, 0.8, "W_K", attention_color,
+             subtext=f"({n_embd}→{head_size})")
+    draw_box(7.5, qkv_y, 1.8, 0.8, "W_V", attention_color,
+             subtext=f"({n_embd}→{head_size})")
+    
+    draw_arrow(5, 14.2, 2.5, 13.9)
+    draw_arrow(5, 14.2, 5, 13.9)
+    draw_arrow(5, 14.2, 7.5, 13.9)
+    
+    # QK^T and softmax
+    qk_y = 12.3
+    draw_box(3.75, qk_y, 2, 0.7, "QK^T / √d", attention_color, fontsize=8)
+    draw_arrow(2.5, 13.1, 3.2, 12.65)
+    draw_arrow(5, 13.1, 4.3, 12.65)
+    
+    # Causal mask + Softmax
+    mask_y = 11.5
+    draw_box(3.75, mask_y, 2.2, 0.6, "Mask + Softmax", attention_color, fontsize=8)
+    draw_arrow(3.75, 11.95, 3.75, 11.8)
+    ax.text(6, mask_y, f"→ (B, T, T)", fontsize=7, va='center', color='#555')
+    
+    # Attention × V
+    av_y = 10.8
+    draw_box(5.5, av_y, 1.8, 0.6, "Attn × V", attention_color, fontsize=8)
+    draw_arrow(3.75, 11.2, 5, 11.1)
+    draw_arrow(7.5, 13.1, 6.5, 11.1)
+    
+    # Concat heads (if multi-head)
+    if num_heads > 1:
+        concat_y = 10.0
+        draw_box(5.5, concat_y, 2, 0.6, f"Concat {num_heads} heads", attention_color, fontsize=8)
+        draw_arrow(5.5, 10.5, 5.5, 10.3)
+        ax.text(7.8, concat_y, f"→ (B, T, {num_heads * head_size})", fontsize=7, va='center', color='#555')
+    
+    # 6. Projection layer
+    y = 8.5
+    draw_box(5, y, 3, 0.8, "Projection", linear_color,
+             subtext=f"nn.Linear({num_heads * head_size}, {n_embd})")
+    draw_arrow(5.5 if num_heads > 1 else 5.5, 9.7 if num_heads > 1 else 10.5, 5, 8.9)
+    
+    # 7. Residual connection
+    y = 7.5
+    draw_box(5, y, 2, 0.6, "+", '#FFF', fontsize=14)
+    draw_arrow(5, 8.1, 5, 7.8)
+    # Draw residual skip connection
+    ax.annotate('', xy=(4.5, 7.5), xytext=(1, 15),
+                arrowprops=dict(arrowstyle='->', color='#27AE60', lw=1.5, 
+                               connectionstyle='arc3,rad=0.2'))
+    ax.text(0.8, 12, "residual", fontsize=7, color='#27AE60', rotation=90, va='center')
+    
+    # 8. Feed Forward
+    y = 6
+    draw_box(5, y, 3.5, 1.2, "Feed Forward", linear_color,
+             subtext=f"Linear({n_embd}, {n_embd*16}) → ReLU → Linear({n_embd*16}, {n_embd})")
+    draw_arrow(5, 7.2, 5, 6.6)
+    
+    # 9. Residual connection
+    y = 4.8
+    draw_box(5, y, 2, 0.6, "+", '#FFF', fontsize=14)
+    draw_arrow(5, 5.4, 5, 5.1)
+    # Draw residual skip connection
+    ax.annotate('', xy=(4.5, 4.8), xytext=(1, 7.5),
+                arrowprops=dict(arrowstyle='->', color='#27AE60', lw=1.5,
+                               connectionstyle='arc3,rad=0.15'))
+    
+    # 10. Output Linear (lm_head)
+    y = 3.5
+    draw_box(5, y, 3, 0.8, "LM Head", output_color,
+             subtext=f"nn.Linear({n_embd}, {vocab_size})")
+    draw_arrow(5, 4.5, 5, 3.9)
+    
+    # 11. Softmax
+    y = 2.3
+    draw_box(5, y, 2.5, 0.7, "Softmax", output_color)
+    draw_arrow(5, 3.1, 5, 2.65)
+    
+    # 12. Output
+    y = 1.2
+    draw_box(5, y, 3.5, 0.8, "Output Probabilities", output_color,
+             subtext=f"shape: (B, T, {vocab_size})")
+    draw_arrow(5, 1.95, 5, 1.6)
+    
+    # Legend
+    legend_y = 0.3
+    legend_items = [
+        (embed_color, "Embeddings"),
+        (attention_color, "Attention"),
+        (linear_color, "Linear/FF"),
+        (output_color, "Output"),
+    ]
+    for i, (color, label) in enumerate(legend_items):
+        x = 2 + i * 2
+        rect = plt.Rectangle((x - 0.3, legend_y - 0.15), 0.6, 0.3, 
+                              facecolor=color, edgecolor='#2C3E50', linewidth=1)
+        ax.add_patch(rect)
+        ax.text(x + 0.5, legend_y, label, fontsize=7, va='center')
+    
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')
+        plt.close()
+        print(f"Architecture diagram saved to {save_path}")
+    else:
+        plt.show()
+
+# -----------------------------
+# Q/K Embedding Space Visualization
+# -----------------------------
+def plot_qk_embedding_space(model, itos, save_path: str = None):
+    """
+    Create a single scatter plot showing ALL Q and K transformed embeddings
+    with both token AND position labels for every combination.
+    Uses consistent format: Q{token}p{pos} and K{token}p{pos}
+    
+    Args:
+        model: Trained BigramLanguageModel
+        itos: Index-to-string mapping for tokens
+        save_path: Path to save the figure
+    """
+    model.eval()
+    
+    # Get model parameters
+    vocab_size = model.token_embedding.weight.shape[0]
+    block_size = model.position_embedding_table.weight.shape[0]
+    
+    # Get the first attention head's Q, K weights
+    head = model.sa_heads.heads[0]
+    W_Q = head.query.weight.detach().cpu().numpy()  # (head_size, n_embd)
+    W_K = head.key.weight.detach().cpu().numpy()    # (head_size, n_embd)
+    head_size = W_Q.shape[0]
+    
+    # Get embeddings
+    token_emb = model.token_embedding.weight.detach().cpu().numpy()  # (vocab_size, n_embd)
+    pos_emb = model.position_embedding_table.weight.detach().cpu().numpy()  # (block_size, n_embd)
+    
+    # Compute Q and K for all token-position combinations
+    num_combinations = vocab_size * block_size
+    
+    Q_all = []
+    K_all = []
+    labels = []
+    
+    for t in range(vocab_size):
+        for p in range(block_size):
+            combined_emb = token_emb[t] + pos_emb[p]
+            q = W_Q @ combined_emb  # (head_size,)
+            k = W_K @ combined_emb  # (head_size,)
+            Q_all.append(q)
+            K_all.append(k)
+            token_str = str(itos[t])
+            labels.append(f"{token_str}p{p}")
+    
+    Q_all = np.array(Q_all)  # (num_combinations, head_size)
+    K_all = np.array(K_all)  # (num_combinations, head_size)
+    
+    # If head_size is 2, plot directly. Otherwise, use PCA
+    if head_size == 2:
+        Q_2d = Q_all
+        K_2d = K_all
+    else:
+        from sklearn.decomposition import PCA
+        combined = np.vstack([Q_all, K_all])
+        pca = PCA(n_components=2)
+        combined_2d = pca.fit_transform(combined)
+        Q_2d = combined_2d[:num_combinations]
+        K_2d = combined_2d[num_combinations:]
+    
+    # Create single large figure
+    fig, ax = plt.subplots(figsize=(20, 16))
+    
+    # Plot invisible scatter points (for axis scaling)
+    all_x = np.concatenate([Q_2d[:, 0], K_2d[:, 0]])
+    all_y = np.concatenate([Q_2d[:, 1], K_2d[:, 1]])
+    ax.scatter(all_x, all_y, s=0, alpha=0)
+    
+    # Add text labels for ALL Q points (blue)
+    for i in range(num_combinations):
+        ax.text(Q_2d[i, 0], Q_2d[i, 1], labels[i], fontsize=6, ha='center', va='center', color='blue')
+    
+    # Add text labels for ALL K points (red)
+    for i in range(num_combinations):
+        ax.text(K_2d[i, 0], K_2d[i, 1], labels[i], fontsize=6, ha='center', va='center', color='red')
+    
+    ax.set_xlabel("Dimension 1" + (" (PCA)" if head_size != 2 else ""), fontsize=12)
+    ax.set_ylabel("Dimension 2" + (" (PCA)" if head_size != 2 else ""), fontsize=12)
+    ax.set_title(f"Q and K Embedding Space\n{num_combinations} Q (blue) + {num_combinations} K (red) = {2*num_combinations} total\n({vocab_size} tokens × {block_size} positions)", fontsize=14, fontweight='bold')
+    ax.grid(True, alpha=0.3)
+    
+    # Add legend
+    ax.text(0.02, 0.98, "Blue = Query, Red = Key\nFormat: {token}p{position}", 
+            transform=ax.transAxes, fontsize=10, verticalalignment='top',
+            bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.9))
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')
+        plt.close()
+        print(f"Q/K embedding space plot saved to {save_path}")
+    else:
+        plt.show()
+
+
+def plot_qk_full_attention_heatmap(model, itos, save_path: str = None):
+    """
+    Create a heatmap showing attention scores for ALL token-position combinations.
+    X-axis: Key (token-position), Y-axis: Query (token-position), Value: Q·K
+    
+    Args:
+        model: Trained BigramLanguageModel
+        itos: Index-to-string mapping for tokens
+        save_path: Path to save the figure
+    """
+    model.eval()
+    
+    # Get model parameters
+    vocab_size = model.token_embedding.weight.shape[0]
+    block_size = model.position_embedding_table.weight.shape[0]
+    
+    # Get the first attention head's Q, K weights
+    head = model.sa_heads.heads[0]
+    W_Q = head.query.weight.detach().cpu().numpy()
+    W_K = head.key.weight.detach().cpu().numpy()
+    head_size = W_Q.shape[0]
+    
+    # Get embeddings
+    token_emb = model.token_embedding.weight.detach().cpu().numpy()
+    pos_emb = model.position_embedding_table.weight.detach().cpu().numpy()
+    
+    # Compute Q and K for all token-position combinations
+    num_combinations = vocab_size * block_size
+    Q_all = np.zeros((num_combinations, head_size))
+    K_all = np.zeros((num_combinations, head_size))
+    labels = []
+    
+    idx = 0
+    for t in range(vocab_size):
+        for p in range(block_size):
+            combined_emb = token_emb[t] + pos_emb[p]
+            Q_all[idx] = W_Q @ combined_emb
+            K_all[idx] = W_K @ combined_emb
+            labels.append(f"{itos[t]}@{p}")
+            idx += 1
+    
+    # Compute full attention matrix: Q_all @ K_all.T / sqrt(d)
+    attention_matrix = (Q_all @ K_all.T) / np.sqrt(head_size)
+    
+    # Create figure
+    fig, ax = plt.subplots(figsize=(20, 16))
+    
+    # Use 'nipy_spectral' - maximum color divergence across full spectrum
+    im = ax.imshow(attention_matrix, cmap='nipy_spectral', aspect='auto')
+    
+    # Simple token labels at center of each token block
+    xtick_positions = []
+    xtick_labels = []
+    ytick_positions = []
+    ytick_labels = []
+    
+    for t in range(vocab_size):
+        mid_pos = t * block_size + block_size // 2
+        xtick_positions.append(mid_pos)
+        xtick_labels.append(itos[t])
+        ytick_positions.append(mid_pos)
+        ytick_labels.append(itos[t])
+    
+    ax.set_xticks(xtick_positions)
+    ax.set_xticklabels(xtick_labels, fontsize=9, fontweight='bold')
+    ax.set_yticks(ytick_positions)
+    ax.set_yticklabels(ytick_labels, fontsize=9, fontweight='bold')
+    
+    # Add grid lines to separate token groups
+    for t in range(vocab_size + 1):
+        ax.axhline(y=t * block_size - 0.5, color='white', linewidth=1.5, alpha=0.8)
+        ax.axvline(x=t * block_size - 0.5, color='white', linewidth=1.5, alpha=0.8)
+    
+    ax.set_xlabel("Key Token", fontsize=12)
+    ax.set_ylabel("Query Token", fontsize=12)
+    ax.set_title(f"Full Attention Matrix: Q·K / √{head_size}\n({vocab_size} tokens × {block_size} positions, positions 0→{block_size-1} top-to-bottom within each token block)", 
+                fontsize=14, fontweight='bold')
+    
+    # Colorbar
+    cbar = plt.colorbar(im, ax=ax, shrink=0.6)
+    cbar.set_label("Attention Score (pre-softmax)", fontsize=10)
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')
+        plt.close()
+        print(f"Full Q/K attention heatmap saved to {save_path}")
+    else:
+        plt.show()
+
+
+def plot_qk_softmax_attention_heatmap(model, itos, save_path: str = None):
+    """
+    Create a heatmap showing SOFTMAX attention weights for ALL token-position combinations.
+    This shows the actual attention probabilities after softmax normalization.
+    """
+    model.eval()
+    
+    vocab_size = model.token_embedding.weight.shape[0]
+    block_size = model.position_embedding_table.weight.shape[0]
+    
+    head = model.sa_heads.heads[0]
+    W_Q = head.query.weight.detach().cpu().numpy()
+    W_K = head.key.weight.detach().cpu().numpy()
+    head_size = W_Q.shape[0]
+    
+    token_emb = model.token_embedding.weight.detach().cpu().numpy()
+    pos_emb = model.position_embedding_table.weight.detach().cpu().numpy()
+    
+    num_combinations = vocab_size * block_size
+    Q_all = np.zeros((num_combinations, head_size))
+    K_all = np.zeros((num_combinations, head_size))
+    
+    idx = 0
+    for t in range(vocab_size):
+        for p in range(block_size):
+            combined_emb = token_emb[t] + pos_emb[p]
+            Q_all[idx] = W_Q @ combined_emb
+            K_all[idx] = W_K @ combined_emb
+            idx += 1
+    
+    # Compute attention scores and apply softmax row-wise
+    attention_scores = (Q_all @ K_all.T) / np.sqrt(head_size)
+    
+    # Apply softmax to each row (each query attends to all keys)
+    def softmax(x):
+        exp_x = np.exp(x - np.max(x, axis=-1, keepdims=True))  # subtract max for numerical stability
+        return exp_x / np.sum(exp_x, axis=-1, keepdims=True)
+    
+    attention_probs = softmax(attention_scores)
+    
+    # #region agent log
+    # Debug: verify attention matrix structure
+    import json
+    print(f"\n=== DEBUG: Attention Matrix Analysis ===")
+    print(f"Matrix shape: {attention_probs.shape} (queries x keys)")
+    print(f"Tokens: {[itos[t] for t in range(vocab_size)]}")
+    print(f"'+' token index: {vocab_size - 1}")
+    print(f"'+' query rows: {(vocab_size-1)*block_size} to {vocab_size*block_size - 1}")
+    print(f"'+' key cols: {(vocab_size-1)*block_size} to {vocab_size*block_size - 1}")
+    
+    print(f"\n'+' QUERY (bottom rows) attention to each KEY token:")
+    for t in range(vocab_size):
+        token_name = itos[t]
+        avg_attn = attention_probs[(vocab_size-1)*block_size:(vocab_size)*block_size, t*block_size:(t+1)*block_size].mean()
+        even_odd = "EVEN" if t < vocab_size - 1 and int(itos[t]) % 2 == 0 else ("ODD" if t < vocab_size - 1 else "+")
+        print(f"  '+' query -> '{token_name}' key: {avg_attn:.6f} ({even_odd})")
+    
+    print(f"\nEach QUERY token's attention to '+' KEY (rightmost column):")
+    for t in range(vocab_size):
+        token_name = itos[t]
+        avg_attn = attention_probs[t*block_size:(t+1)*block_size, (vocab_size-1)*block_size:(vocab_size)*block_size].mean()
+        print(f"  '{token_name}' query -> '+' key: {avg_attn:.6f}")
+    
+    print(f"\nMatrix value range: min={attention_probs.min():.6f}, max={attention_probs.max():.6f}")
+    
+    # Verify softmax: each ROW should sum to 1
+    row_sums = attention_probs.sum(axis=1)
+    print(f"\nSoftmax verification (each row should sum to 1):")
+    print(f"  Row sums: min={row_sums.min():.6f}, max={row_sums.max():.6f}, mean={row_sums.mean():.6f}")
+    print(f"  First 5 row sums: {row_sums[:5]}")
+    print(f"  Last 5 row sums ('+' queries): {row_sums[-5:]}")
+    print(f"=== END DEBUG ===\n")
+    # #endregion
+    
+    # Create figure
+    fig, ax = plt.subplots(figsize=(20, 16))
+    
+    # Use nipy_spectral for max color divergence
+    im = ax.imshow(attention_probs, cmap='nipy_spectral', aspect='auto')
+    
+    # Simple token labels
+    xtick_positions = []
+    xtick_labels = []
+    ytick_positions = []
+    ytick_labels = []
+    
+    for t in range(vocab_size):
+        mid_pos = t * block_size + block_size // 2
+        xtick_positions.append(mid_pos)
+        xtick_labels.append(itos[t])
+        ytick_positions.append(mid_pos)
+        ytick_labels.append(itos[t])
+    
+    ax.set_xticks(xtick_positions)
+    ax.set_xticklabels(xtick_labels, fontsize=9, fontweight='bold')
+    ax.set_yticks(ytick_positions)
+    ax.set_yticklabels(ytick_labels, fontsize=9, fontweight='bold')
+    
+    # Grid lines to separate token groups
+    for t in range(vocab_size + 1):
+        ax.axhline(y=t * block_size - 0.5, color='white', linewidth=1.5, alpha=0.8)
+        ax.axvline(x=t * block_size - 0.5, color='white', linewidth=1.5, alpha=0.8)
+    
+    ax.set_xlabel("Key Token", fontsize=12)
+    ax.set_ylabel("Query Token", fontsize=12)
+    ax.set_title(f"Softmax Attention Probabilities\n({vocab_size} tokens × {block_size} positions, positions 0→{block_size-1} top-to-bottom)", 
+                fontsize=14, fontweight='bold')
+    
+    cbar = plt.colorbar(im, ax=ax, shrink=0.6)
+    cbar.set_label("Attention Probability (after softmax)", fontsize=10)
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')
+        plt.close()
+        print(f"Softmax attention heatmap saved to {save_path}")
+    else:
+        plt.show()
+
+# -----------------------------
+# Checkpoint saving/loading
+# -----------------------------
+def get_checkpoint_dir(config_name_actual: str, step: int = None) -> Path:
+    """Get the checkpoint directory for a given config and optional step."""
+    base_dir = Path(config_name_actual) / "checkpoints"
+    if step is not None:
+        return base_dir / f"step_{step:06d}"
+    return base_dir
+
+def get_plots_dir(config_name_actual: str, step: int = None) -> Path:
+    """Get the plots directory for a given config and optional step."""
+    base_dir = Path(config_name_actual) / "plots"
+    if step is not None:
+        return base_dir / f"step_{step:06d}"
+    return base_dir
+
+def save_checkpoint(config_name_actual: str, model, train_sequences, val_sequences, 
+                   itos, stoi, vocab_size, steps_for_plot, train_loss_history, 
+                   val_loss_history, rule_error_history, model_config, eval_interval=None, step=None):
+    """Save all necessary data for later visualization.
+    
+    Args:
+        step: If provided, saves to step-specific directory (step_XXXXXX). 
+              If None, saves to main checkpoint directory (final checkpoint).
+    """
+    checkpoint_dir = get_checkpoint_dir(config_name_actual, step)
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Save model
+    torch.save(model.state_dict(), checkpoint_dir / "model.pt")
+    
+    # Save sequences and encoder mappings
+    # Save to main checkpoint directory first (if it doesn't exist)
+    main_dir = get_checkpoint_dir(config_name_actual)
+    import shutil
+    
+    # Always ensure main checkpoint has sequences (save once)
+    if not (main_dir / "train_sequences.pkl").exists():
+        main_dir.mkdir(parents=True, exist_ok=True)
+        with open(main_dir / "train_sequences.pkl", "wb") as f:
+            pickle.dump(train_sequences, f)
+        with open(main_dir / "val_sequences.pkl", "wb") as f:
+            pickle.dump(val_sequences, f)
+        with open(main_dir / "itos.pkl", "wb") as f:
+            pickle.dump(itos, f)
+        with open(main_dir / "stoi.pkl", "wb") as f:
+            pickle.dump(stoi, f)
+    
+    # For step checkpoints, copy from main if needed
+    if step is not None:
+        for filename in ["train_sequences.pkl", "val_sequences.pkl", "itos.pkl", "stoi.pkl"]:
+            if (main_dir / filename).exists() and not (checkpoint_dir / filename).exists():
+                shutil.copy2(main_dir / filename, checkpoint_dir / filename)
+    
+    # Save metadata (convert tensors to Python types for JSON serialization)
+    def convert_to_python(obj):
+        """Convert torch tensors and numpy arrays to Python types."""
+        if isinstance(obj, torch.Tensor):
+            return obj.item() if obj.numel() == 1 else obj.tolist()
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, (list, tuple)):
+            return [convert_to_python(item) for item in obj]
+        elif isinstance(obj, dict):
+            return {key: convert_to_python(value) for key, value in obj.items()}
+        return obj
+    
+    metadata = {
+        "vocab_size": vocab_size,
+        "step": step,
+        "steps_for_plot": convert_to_python(steps_for_plot),
+        "train_loss_history": convert_to_python(train_loss_history),
+        "val_loss_history": convert_to_python(val_loss_history),
+        "rule_error_history": convert_to_python(rule_error_history),
+        "model_config": model_config,
+        "eval_interval": eval_interval,
+    }
+    with open(checkpoint_dir / "metadata.json", "w") as f:
+        json.dump(metadata, f, indent=2)
+    
+    print(f"Checkpoint saved to {checkpoint_dir}")
+
+def create_decode_from_itos(itos):
+    """Create a decode function from itos mapping."""
+    def decode(token_indices):
+        """Decode token indices to integer values (or operator strings)."""
+        result = []
+        for idx in token_indices:
+            token_str = itos[idx]
+            # Try to convert to int, if it fails it's an operator (keep as string)
+            try:
+                result.append(int(token_str))
+            except ValueError:
+                result.append(token_str)
+        return result
+    return decode
+
+def load_checkpoint(config_name_actual: str, step: int = None):
+    """Load all necessary data from checkpoint.
+    
+    Args:
+        config_name_actual: Config name
+        step: If provided, loads from step-specific directory. If None, loads final checkpoint.
+    
+    Returns:
+        Dictionary with all checkpoint data, or None if not found
+    """
+    checkpoint_dir = get_checkpoint_dir(config_name_actual, step)
+    
+    if not checkpoint_dir.exists():
+        return None
+    
+    # Load metadata
+    with open(checkpoint_dir / "metadata.json", "r") as f:
+        metadata = json.load(f)
+    
+    # Load sequences - try step dir first, fall back to main dir
+    main_dir = get_checkpoint_dir(config_name_actual)
+    for filename in ["train_sequences.pkl", "val_sequences.pkl", "itos.pkl", "stoi.pkl"]:
+        if not (checkpoint_dir / filename).exists() and (main_dir / filename).exists():
+            # Copy from main if not in step dir
+            import shutil
+            shutil.copy2(main_dir / filename, checkpoint_dir / filename)
+    
+    with open(checkpoint_dir / "train_sequences.pkl", "rb") as f:
+        train_sequences = pickle.load(f)
+    with open(checkpoint_dir / "val_sequences.pkl", "rb") as f:
+        val_sequences = pickle.load(f)
+    
+    # Load encoder mappings
+    with open(checkpoint_dir / "itos.pkl", "rb") as f:
+        itos = pickle.load(f)
+    with open(checkpoint_dir / "stoi.pkl", "rb") as f:
+        stoi = pickle.load(f)
+    
+    # Create decode function from itos
+    decode = create_decode_from_itos(itos)
+    
+    # Create model and load weights
+    model_config = metadata["model_config"]
+    model = BigramLanguageModel(
+        vocab_size=metadata["vocab_size"],
+        n_embd=model_config['n_embd'],
+        block_size=model_config['block_size'],
+        num_heads=model_config['num_heads'],
+        head_size=model_config['head_size']
+    )
+    model.load_state_dict(torch.load(checkpoint_dir / "model.pt"))
+    model.eval()
+    
+    step_loaded = metadata.get("step")
+    print(f"Checkpoint loaded from {checkpoint_dir} (step: {step_loaded})")
+    
+    return {
+        "model": model,
+        "train_sequences": train_sequences,
+        "val_sequences": val_sequences,
+        "itos": itos,
+        "stoi": stoi,
+        "decode": decode,
+        "vocab_size": metadata["vocab_size"],
+        "step": step_loaded,
+        "steps_for_plot": metadata["steps_for_plot"],
+        "train_loss_history": metadata["train_loss_history"],
+        "val_loss_history": metadata["val_loss_history"],
+        "rule_error_history": metadata.get("rule_error_history", []),
+        "model_config": model_config,
+        "eval_interval": metadata.get("eval_interval"),
+    }
+
+def list_available_checkpoints(config_name_actual: str):
+    """List all available checkpoint steps for a config."""
+    base_dir = Path(config_name_actual) / "checkpoints"
+    if not base_dir.exists():
+        return []
+    
+    steps = []
+    for item in base_dir.iterdir():
+        if item.is_dir() and item.name.startswith("step_"):
+            try:
+                step_num = int(item.name.split("_")[1])
+                steps.append(step_num)
+            except (ValueError, IndexError):
+                continue
+    
+    return sorted(steps)
+
+# -----------------------------
+# Visualization function
+# -----------------------------
+def visualize_from_checkpoint(config_name_actual: str, checkpoint_data: dict, config: dict, step: int = None):
+    """Generate all visualizations from checkpoint data.
+    
+    Args:
+        config_name_actual: Config name
+        checkpoint_data: Dictionary with model, sequences, itos, etc.
+        config: Full config dictionary
+        step: Step number for this checkpoint (for naming plots subdirectory)
+    """
+    # Extract data from checkpoint
+    model = checkpoint_data["model"]
+    train_sequences = checkpoint_data["train_sequences"]
+    itos = checkpoint_data["itos"]
+    vocab_size = checkpoint_data["vocab_size"]
+    steps_for_plot = checkpoint_data["steps_for_plot"]
+    train_loss_history = checkpoint_data["train_loss_history"]
+    val_loss_history = checkpoint_data["val_loss_history"]
+    rule_error_history = checkpoint_data.get("rule_error_history", [])
+    model_config = checkpoint_data["model_config"]
+    eval_interval = checkpoint_data.get("eval_interval", 200)
+    
+    # Get decode function
+    if "decode" in checkpoint_data:
+        decode = checkpoint_data["decode"]
+    else:
+        decode = create_decode_from_itos(itos)
+    
+    # Get block_size
+    block_size = model_config['block_size']
+    data_config = config['data']
+    training_config = config.get('training', {})
+    batch_size = training_config.get('batch_size', 4)
+    
+    # Create plots directory (with step subdirectory if specified)
+    plots_dir = get_plots_dir(config_name_actual, step)
+    plots_dir.mkdir(parents=True, exist_ok=True)
+    plots_dir = str(plots_dir)  # Convert to string for os.path.join compatibility
+    
+    # Get generator for visualization
+    generator = get_generator_from_config(config)
+    
+    # Generate multiple integer sequences
+    num_sequences_to_generate = 10
+    generated_sequences = []
+    for _ in range(num_sequences_to_generate):
+        seq_length = random.randint(data_config['min_length'], data_config['max_length'])
+        start_token = random.randint(0, vocab_size - 1)
+        start = torch.tensor([[start_token]], dtype=torch.long)
+        sample = model.generate(start, max_new_tokens=seq_length - 1)[0].tolist()
+        generated_integers = decode(sample)
+        generated_sequences.append(generated_integers)
+    
+    # Write sequences
+    with open(os.path.join(plots_dir, "generated_integer_sequence.txt"), "w", encoding="utf-8") as f:
+        for seq in generated_sequences:
+            f.write(" ".join(str(i) for i in seq) + "\n")
+    print(f"Generated {num_sequences_to_generate} sequences for step {step}")
+    
+    # Generate all visualizations
+    plot_learning_curve(steps_for_plot, train_loss_history, val_loss_history, 
+                       rule_error_history=rule_error_history,
+                       save_path=os.path.join(plots_dir, "learning_curve.png"), 
+                       eval_interval=eval_interval)
+    
+    heatmap_accuracy, correct_count, incorrect_count = plot_generated_sequences_heatmap(
+        generated_sequences, generator,
+        save_path=os.path.join(plots_dir, "generated_sequences_heatmap.png"),
+        num_sequences=len(generated_sequences),
+        max_length=50
+    )
+    print(f"Generated sequences heatmap: {correct_count} correct, {incorrect_count} incorrect positions ({heatmap_accuracy:.1%} accuracy)")
+    
+    # Create example sequences for plotting
+    X1, _ = get_batch_from_sequences(train_sequences, block_size, 1)
+    X2, _ = get_batch_from_sequences(train_sequences, block_size, 1)
+    X3, _ = get_batch_from_sequences(train_sequences, block_size, 1)
+    X_list = [X1, X2, X3]
+    
+    # Generate architecture diagram (only once, not per step)
+    arch_path = os.path.join(str(get_plots_dir(config_name_actual)), "architecture.png")
+    if not os.path.exists(arch_path):
+        plot_architecture_diagram(config, save_path=arch_path)
+    
+    # Generate all plots
+    plot_weights_qkv_two_sequences(model, X_list, itos, save_path=os.path.join(plots_dir, "qkv.png"), num_sequences=3)
+    plot_embeddings_pca(model, itos, save_path=os.path.join(plots_dir, "embeddings.png"))
+    plot_qkv_transformations(model, itos, save_path=os.path.join(plots_dir, "qkv_transformations.png"))
+    plot_token_position_embedding_space(model, itos, save_path=os.path.join(plots_dir, "token_position_embedding_space.png"))
+    plot_attention_matrix(model, X_list, itos, save_path=os.path.join(plots_dir, "attention_matrix.png"), num_sequences=3)
+    
+    # New Q/K embedding space visualizations
+    plot_qk_embedding_space(model, itos, save_path=os.path.join(plots_dir, "qk_embedding_space.png"))
+    plot_qk_full_attention_heatmap(model, itos, save_path=os.path.join(plots_dir, "qk_full_attention_heatmap.png"))
+    plot_qk_softmax_attention_heatmap(model, itos, save_path=os.path.join(plots_dir, "qk_softmax_attention_heatmap.png"))
+    
+    print(f"All visualizations saved to {plots_dir}")
+
+# -----------------------------
 # Main training script
 # -----------------------------
-def main(config_name: str = "copy_modulo"):
+def visualize_all_checkpoints(config_name_actual: str, config: dict):
+    """Visualize all available checkpoints for a config."""
+    steps = list_available_checkpoints(config_name_actual)
+    if not steps:
+        print(f"No step checkpoints found for {config_name_actual}")
+        return
+    
+    print(f"Found {len(steps)} checkpoint steps: {steps}")
+    for step in steps:
+        print(f"Visualizing checkpoint at step {step}...")
+        checkpoint_data = load_checkpoint(config_name_actual, step=step)
+        if checkpoint_data:
+            visualize_from_checkpoint(config_name_actual, checkpoint_data, config, step=step)
+        else:
+            print(f"Warning: Could not load checkpoint at step {step}")
+
+def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualize_only: bool = False, step: int = None, visualize_all: bool = False):
     """
     Main training function.
     
     Args:
         config_name: Name of the config file (without .yaml extension) in the configs folder
+        force_retrain: If True, retrain even if checkpoint exists
+        visualize_only: If True, only generate visualizations (no training)
+        step: If visualize_only=True, visualize this specific step. If None, visualize final checkpoint.
+        visualize_all: If True, visualize all available checkpoints
     """
-    print(f"Starting training with config: {config_name}")
+    print(f"Starting with config: {config_name}")
     torch.manual_seed(0)
 
     # Load configuration
@@ -2680,166 +3506,231 @@ def main(config_name: str = "copy_modulo"):
     training_config = config['training']
     
     # Create plots directory with config name subfolder
-    plots_dir = os.path.join("plots", config_name_actual)
-    os.makedirs(plots_dir, exist_ok=True)
+    plots_dir = get_plots_dir(config_name_actual)
+    plots_dir.mkdir(parents=True, exist_ok=True)
+    plots_dir = str(plots_dir)  # Convert to string for os.path.join compatibility
+    
+    # Handle visualize_only mode
+    if visualize_only:
+        if visualize_all:
+            visualize_all_checkpoints(config_name_actual, config)
+        else:
+            checkpoint_data = load_checkpoint(config_name_actual, step=step)
+            if checkpoint_data is None:
+                print(f"Error: No checkpoint found for {config_name_actual}" + (f" at step {step}" if step else ""))
+                return
+            visualize_from_checkpoint(config_name_actual, checkpoint_data, config, step=step)
+        return
+    
+    # Check for existing checkpoint
+    checkpoint_data = None
+    if not force_retrain:
+        checkpoint_data = load_checkpoint(config_name_actual, step=None)
+        if checkpoint_data:
+            print("Using existing checkpoint. Set force_retrain=True to retrain.")
+    
+    if checkpoint_data is None:
+        # Need to train
+        print("No checkpoint found or force_retrain=True. Training new model...")
 
-    # 1) Generate integer string data using generator from config
-    generator = get_generator_from_config(config)
-    sequences = generate_integer_string_data(
-        generator, 
-        num_sequences=data_config['num_sequences'],
-        min_length=data_config['min_length'],
-        max_length=data_config['max_length']
-    )
-    print(f"Generated {len(sequences)} sequences")
-    print(f"Sequence lengths: min={min(len(s) for s in sequences)}, max={max(len(s) for s in sequences)}, avg={sum(len(s) for s in sequences)/len(sequences):.1f}")
-    
-    # 2) Build encoder/decoder for integers (or integers + operators)
-    min_value = data_config['min_value']
-    max_value = data_config['max_value']
-    
-    # Check if generator uses operators
-    if isinstance(generator, OperatorBasedGenerator):
-        operators = generator.operators
-        encode, decode, vocab_size, itos, stoi = build_encoder_with_operators(
-            min_value=min_value, max_value=max_value, operators=operators
+        # 1) Generate integer string data using generator from config
+        generator = get_generator_from_config(config)
+        sequences = generate_integer_string_data(
+            generator, 
+            num_sequences=data_config['num_sequences'],
+            min_length=data_config['min_length'],
+            max_length=data_config['max_length']
         )
-        print("Vocabulary size:", vocab_size)
-        print("Vocabulary (integers + operators):", [itos[i] for i in range(vocab_size)])
+        print(f"Generated {len(sequences)} sequences")
+        print(f"Sequence lengths: min={min(len(s) for s in sequences)}, max={max(len(s) for s in sequences)}, avg={sum(len(s) for s in sequences)/len(sequences):.1f}")
+        
+        # 2) Build encoder/decoder for integers (or integers + operators)
+        min_value = data_config['min_value']
+        max_value = data_config['max_value']
+        
+        # Check if generator uses operators
+        if isinstance(generator, OperatorBasedGenerator):
+            operators = generator.operators
+            encode, decode, vocab_size, itos, stoi = build_encoder_with_operators(
+                min_value=min_value, max_value=max_value, operators=operators
+            )
+            print("Vocabulary size:", vocab_size)
+            print("Vocabulary (integers + operators):", [itos[i] for i in range(vocab_size)])
+        else:
+            encode, decode, vocab_size, itos, stoi = build_encoder_for_integers(min_value=min_value, max_value=max_value)
+            print("Vocabulary size:", vocab_size)
+            print("Vocabulary (integers):", [itos[i] for i in range(vocab_size)])
+
+        # 3) Encode sequences (integer values -> token indices)
+        encoded_sequences = [encode(seq) for seq in sequences]
+        
+        # 4) Split sequences into train/val
+        train_sequences, val_sequences = split_train_val_sequences(encoded_sequences, train_ratio=0.9)
+        print(f"Train: {len(train_sequences)} sequences, Val: {len(val_sequences)} sequences")
+        
+        # 4.5) Save some training data to a text file
+        num_samples_to_save = min(50, len(sequences))  # Save up to 50 sample sequences
+        with open(os.path.join(plots_dir, "training_data_samples.txt"), "w", encoding="utf-8") as f:
+            f.write(f"# Training Data Samples for: {config_name_actual}\n")
+            f.write(f"# {num_samples_to_save} sample sequences (original integer values before encoding)\n")
+            f.write(f"# Format: space-separated integers, one sequence per line\n\n")
+            for i, seq in enumerate(sequences[:num_samples_to_save]):
+                f.write(" ".join(str(val) for val in seq) + "\n")
+        print(f"Saved {num_samples_to_save} training data samples to {os.path.join(plots_dir, 'training_data_samples.txt')}")
+        
+        # 4.6) Visualize training data with rule correctness
+        train_heatmap_accuracy, train_correct_count, train_incorrect_count = plot_training_data_heatmap(
+            sequences, generator,  # Use original sequences (before encoding)
+            save_path=os.path.join(plots_dir, "training_data_heatmap.png"),
+            num_sequences=min(50, len(sequences)),  # Show up to 50 training sequences
+            max_length=50
+        )
+        print(f"Training data heatmap: {train_correct_count} correct, {train_incorrect_count} incorrect positions ({train_heatmap_accuracy:.1%} accuracy)")
+
+        # 5) Create model + optimizer
+        n_embd = model_config['n_embd']
+        block_size = model_config['block_size']
+        num_heads = model_config['num_heads']
+        head_size = model_config['head_size']
+        
+        model = BigramLanguageModel(vocab_size, n_embd, block_size, num_heads, head_size)
+        optimizer = torch.optim.AdamW(model.parameters(), lr=training_config['learning_rate'])
+
+        # 6) Training loop
+        steps_for_plot = []
+        train_loss_history = []
+        val_loss_history = []
+        rule_error_history = []
+
+        batch_size = training_config['batch_size']
+        max_steps = training_config['max_steps']
+        eval_interval = training_config['eval_interval']
+        eval_iterations = training_config['eval_iterations']
+        checkpoint_interval = training_config.get('checkpoint_interval', 1000)  # Save checkpoint every N steps
+        
+        X_fixed, _ = get_batch_from_sequences(train_sequences, block_size, batch_size)
+
+        for step in range(max_steps):
+            # Evaluate occasionally
+            if step % eval_interval == 0:
+                losses = estimate_loss(model, train_sequences, val_sequences, block_size, batch_size, eval_iterations)
+                rule_err = estimate_rule_error(model, generator, decode, block_size, num_samples=20, seq_length=30)
+
+                steps_for_plot.append(step)
+                train_loss_history.append(losses["train"])
+                val_loss_history.append(losses["validation"])
+                rule_error_history.append(rule_err)
+
+                print(f"step {step}: train loss {losses['train']:.4f}, val loss {losses['validation']:.4f}, rule err {rule_err:.4f}", flush=True)
+
+            # Save checkpoint at intervals
+            if checkpoint_interval > 0 and step > 0 and step % checkpoint_interval == 0:
+                save_checkpoint(
+                    config_name_actual, model, train_sequences, val_sequences,
+                    itos, stoi, vocab_size, steps_for_plot, train_loss_history,
+                    val_loss_history, rule_error_history, model_config, eval_interval, step=step
+                )
+
+            # One batch
+            X, Y = get_batch_from_sequences(train_sequences, block_size, batch_size)
+
+            # Forward + backward + update
+            _, loss = model(X, Y)
+            optimizer.zero_grad(set_to_none=True)
+            loss.backward()
+            optimizer.step()
+
+        # Beep to signal training is complete
+        print('\a', end='', flush=True)
+
+        # Show results
+        print("Final loss:", loss.item(), flush=True)
+        print(f"Final rule error: {rule_error_history[-1]:.4f}" if rule_error_history else "", flush=True)
+        
+        # Save final checkpoint (step=None means final)
+        save_checkpoint(
+            config_name_actual, model, train_sequences, val_sequences,
+            itos, stoi, vocab_size, steps_for_plot, train_loss_history,
+            val_loss_history, rule_error_history, model_config, eval_interval, step=None
+        )
+        
+        # Store data for visualization
+        checkpoint_data = {
+            "model": model,
+            "train_sequences": train_sequences,
+            "val_sequences": val_sequences,
+            "itos": itos,
+            "stoi": stoi,
+            "vocab_size": vocab_size,
+            "steps_for_plot": steps_for_plot,
+            "train_loss_history": train_loss_history,
+            "val_loss_history": val_loss_history,
+            "rule_error_history": rule_error_history,
+            "model_config": model_config,
+            "eval_interval": eval_interval,
+        }
+    
+    # Extract data from checkpoint (whether loaded or newly trained)
+    model = checkpoint_data["model"]
+    train_sequences = checkpoint_data["train_sequences"]
+    val_sequences = checkpoint_data["val_sequences"]
+    itos = checkpoint_data["itos"]
+    stoi = checkpoint_data["stoi"]
+    vocab_size = checkpoint_data["vocab_size"]
+    steps_for_plot = checkpoint_data["steps_for_plot"]
+    train_loss_history = checkpoint_data["train_loss_history"]
+    val_loss_history = checkpoint_data["val_loss_history"]
+    rule_error_history = checkpoint_data.get("rule_error_history", [])
+    model_config = checkpoint_data["model_config"]
+    
+    # Get decode function (either from checkpoint or create it)
+    if "decode" in checkpoint_data:
+        decode = checkpoint_data["decode"]
     else:
-        encode, decode, vocab_size, itos, stoi = build_encoder_for_integers(min_value=min_value, max_value=max_value)
-    print("Vocabulary size:", vocab_size)
-    print("Vocabulary (integers):", [itos[i] for i in range(vocab_size)])
-
-    # 3) Encode sequences (integer values -> token indices)
-    encoded_sequences = [encode(seq) for seq in sequences]
+        # Recreate from itos (for backward compatibility)
+        decode = create_decode_from_itos(itos)
     
-    # 4) Split sequences into train/val
-    train_sequences, val_sequences = split_train_val_sequences(encoded_sequences, train_ratio=0.9)
-    print(f"Train: {len(train_sequences)} sequences, Val: {len(val_sequences)} sequences")
-    
-    # 4.5) Save some training data to a text file
-    num_samples_to_save = min(50, len(sequences))  # Save up to 50 sample sequences
-    with open(os.path.join(plots_dir, "training_data_samples.txt"), "w", encoding="utf-8") as f:
-        f.write(f"# Training Data Samples for: {config_name_actual}\n")
-        f.write(f"# {num_samples_to_save} sample sequences (original integer values before encoding)\n")
-        f.write(f"# Format: space-separated integers, one sequence per line\n\n")
-        for i, seq in enumerate(sequences[:num_samples_to_save]):
-            f.write(" ".join(str(val) for val in seq) + "\n")
-    print(f"Saved {num_samples_to_save} training data samples to {os.path.join(plots_dir, 'training_data_samples.txt')}")
-    
-    # 4.6) Visualize training data with rule correctness
-    train_heatmap_accuracy, train_correct_count, train_incorrect_count = plot_training_data_heatmap(
-        sequences, generator,  # Use original sequences (before encoding)
-        save_path=os.path.join(plots_dir, "training_data_heatmap.png"),
-        num_sequences=min(50, len(sequences)),  # Show up to 50 training sequences
-        max_length=50
-    )
-    print(f"Training data heatmap: {train_correct_count} correct, {train_incorrect_count} incorrect positions ({train_heatmap_accuracy:.1%} accuracy)")
-
-    # 5) Create model + optimizer
-    n_embd = model_config['n_embd']
+    # Get block_size and eval_interval for visualization
     block_size = model_config['block_size']
-    num_heads = model_config['num_heads']
-    head_size = model_config['head_size']
+    eval_interval = checkpoint_data.get("eval_interval") or training_config.get('eval_interval', 200)
     
-    model = BigramLanguageModel(vocab_size, n_embd, block_size, num_heads, head_size)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=training_config['learning_rate'])
-
-    # 6) Training loop
-    steps_for_plot = []
-    train_loss_history = []
-    val_loss_history = []
-    rule_error_history = []
-
-    batch_size = training_config['batch_size']
-    max_steps = training_config['max_steps']
-    eval_interval = training_config['eval_interval']
-    eval_iterations = training_config['eval_iterations']
+    batch_size = training_config.get('batch_size', 4)  # For getting batches for visualization
     
-    X_fixed, _ = get_batch_from_sequences(train_sequences, block_size, batch_size)
-
-    for step in range(max_steps):
-        # Evaluate occasionally
-        if step % eval_interval == 0:
-            losses = estimate_loss(model, train_sequences, val_sequences, block_size, batch_size, eval_iterations)
-            rule_err = estimate_rule_error(model, generator, decode, block_size, num_samples=20, seq_length=30)
-
-            steps_for_plot.append(step)
-            train_loss_history.append(losses["train"])
-            val_loss_history.append(losses["validation"])
-            rule_error_history.append(rule_err)
-
-            print(f"step {step}: train loss {losses['train']:.4f}, val loss {losses['validation']:.4f}, rule err {rule_err:.4f}", flush=True)
-
-        # One batch
-        X, Y = get_batch_from_sequences(train_sequences, block_size, batch_size)
-
-        # Forward + backward + update
-        _, loss = model(X, Y)
-        optimizer.zero_grad(set_to_none=True)
-        loss.backward()
-        optimizer.step()
-
-    # Beep to signal training is complete
-    print('\a', end='', flush=True)
-
-    # 4) Show results
-    print("Final loss:", loss.item(), flush=True)
-    print(f"Final rule error: {rule_error_history[-1]:.4f}" if rule_error_history else "", flush=True)
-
-    # Generate multiple integer sequences
-    num_sequences_to_generate = 10  # Number of sequences to generate
-    generated_sequences = []
-    for _ in range(num_sequences_to_generate):
-        # Random sequence length between min_length and max_length
-        seq_length = random.randint(data_config['min_length'], data_config['max_length'])
-        # Start with a random token instead of always 0 to avoid bias
-        start_token = random.randint(0, vocab_size - 1)
-        start = torch.tensor([[start_token]], dtype=torch.long)
-        sample = model.generate(start, max_new_tokens=seq_length - 1)[0].tolist()  # -1 because start token counts
-        generated_integers = decode(sample)  # Decode token indices back to integer values
-        generated_sequences.append(generated_integers)
-    
-    # Write sequences, one per line, with space-separated integers
-    with open(os.path.join(plots_dir, "generated_integer_sequence.txt"), "w", encoding="utf-8") as f:
-        for seq in generated_sequences:
-            f.write(" ".join(str(i) for i in seq) + "\n")
-    print(f"Generated {num_sequences_to_generate} sequences")
-    print(f"First sequence (length {len(generated_sequences[0])}): {generated_sequences[0][:50]}...")
-
-    # 5) Plots - keep only: QKV (2 rows: weights W_Q/W_K/W_V, activations Q/K/V), embeddings (1x3: raw/hierarchical/PCA), attention matrix, output matrix, learning curve
-    # Combined learning curve with loss and rule accuracy
-    plot_learning_curve(steps_for_plot, train_loss_history, val_loss_history, 
-                       rule_error_history=rule_error_history,
-                       save_path=os.path.join(plots_dir, "learning_curve.png"), 
-                       eval_interval=eval_interval)
-    
-    # Plot annotated heatmap of generated sequences showing correctness (all sequences on one figure)
-    heatmap_accuracy, correct_count, incorrect_count = plot_generated_sequences_heatmap(
-        generated_sequences, generator,
-        save_path=os.path.join(plots_dir, "generated_sequences_heatmap.png"),
-        num_sequences=len(generated_sequences),  # Show all generated sequences
-        max_length=50  # Show more positions
-    )
-    print(f"Generated sequences heatmap: {correct_count} correct, {incorrect_count} incorrect positions ({heatmap_accuracy:.1%} accuracy)")
-    
-    # Create multiple example sequences for plotting
-    X1, _ = get_batch_from_sequences(train_sequences, block_size, 1)
-    X2, _ = get_batch_from_sequences(train_sequences, block_size, 1)
-    X3, _ = get_batch_from_sequences(train_sequences, block_size, 1)
-    X_list = [X1, X2, X3]
-    
-    # Plot QKV for multiple sequences (shown as rows)
-    plot_weights_qkv_two_sequences(model, X_list, itos, save_path=os.path.join(plots_dir, "qkv.png"), num_sequences=3)
-    plot_embeddings_pca(model, itos, save_path=os.path.join(plots_dir, "embeddings.png"))
-    plot_qkv_transformations(model, itos, save_path=os.path.join(plots_dir, "qkv_transformations.png"))
-    plot_token_position_embedding_space(model, itos, save_path=os.path.join(plots_dir, "token_position_embedding_space.png"))
-    plot_attention_matrix(model, X_list, itos, save_path=os.path.join(plots_dir, "attention_matrix.png"), num_sequences=3)
+    # Generate visualizations for final checkpoint
+    visualize_from_checkpoint(config_name_actual, checkpoint_data, config, step=None)
 
 
 
 if __name__ == "__main__":
-    # Get config name from command line argument, default to "default"
-    config_name = sys.argv[1] if len(sys.argv) > 1 else "plus_last_even"
-    main(config_name=config_name)
+    # Parse command line arguments
+    # Usage:
+    #   python main.py <config_name>                    # Train and visualize
+    #   python main.py <config_name> --visualize       # Only visualize (final checkpoint)
+    #   python main.py <config_name> --visualize --step <step_num>  # Visualize specific step
+    #   python main.py <config_name> --force-retrain    # Force retrain
+    
+    config_name = "plus_last_even"  # default
+    force_retrain = False
+    visualize_only = False
+    step = None
+    
+    if len(sys.argv) > 1:
+        config_name = sys.argv[1]
+    
+    # Parse flags
+    visualize_all = "--visualize-all" in sys.argv
+    if "--visualize" in sys.argv or visualize_all:
+        visualize_only = True
+        if "--step" in sys.argv:
+            step_idx = sys.argv.index("--step")
+            if step_idx + 1 < len(sys.argv):
+                try:
+                    step = int(sys.argv[step_idx + 1])
+                except ValueError:
+                    print("Error: --step must be followed by an integer")
+                    sys.exit(1)
+    
+    if "--force-retrain" in sys.argv:
+        force_retrain = True
+    
+    main(config_name=config_name, force_retrain=force_retrain, visualize_only=visualize_only, step=step, visualize_all=visualize_all)
