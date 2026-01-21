@@ -2144,30 +2144,26 @@ def plot_attention_matrix(model, X_list, itos, save_path=None, num_sequences=3):
         # Get tokens for this sequence
         tokens = [itos[i.item()] for i in X[0]]
         tokens_list.append(tokens)
-    
-    # Get embeddings and positional encodings
-    token_emb = model.token_embedding(X)
-    pos = torch.arange(T, device=X.device) % model.block_size
-    pos_emb = model.position_embedding_table(pos)
-    x = token_emb + pos_emb
-    
-    # Get attention weights from all heads
-    wei_all = []
-    for h in model.sa_heads.heads:
-        _, wei = h(x)  # wei: (B, T, T)
-        wei_all.append(wei[0].cpu().numpy())  # (T, T)
-    
-    # Average across heads
+
+        # Get embeddings and positional encodings
+        token_emb = model.token_embedding(X)
+        pos = torch.arange(T, device=X.device) % model.block_size
+        pos_emb = model.position_embedding_table(pos)
+        x = token_emb + pos_emb
+        
+        # Get attention weights and outputs from all heads
+        wei_all = []
+        out_all = []
+        for h in model.sa_heads.heads:
+            out, wei = h(x)  # out: (B, T, head_size), wei: (B, T, T)
+            wei_all.append(wei[0].cpu().numpy())  # (T, T)
+            out_all.append(out[0].cpu().numpy())  # (T, head_size)
+        
+        # Average attention across heads
         attention_matrix = np.stack(wei_all, axis=0).mean(axis=0)  # (T, T)
         attention_matrices.append(attention_matrix)
         
-        # Get attention output (before linear layer)
-        out_all = []
-        for h in model.sa_heads.heads:
-            out, _ = h(x)  # out: (B, T, head_size)
-            out_all.append(out[0].cpu().numpy())  # (T, head_size)
-        
-        # Concatenate heads and average (or just concatenate)
+        # Concatenate head outputs
         attention_out = np.concatenate(out_all, axis=-1)  # (T, num_heads * head_size)
         linear_outputs.append(attention_out)
         
@@ -2326,7 +2322,7 @@ def estimate_rule_error(model, generator, decode, block_size, num_samples=20, se
     """
     Generate sequences and check rule error.
     Returns the fraction of CONSTRAINED positions that violate the rule.
-    For operator-based generators, only counts positions immediately after operators.
+    Uses the generator's `valence_mask()` to determine which positions are constrained.
     """
     model.eval()
     
@@ -2344,26 +2340,18 @@ def estimate_rule_error(model, generator, decode, block_size, num_samples=20, se
         
         # Verify the sequence
         correctness, _ = generator.verify_sequence(generated_integers)
-        
-        # For operator-based generators, only count positions after operators
-        if isinstance(generator, OperatorBasedGenerator):
-            for i, token in enumerate(generated_integers[:-1]):
-                if generator.is_operator(token):
-                    # Position i+1 is constrained by the rule
-                    if i + 1 < len(correctness):
-                        total_constrained += 1
-                        if correctness[i + 1] == 0:
-                            incorrect_constrained += 1
-        else:
-            # For non-operator generators, count all positions except first
-            total_constrained += len(correctness) - 1
-            incorrect_constrained += sum(1 for c in correctness[1:] if c == 0)
+        valence = generator.valence_mask(generated_integers)
+        for i, is_constrained in enumerate(valence):
+            if i < len(correctness) and is_constrained:
+                total_constrained += 1
+                if correctness[i] == 0:
+                    incorrect_constrained += 1
     
     model.train()
     return incorrect_constrained / total_constrained if total_constrained > 0 else 0.0
 
 
-def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=None, num_sequences=5, max_length=30):
+def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=None, num_sequences=5, max_length=30, ax=None, title=None, show_legend=True):
     """
     Plot generated sequences as an annotated heatmap showing correctness.
     Red = incorrect, White/Green = correct.
@@ -2373,40 +2361,54 @@ def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=N
     # Truncate to max_length and pad to same length
     max_len = min(max_length, max(len(seq) for seq in sequences_to_show))
     
-    # Create data matrix and correctness matrix
+    # Create data matrix, correctness matrix, and constrained/valence matrix
     data_matrix = []
     correctness_matrix = []
+    constrained_matrix = []
     
     for seq in sequences_to_show:
         seq_truncated = seq[:max_len]
         correctness, _ = generator.verify_sequence(seq_truncated)
+        valence = generator.valence_mask(seq_truncated)
         
         # Pad if necessary
         while len(seq_truncated) < max_len:
-            seq_truncated.append(-1)  # Padding value
-            correctness.append(-1)  # Padding marker
+            seq_truncated.append(None)  # Padding value (masked)
+            correctness.append(np.nan)  # Padding marker (masked)
+            valence.append(np.nan)
         
         data_matrix.append(seq_truncated)
         correctness_matrix.append(correctness)
+        constrained_matrix.append(valence)
     
-    data_matrix = np.array(data_matrix)
-    correctness_matrix = np.array(correctness_matrix)
+    data_matrix = np.array(data_matrix, dtype=object)
+    correctness_matrix = np.array(correctness_matrix, dtype=float)
+    constrained_matrix = np.array(constrained_matrix, dtype=float)
     
-    # Create figure - scale appropriately for number of sequences
-    fig_height = max(6, min(20, num_sequences * 0.6 + 2))
-    fig_width = min(24, max(12, max_len * 0.5))
-    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+    created_fig = False
+    if ax is None:
+        # Create figure - scale appropriately for number of sequences
+        fig_height = max(6, min(20, num_sequences * 0.6 + 2))
+        fig_width = min(24, max(12, max_len * 0.5))
+        fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+        created_fig = True
     
-    # Create color matrix: 1 (correct) = light green, 0 (incorrect) = red, -1 (padding) = gray
+    # Create color matrix: 1 (correct) = light green, 0 (incorrect) = red, 2 (neutral/no valence) = gray
     from matplotlib.colors import ListedColormap
     colors = ['#ff6b6b', '#90EE90', '#d3d3d3']  # red, light green, gray
     cmap = ListedColormap(colors)
+    cmap.set_bad(color=(1, 1, 1, 0))  # transparent for padding
     
-    # Map correctness to color indices: 0->0 (red), 1->1 (green), -1->2 (gray)
-    color_indices = np.where(correctness_matrix == -1, 2, correctness_matrix)
+    # Mask padding so it doesn't render at all, and show neutral positions in gray
+    color_indices = np.where(
+        np.isnan(correctness_matrix),
+        np.nan,
+        np.where(constrained_matrix == 0.0, 2.0, correctness_matrix)  # 2=neutral, else 0/1
+    )
+    masked_colors = np.ma.masked_invalid(color_indices)
     
     # Plot the heatmap
-    im = ax.imshow(color_indices, cmap=cmap, aspect='auto', vmin=0, vmax=2)
+    im = ax.imshow(masked_colors, cmap=cmap, aspect='auto', vmin=0, vmax=2)
     
     # Add text annotations (the actual numbers)
     # Adjust font size based on number of sequences
@@ -2414,14 +2416,14 @@ def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=N
     for i in range(len(sequences_to_show)):
         for j in range(max_len):
             val = data_matrix[i, j]
-            if val != -1:  # Not padding
+            if val is not None:  # Not padding
                 text_color = 'black'
                 ax.text(j, i, str(val), ha='center', va='center', fontsize=fontsize, color=text_color, fontweight='bold')
     
     # Set labels
     ax.set_xlabel("Position in Sequence", fontsize=11)
     ax.set_ylabel("Sequence #", fontsize=11)
-    ax.set_title("Generated Sequences with Rule Correctness\n(Green = Correct, Red = Incorrect)", fontsize=12)
+    ax.set_title(title or "Generated Sequences with Rule Correctness\n(Green = Correct, Red = Incorrect)", fontsize=12)
     
     # Set ticks
     ax.set_xticks(range(0, max_len, max(1, max_len // 15)))
@@ -2433,8 +2435,50 @@ def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=N
     legend_elements = [
         Patch(facecolor='#90EE90', label='Correct'),
         Patch(facecolor='#ff6b6b', label='Incorrect'),
+        Patch(facecolor='#d3d3d3', label='Neutral'),
     ]
-    ax.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1.15, 1))
+    if show_legend:
+        ax.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1.15, 1))
+    
+    if created_fig:
+        plt.tight_layout()
+        if save_path:
+            plt.savefig(save_path, bbox_inches='tight', dpi=150)
+            plt.close()
+        else:
+            plt.show()
+    
+    # Return summary statistics
+    # Only count constrained (valenced) positions for accuracy stats
+    total_correct = np.sum((correctness_matrix == 1) & (constrained_matrix == 1))
+    total_incorrect = np.sum((correctness_matrix == 0) & (constrained_matrix == 1))
+    total_valid = total_correct + total_incorrect
+    accuracy = total_correct / total_valid if total_valid > 0 else 0
+    return accuracy, total_correct, total_incorrect
+
+def plot_generated_sequences_heatmap_before_after(generated_sequences_e0, generated_sequences_final, generator, save_path=None, num_sequences=5, max_length=50):
+    """Plot before/after generated sequences heatmaps in one image."""
+    if not generated_sequences_e0:
+        return plot_generated_sequences_heatmap(
+            generated_sequences_final, generator,
+            save_path=save_path, num_sequences=num_sequences, max_length=max_length
+        )
+    
+    # Create a 2-row figure (E0 on top, Final on bottom)
+    fig_height = max(9, min(24, num_sequences * 1.2 + 4))
+    fig_width = 24
+    fig, axes = plt.subplots(2, 1, figsize=(fig_width, fig_height))
+    
+    acc0, c0, i0 = plot_generated_sequences_heatmap(
+        generated_sequences_e0, generator,
+        save_path=None, num_sequences=num_sequences, max_length=max_length,
+        ax=axes[0], title=f"E0 Generated Sequences (n={num_sequences})", show_legend=False
+    )
+    accf, cf, inf = plot_generated_sequences_heatmap(
+        generated_sequences_final, generator,
+        save_path=None, num_sequences=num_sequences, max_length=max_length,
+        ax=axes[1], title=f"Final Generated Sequences (n={num_sequences})", show_legend=True
+    )
     
     plt.tight_layout()
     if save_path:
@@ -2443,12 +2487,7 @@ def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=N
     else:
         plt.show()
     
-    # Return summary statistics
-    total_correct = np.sum(correctness_matrix == 1)
-    total_incorrect = np.sum(correctness_matrix == 0)
-    total_valid = total_correct + total_incorrect
-    accuracy = total_correct / total_valid if total_valid > 0 else 0
-    return accuracy, total_correct, total_incorrect
+    return (acc0, c0, i0), (accf, cf, inf)
 
 def plot_training_data_heatmap(training_sequences, generator, save_path=None, num_sequences=50, max_length=50):
     """
@@ -2461,40 +2500,51 @@ def plot_training_data_heatmap(training_sequences, generator, save_path=None, nu
     # Truncate to max_length and pad to same length
     max_len = min(max_length, max(len(seq) for seq in sequences_to_show))
     
-    # Create data matrix and correctness matrix
+    # Create data matrix, correctness matrix, and constrained/valence matrix
     data_matrix = []
     correctness_matrix = []
+    constrained_matrix = []
     
     for seq in sequences_to_show:
         seq_truncated = seq[:max_len]
         correctness, _ = generator.verify_sequence(seq_truncated)
+        valence = generator.valence_mask(seq_truncated)
         
         # Pad if necessary
         while len(seq_truncated) < max_len:
-            seq_truncated.append(-1)  # Padding value
-            correctness.append(-1)  # Padding marker
-        
+            seq_truncated.append(None)  # Padding value (masked)
+            correctness.append(np.nan)  # Padding marker (masked)
+            valence.append(np.nan)
+
         data_matrix.append(seq_truncated)
         correctness_matrix.append(correctness)
+        constrained_matrix.append(valence)
     
-    data_matrix = np.array(data_matrix)
-    correctness_matrix = np.array(correctness_matrix)
+    data_matrix = np.array(data_matrix, dtype=object)
+    correctness_matrix = np.array(correctness_matrix, dtype=float)
+    constrained_matrix = np.array(constrained_matrix, dtype=float)
     
     # Create figure - scale appropriately for number of sequences
     fig_height = max(8, min(30, num_sequences * 0.4 + 2))
     fig_width = min(24, max(12, max_len * 0.4))
     fig, ax = plt.subplots(figsize=(fig_width, fig_height))
     
-    # Create color matrix: 1 (correct) = light green, 0 (incorrect) = red, -1 (padding) = gray
+    # Create color matrix: 1 (correct) = light green, 0 (incorrect) = red, 2 (neutral/no valence) = gray
     from matplotlib.colors import ListedColormap
     colors = ['#ff6b6b', '#90EE90', '#d3d3d3']  # red, light green, gray
     cmap = ListedColormap(colors)
+    cmap.set_bad(color=(1, 1, 1, 0))  # transparent for padding
     
-    # Map correctness to color indices: 0->0 (red), 1->1 (green), -1->2 (gray)
-    color_indices = np.where(correctness_matrix == -1, 2, correctness_matrix)
+    # Mask padding so it doesn't render at all, and show neutral positions in gray
+    color_indices = np.where(
+        np.isnan(correctness_matrix),
+        np.nan,
+        np.where(constrained_matrix == 0.0, 2.0, correctness_matrix)  # 2=neutral, else 0/1
+    )
+    masked_colors = np.ma.masked_invalid(color_indices)
     
     # Plot the heatmap
-    im = ax.imshow(color_indices, cmap=cmap, aspect='auto', vmin=0, vmax=2)
+    im = ax.imshow(masked_colors, cmap=cmap, aspect='auto', vmin=0, vmax=2)
     
     # Add text annotations (the actual numbers)
     # Adjust font size based on number of sequences
@@ -2502,7 +2552,7 @@ def plot_training_data_heatmap(training_sequences, generator, save_path=None, nu
     for i in range(len(sequences_to_show)):
         for j in range(max_len):
             val = data_matrix[i, j]
-            if val != -1:  # Not padding
+            if val is not None:  # Not padding
                 text_color = 'black'
                 ax.text(j, i, str(val), ha='center', va='center', fontsize=fontsize, color=text_color, fontweight='bold')
     
@@ -2521,6 +2571,7 @@ def plot_training_data_heatmap(training_sequences, generator, save_path=None, nu
     legend_elements = [
         Patch(facecolor='#90EE90', label='Correct'),
         Patch(facecolor='#ff6b6b', label='Incorrect'),
+        Patch(facecolor='#d3d3d3', label='Neutral'),
     ]
     ax.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1.15, 1))
     
@@ -2532,8 +2583,9 @@ def plot_training_data_heatmap(training_sequences, generator, save_path=None, nu
         plt.show()
     
     # Return summary statistics
-    total_correct = np.sum(correctness_matrix == 1)
-    total_incorrect = np.sum(correctness_matrix == 0)
+    # Only count constrained (valenced) positions for accuracy stats
+    total_correct = np.sum((correctness_matrix == 1) & (constrained_matrix == 1))
+    total_incorrect = np.sum((correctness_matrix == 0) & (constrained_matrix == 1))
     total_valid = total_correct + total_incorrect
     accuracy = total_correct / total_valid if total_valid > 0 else 0
     return accuracy, total_correct, total_incorrect
@@ -3187,7 +3239,8 @@ def get_plots_dir(config_name_actual: str, step: int = None) -> Path:
 
 def save_checkpoint(config_name_actual: str, model, train_sequences, val_sequences, 
                    itos, stoi, vocab_size, steps_for_plot, train_loss_history, 
-                   val_loss_history, rule_error_history, model_config, eval_interval=None, step=None):
+                   val_loss_history, rule_error_history, model_config, eval_interval=None, step=None,
+                   generated_sequences_e0=None):
     """Save all necessary data for later visualization.
     
     Args:
@@ -3245,6 +3298,7 @@ def save_checkpoint(config_name_actual: str, model, train_sequences, val_sequenc
         "rule_error_history": convert_to_python(rule_error_history),
         "model_config": model_config,
         "eval_interval": eval_interval,
+        "generated_sequences_e0": convert_to_python(generated_sequences_e0) if generated_sequences_e0 is not None else None,
     }
     with open(checkpoint_dir / "metadata.json", "w") as f:
         json.dump(metadata, f, indent=2)
@@ -3335,6 +3389,7 @@ def load_checkpoint(config_name_actual: str, step: int = None):
         "train_loss_history": metadata["train_loss_history"],
         "val_loss_history": metadata["val_loss_history"],
         "rule_error_history": metadata.get("rule_error_history", []),
+        "generated_sequences_e0": metadata.get("generated_sequences_e0"),
         "model_config": model_config,
         "eval_interval": metadata.get("eval_interval"),
     }
@@ -3399,9 +3454,28 @@ def visualize_from_checkpoint(config_name_actual: str, checkpoint_data: dict, co
     
     # Get generator for visualization
     generator = get_generator_from_config(config)
+
+    # Recreate "training patterns" visualizations (max 6) from decoded train sequences
+    decoded_train_sequences = []
+    for seq in train_sequences[:6]:
+        decoded_train_sequences.append(decode(seq))
+    # Write samples
+    with open(os.path.join(plots_dir, "training_data_samples.txt"), "w", encoding="utf-8") as f:
+        f.write(f"# Training Data Samples for: {config_name_actual}\n")
+        f.write(f"# {len(decoded_train_sequences)} sample sequences (decoded from train_sequences)\n")
+        f.write("# Format: space-separated tokens, one sequence per line\n\n")
+        for seq in decoded_train_sequences:
+            f.write(" ".join(str(i) for i in seq) + "\n")
+    # Plot heatmap
+    _train_acc, _train_correct, _train_incorrect = plot_training_data_heatmap(
+        decoded_train_sequences, generator,
+        save_path=os.path.join(plots_dir, "training_data_heatmap.png"),
+        num_sequences=len(decoded_train_sequences),
+        max_length=50
+    )
     
-    # Generate multiple integer sequences
-    num_sequences_to_generate = 10
+    # Generate multiple integer sequences (final)
+    num_sequences_to_generate = 5
     generated_sequences = []
     for _ in range(num_sequences_to_generate):
         seq_length = random.randint(data_config['min_length'], data_config['max_length'])
@@ -3411,8 +3485,15 @@ def visualize_from_checkpoint(config_name_actual: str, checkpoint_data: dict, co
         generated_integers = decode(sample)
         generated_sequences.append(generated_integers)
     
-    # Write sequences
+    # Write sequences (E0 + Final), 5 each
+    generated_sequences_e0 = checkpoint_data.get("generated_sequences_e0") or []
     with open(os.path.join(plots_dir, "generated_integer_sequence.txt"), "w", encoding="utf-8") as f:
+        if generated_sequences_e0:
+            f.write("E0\n")
+            for seq in generated_sequences_e0[:5]:
+                f.write(" ".join(str(i) for i in seq) + "\n")
+            f.write("\n")
+        f.write("Final\n")
         for seq in generated_sequences:
             f.write(" ".join(str(i) for i in seq) + "\n")
     print(f"Generated {num_sequences_to_generate} sequences for step {step}")
@@ -3423,13 +3504,24 @@ def visualize_from_checkpoint(config_name_actual: str, checkpoint_data: dict, co
                        save_path=os.path.join(plots_dir, "learning_curve.png"), 
                        eval_interval=eval_interval)
     
-    heatmap_accuracy, correct_count, incorrect_count = plot_generated_sequences_heatmap(
-        generated_sequences, generator,
-        save_path=os.path.join(plots_dir, "generated_sequences_heatmap.png"),
-        num_sequences=len(generated_sequences),
-        max_length=50
-    )
-    print(f"Generated sequences heatmap: {correct_count} correct, {incorrect_count} incorrect positions ({heatmap_accuracy:.1%} accuracy)")
+    generated_sequences_e0 = checkpoint_data.get("generated_sequences_e0") or []
+    if generated_sequences_e0:
+        (acc0, c0, i0), (accf, cf, inf) = plot_generated_sequences_heatmap_before_after(
+            generated_sequences_e0, generated_sequences, generator,
+            save_path=os.path.join(plots_dir, "generated_sequences_heatmap.png"),
+            num_sequences=5,
+            max_length=50
+        )
+        print(f"Generated sequences heatmap (E0): {c0} correct, {i0} incorrect positions ({acc0:.1%} accuracy)")
+        print(f"Generated sequences heatmap (Final): {cf} correct, {inf} incorrect positions ({accf:.1%} accuracy)")
+    else:
+        heatmap_accuracy, correct_count, incorrect_count = plot_generated_sequences_heatmap(
+            generated_sequences, generator,
+            save_path=os.path.join(plots_dir, "generated_sequences_heatmap.png"),
+            num_sequences=len(generated_sequences),
+            max_length=50
+        )
+        print(f"Generated sequences heatmap: {correct_count} correct, {incorrect_count} incorrect positions ({heatmap_accuracy:.1%} accuracy)")
     
     # Create example sequences for plotting
     X1, _ = get_batch_from_sequences(train_sequences, block_size, 1)
@@ -3562,7 +3654,7 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
         print(f"Train: {len(train_sequences)} sequences, Val: {len(val_sequences)} sequences")
         
         # 4.5) Save some training data to a text file
-        num_samples_to_save = min(50, len(sequences))  # Save up to 50 sample sequences
+        num_samples_to_save = min(6, len(sequences))  # Save up to 6 sample sequences
         with open(os.path.join(plots_dir, "training_data_samples.txt"), "w", encoding="utf-8") as f:
             f.write(f"# Training Data Samples for: {config_name_actual}\n")
             f.write(f"# {num_samples_to_save} sample sequences (original integer values before encoding)\n")
@@ -3575,7 +3667,7 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
         train_heatmap_accuracy, train_correct_count, train_incorrect_count = plot_training_data_heatmap(
             sequences, generator,  # Use original sequences (before encoding)
             save_path=os.path.join(plots_dir, "training_data_heatmap.png"),
-            num_sequences=min(50, len(sequences)),  # Show up to 50 training sequences
+        num_sequences=min(6, len(sequences)),  # Show up to 6 training sequences
             max_length=50
         )
         print(f"Training data heatmap: {train_correct_count} correct, {train_incorrect_count} incorrect positions ({train_heatmap_accuracy:.1%} accuracy)")
@@ -3588,6 +3680,21 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
         
         model = BigramLanguageModel(vocab_size, n_embd, block_size, num_heads, head_size)
         optimizer = torch.optim.AdamW(model.parameters(), lr=training_config['learning_rate'])
+
+        # Generate "before training" sequences (E0) without perturbing RNG state for training
+        py_state = random.getstate()
+        np_state = np.random.get_state()
+        torch_state = torch.random.get_rng_state()
+        generated_sequences_e0 = []
+        for _ in range(5):
+            seq_length = random.randint(data_config['min_length'], data_config['max_length'])
+            start_token = random.randint(0, vocab_size - 1)
+            start = torch.tensor([[start_token]], dtype=torch.long)
+            sample = model.generate(start, max_new_tokens=seq_length - 1)[0].tolist()
+            generated_sequences_e0.append(decode(sample))
+        random.setstate(py_state)
+        np.random.set_state(np_state)
+        torch.random.set_rng_state(torch_state)
 
         # 6) Training loop
         steps_for_plot = []
@@ -3621,7 +3728,8 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
                 save_checkpoint(
                     config_name_actual, model, train_sequences, val_sequences,
                     itos, stoi, vocab_size, steps_for_plot, train_loss_history,
-                    val_loss_history, rule_error_history, model_config, eval_interval, step=step
+                    val_loss_history, rule_error_history, model_config, eval_interval, step=step,
+                    generated_sequences_e0=generated_sequences_e0
                 )
 
             # One batch
@@ -3644,7 +3752,8 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
         save_checkpoint(
             config_name_actual, model, train_sequences, val_sequences,
             itos, stoi, vocab_size, steps_for_plot, train_loss_history,
-            val_loss_history, rule_error_history, model_config, eval_interval, step=None
+            val_loss_history, rule_error_history, model_config, eval_interval, step=None,
+            generated_sequences_e0=generated_sequences_e0
         )
         
         # Store data for visualization
@@ -3659,6 +3768,7 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
             "train_loss_history": train_loss_history,
             "val_loss_history": val_loss_history,
             "rule_error_history": rule_error_history,
+            "generated_sequences_e0": generated_sequences_e0,
             "model_config": model_config,
             "eval_interval": eval_interval,
         }

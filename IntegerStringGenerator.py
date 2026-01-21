@@ -48,6 +48,17 @@ class IntegerStringGenerator(ABC):
             - Boolean indicating if the entire sequence is correct (no mistakes)
         """
         pass
+
+    def valence_mask(self, sequence: list) -> list[bool]:
+        """
+        Returns a boolean mask indicating which positions are actually *constrained* by the rule
+        (i.e., have right/wrong valence). Positions that are "free" should be False.
+        
+        Default: assume all positions are constrained.
+        Subclasses should override when some positions are unconstrained (e.g. warmup tokens,
+        conditional rules that only apply sometimes, operator-based rules, etc.).
+        """
+        return [True] * len(sequence)
     
     def generate_dataset(self, num_sequences: int, min_length: int = 10, max_length: int = 100) -> list[list[int]]:
         """
@@ -121,6 +132,10 @@ class OddEvenIndexRule(IntegerStringGenerator):
                 correctness.append(1 if val % 2 == 1 else 0)
         return correctness, all(c == 1 for c in correctness)
 
+    def valence_mask(self, sequence: list) -> list[bool]:
+        # Every position has a parity constraint.
+        return [True] * len(sequence)
+
 
 class EvenToOddTransitionRule(IntegerStringGenerator):
     """
@@ -177,6 +192,15 @@ class EvenToOddTransitionRule(IntegerStringGenerator):
             else:  # Previous is odd, current can be anything
                 correctness.append(1)
         return correctness, all(c == 1 for c in correctness)
+
+    def valence_mask(self, sequence: list) -> list[bool]:
+        if len(sequence) == 0:
+            return []
+        mask = [False]  # first token is free
+        for i in range(1, len(sequence)):
+            prev = sequence[i - 1]
+            mask.append(bool(prev % 2 == 0))  # constrained iff prev is even
+        return mask
 
 
 class EvenRepeatLastOddRule(IntegerStringGenerator):
@@ -246,6 +270,20 @@ class EvenRepeatLastOddRule(IntegerStringGenerator):
                 last_odd = curr
         return correctness, all(c == 1 for c in correctness)
 
+    def valence_mask(self, sequence: list) -> list[bool]:
+        if len(sequence) == 0:
+            return []
+        mask = [False]  # first token is free
+        last_odd = sequence[0] if isinstance(sequence[0], int) and sequence[0] % 2 == 1 else None
+        for i in range(1, len(sequence)):
+            prev = sequence[i - 1]
+            curr = sequence[i]
+            constrained = bool(isinstance(prev, int) and prev % 2 == 0 and last_odd is not None)
+            mask.append(constrained)
+            if isinstance(curr, int) and curr % 2 == 1:
+                last_odd = curr
+        return mask
+
 
 class EvenAbsDiffRule(IntegerStringGenerator):
     """
@@ -312,6 +350,17 @@ class EvenAbsDiffRule(IntegerStringGenerator):
                 correctness.append(1)
         return correctness, all(c == 1 for c in correctness)
 
+    def valence_mask(self, sequence: list) -> list[bool]:
+        if len(sequence) == 0:
+            return []
+        if len(sequence) == 1:
+            return [False]
+        mask = [False, False]  # first two are free (not enough history)
+        for i in range(2, len(sequence)):
+            prev = sequence[i - 1]
+            mask.append(bool(isinstance(prev, int) and prev % 2 == 0))
+        return mask
+
 
 class CopyModuloRule(IntegerStringGenerator):
     """
@@ -371,6 +420,10 @@ class CopyModuloRule(IntegerStringGenerator):
             correctness.append(1 if sequence[i] == sequence[source_pos] else 0)
         return correctness, all(c == 1 for c in correctness)
 
+    def valence_mask(self, sequence: list) -> list[bool]:
+        k = self.period
+        return [False] * min(k, len(sequence)) + [True] * max(0, len(sequence) - min(k, len(sequence)))
+
 
 class SuccessorRule(IntegerStringGenerator):
     """
@@ -422,6 +475,11 @@ class SuccessorRule(IntegerStringGenerator):
             expected = self.min_value + ((prev - self.min_value + 1) % self.vocab_size)
             correctness.append(1 if sequence[i] == expected else 0)
         return correctness, all(c == 1 for c in correctness)
+
+    def valence_mask(self, sequence: list) -> list[bool]:
+        if len(sequence) == 0:
+            return []
+        return [False] + [True] * (len(sequence) - 1)
 
 
 class ConditionalTransformRule(IntegerStringGenerator):
@@ -482,6 +540,11 @@ class ConditionalTransformRule(IntegerStringGenerator):
             correctness.append(1 if sequence[i] == expected else 0)
         return correctness, all(c == 1 for c in correctness)
 
+    def valence_mask(self, sequence: list) -> list[bool]:
+        if len(sequence) == 0:
+            return []
+        return [False] + [True] * (len(sequence) - 1)
+
 
 class LookupPermutationRule(IntegerStringGenerator):
     """
@@ -537,6 +600,11 @@ class LookupPermutationRule(IntegerStringGenerator):
             expected = self.permutation[prev - self.min_value]
             correctness.append(1 if sequence[i] == expected else 0)
         return correctness, all(c == 1 for c in correctness)
+
+    def valence_mask(self, sequence: list) -> list[bool]:
+        if len(sequence) == 0:
+            return []
+        return [False] + [True] * (len(sequence) - 1)
 
 
 class ParityBasedRule(IntegerStringGenerator):
@@ -624,6 +692,13 @@ class ParityBasedRule(IntegerStringGenerator):
                 correctness.append(1 if curr % 2 == 1 else 0)
         return correctness, all(c == 1 for c in correctness)
 
+    def valence_mask(self, sequence: list) -> list[bool]:
+        if len(sequence) == 0:
+            return []
+        if len(sequence) == 1:
+            return [False]
+        return [False, False] + [True] * (len(sequence) - 2)
+
 
 class TwoTokenParityRule(IntegerStringGenerator):
     """
@@ -694,6 +769,13 @@ class TwoTokenParityRule(IntegerStringGenerator):
                 correctness.append(1 if curr >= 10 else 0)
         return correctness, all(c == 1 for c in correctness)
 
+    def valence_mask(self, sequence: list) -> list[bool]:
+        if len(sequence) == 0:
+            return []
+        if len(sequence) == 1:
+            return [False]
+        return [False, False] + [True] * (len(sequence) - 2)
+
 
 class EvenGreaterThan10Rule(IntegerStringGenerator):
     """
@@ -760,6 +842,11 @@ class EvenGreaterThan10Rule(IntegerStringGenerator):
                 correctness.append(1 if curr < 10 else 0)
         return correctness, all(c == 1 for c in correctness)
 
+    def valence_mask(self, sequence: list) -> list[bool]:
+        if len(sequence) == 0:
+            return []
+        return [False] + [True] * (len(sequence) - 1)
+
 
 class OperatorBasedGenerator(IntegerStringGenerator):
     """
@@ -795,6 +882,20 @@ class OperatorBasedGenerator(IntegerStringGenerator):
     def is_operator(self, token) -> bool:
         """Check if a token is an operator."""
         return isinstance(token, str) and token in self.operators
+
+    def valence_mask(self, sequence: list) -> list[bool]:
+        """
+        Operator-based rules only constrain the token *after* an operator, and only when that
+        token is a non-operator (operators-after-operators are treated as unconstrained).
+        """
+        if len(sequence) == 0:
+            return []
+        mask = [False]  # first token is free
+        for i in range(1, len(sequence)):
+            prev = sequence[i - 1]
+            curr = sequence[i]
+            mask.append(bool(self.is_operator(prev) and not self.is_operator(curr)))
+        return mask
 
 
 class PlusMeansEvenRule(OperatorBasedGenerator):
