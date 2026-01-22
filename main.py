@@ -2150,12 +2150,13 @@ def plot_attention_matrix(model, X_list, itos, save_path=None, num_sequences=3):
         pos = torch.arange(T, device=X.device) % model.block_size
         pos_emb = model.position_embedding_table(pos)
         x = token_emb + pos_emb
-        
+        x_norm = model.ln1(x)  # Pre-LN before attention
+
         # Get attention weights and outputs from all heads
         wei_all = []
         out_all = []
         for h in model.sa_heads.heads:
-            out, wei = h(x)  # out: (B, T, head_size), wei: (B, T, T)
+            out, wei = h(x_norm)  # out: (B, T, head_size), wei: (B, T, T)
             wei_all.append(wei[0].cpu().numpy())  # (T, T)
             out_all.append(out[0].cpu().numpy())  # (T, head_size)
         
@@ -2598,6 +2599,7 @@ class Head(nn.Module):
             self.key = nn.Linear(n_embd, head_size, bias=False)
             self.query = nn.Linear(n_embd, head_size, bias=False)
             self.value = nn.Linear(n_embd, head_size, bias=False)
+            self.head_size = head_size
 
             # causal mask
             self.register_buffer("tril", torch.tril(torch.ones(block_size, block_size)))
@@ -2609,8 +2611,8 @@ class Head(nn.Module):
             k = self.key(x)  # (B, T, head_size)
             q = self.query(x)  # (B, T, head_size)
 
-
-            weight = q @ k.transpose(-2, -1)  # (B, T, T)
+            scale = self.head_size ** -0.5
+            weight = (q @ k.transpose(-2, -1)) * scale  # (B, T, T), scaled by 1/sqrt(d_k)
             weight = weight.masked_fill(self.tril[:T, :T].to(x.device) == 0, float("-inf"))
             weight = F.softmax(weight, dim=-1)  # (B, T, T)
 
@@ -2661,12 +2663,11 @@ class BigramLanguageModel(nn.Module):
         super().__init__()
         self.token_embedding = nn.Embedding(vocab_size, n_embd)           # (vocab, n_embd)
         self.position_embedding_table = nn.Embedding(block_size, n_embd)  # (block_size, n_embd)
+        self.ln1 = nn.LayerNorm(n_embd)
         self.sa_heads = MultiHeadAttention(num_heads, n_embd, head_size, block_size)
-        # Project attention output back to n_embd for residual connection
         self.proj = nn.Linear(num_heads * head_size, n_embd)
-        # Feedforward layer for computation after attention
+        self.ln2 = nn.LayerNorm(n_embd)
         self.ffwd = FeedForward(n_embd, ffwd_mult=16)
-        # lm_head maps n_embd -> vocab
         self.lm_head = nn.Linear(n_embd, vocab_size)
         self.block_size = block_size
 
@@ -2679,10 +2680,10 @@ class BigramLanguageModel(nn.Module):
 
         x = token_emb + pos_emb  # (B,T,n_embd)
 
-        attn_out, wei = self.sa_heads(x)  # (B,T,num_heads*head_size)
+        attn_out, wei = self.sa_heads(self.ln1(x))
         attn_out = self.proj(attn_out)    # (B,T,n_embd)
         x = x + attn_out                  # residual connection
-        x = x + self.ffwd(x)              # feedforward + residual
+        x = x + self.ffwd(self.ln2(x))    # LayerNorm, feedforward, residual
 
         logits = self.lm_head(x)  # (B,T,vocab)
 
@@ -2723,44 +2724,41 @@ def plot_architecture_diagram(config: dict, save_path: str = None):
     """
     model_config = config['model']
     data_config = config['data']
+    training_config = config.get('training', {})
     
-    # Extract dimensions
     vocab_size = data_config['max_value'] - data_config['min_value'] + 1
     n_embd = model_config['n_embd']
     block_size = model_config['block_size']
     num_heads = model_config['num_heads']
     head_size = model_config['head_size']
+    batch_size = training_config.get('batch_size', 4)
     
-    # Check if generator uses operators (adds to vocab)
     if data_config.get('generator_type') in ['PlusLastEvenRule']:
-        vocab_size += 1  # +1 for '+' operator
+        vocab_size += 1
     
-    fig, ax = plt.subplots(1, 1, figsize=(14, 18))
+    fig, ax = plt.subplots(1, 1, figsize=(14, 20))
     ax.set_xlim(0, 10)
-    ax.set_ylim(0, 20)
+    ax.set_ylim(0, 22)
     ax.set_aspect('equal')
     ax.axis('off')
     
-    # Colors
     input_color = '#E8F4FD'
     embed_color = '#D4E6F1'
     attention_color = '#FCF3CF'
     linear_color = '#FADBD8'
     output_color = '#D5F5E3'
+    norm_color = '#E8DAEF'
     arrow_color = '#2C3E50'
     
-    # Helper function to draw a box
-    def draw_box(x, y, width, height, text, color, fontsize=9, subtext=None):
-        rect = plt.Rectangle((x - width/2, y - height/2), width, height, 
+    def draw_box(x, y, w, h, text, color, fontsize=9, subtext=None, mathtext=False):
+        rect = plt.Rectangle((x - w/2, y - h/2), w, h,
                               facecolor=color, edgecolor='#2C3E50', linewidth=2, zorder=2)
         ax.add_patch(rect)
-        ax.text(x, y + (0.15 if subtext else 0), text, ha='center', va='center', 
-                fontsize=fontsize, fontweight='bold', zorder=3)
+        ax.text(x, y + (0.15 if subtext else 0), text, ha='center', va='center',
+                fontsize=fontsize, fontweight='bold', zorder=3, usetex=False)
         if subtext:
-            ax.text(x, y - 0.25, subtext, ha='center', va='center', 
-                    fontsize=7, color='#555', zorder=3)
+            ax.text(x, y - 0.25, subtext, ha='center', va='center', fontsize=7, color='#555', zorder=3)
     
-    # Helper function to draw arrow
     def draw_arrow(x1, y1, x2, y2, label=None):
         ax.annotate('', xy=(x2, y2), xytext=(x1, y1),
                     arrowprops=dict(arrowstyle='->', color=arrow_color, lw=1.5))
@@ -2768,145 +2766,163 @@ def plot_architecture_diagram(config: dict, save_path: str = None):
             mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
             ax.text(mid_x + 0.3, mid_y, label, fontsize=7, color='#555')
     
-    # Title
+    def residual_arrow(x1, y1, x2, y2, label='residual'):
+        ax.annotate('', xy=(x2, y2), xytext=(x1, y1),
+                    arrowprops=dict(arrowstyle='->', color='#27AE60', lw=1.5,
+                                   connectionstyle='arc3,rad=0.25'))
+    
     config_name = config.get('name', 'Model')
-    ax.text(5, 19.5, f"Architecture: {config_name}", ha='center', va='center', 
+    ax.text(5, 21.2, f"Architecture: {config_name}", ha='center', va='center',
             fontsize=14, fontweight='bold')
     
-    # 1. Input tokens
-    y = 18
-    draw_box(5, y, 3, 0.8, "Input Tokens", input_color, subtext=f"shape: (B, T={block_size})")
+    # Notation (define B, T, C, d_k, vocab; show actual dims)
+    ax.text(8.5, 20.2, "Notation (symbol → actual)", ha='center', va='center', fontsize=9, fontweight='bold')
+    for i, line in enumerate([
+        "B = batch size → " + str(batch_size),
+        "T = seq length → " + str(block_size),
+        "C = n_embd → " + str(n_embd),
+        r"d$_k$ = head_size → " + str(head_size),
+        "vocab → " + str(vocab_size),
+    ]):
+        ax.text(8.5, 19.5 - 0.35 * i, line, ha='center', va='center', fontsize=7, color='#333')
     
-    # 2. Token Embedding
-    y = 16.5
-    draw_box(3.5, y, 3.5, 1, "Token Embedding", embed_color, 
-             subtext=f"nn.Embedding({vocab_size}, {n_embd})")
-    draw_arrow(5, 17.6, 3.5, 17)
+    # 1. Input
+    y_in = 19
+    draw_box(5, y_in, 3, 0.8, "Input Tokens", input_color,
+             subtext=rf"(B, T) = ({batch_size}, {block_size})")
     
-    # 3. Position Embedding
-    draw_box(6.5, y, 3.5, 1, "Position Embedding", embed_color,
-             subtext=f"nn.Embedding({block_size}, {n_embd})")
-    draw_arrow(5, 17.6, 6.5, 17)
+    # 2. Token & Position Embedding
+    y_emb = 17.5
+    draw_box(3.5, y_emb, 3.2, 1, "Token Embedding", embed_color,
+             subtext=rf"Embedding({vocab_size}, {n_embd})")
+    draw_box(6.5, y_emb, 3.2, 1, "Position Embedding", embed_color,
+             subtext=rf"Embedding({block_size}, {n_embd})")
+    draw_arrow(5, 18.6, 3.5, 18)
+    draw_arrow(5, 18.6, 6.5, 18)
     
-    # 4. Add embeddings
-    y = 15
-    draw_box(5, y, 2, 0.6, "+", '#FFF', fontsize=14)
-    draw_arrow(3.5, 16, 4.5, 15.3)
-    draw_arrow(6.5, 16, 5.5, 15.3)
-    ax.text(7.5, y, f"→ (B, T, {n_embd})", fontsize=8, va='center')
+    # 3. Add embeddings
+    y_add = 16.2
+    draw_box(5, y_add, 2, 0.6, "+", '#FFF', fontsize=14)
+    draw_arrow(3.5, 17, 4.5, 16.5)
+    draw_arrow(6.5, 17, 5.5, 16.5)
+    ax.text(7.2, y_add, rf"(B,T,C)=({batch_size},{block_size},{n_embd})", fontsize=7, va='center')
     
-    # 5. Multi-Head Attention block
-    y = 13
-    attn_height = 4.5
-    rect = plt.Rectangle((1.5, y - attn_height/2), 7, attn_height, 
-                          facecolor='#FEF9E7', edgecolor='#F39C12', linewidth=2, 
+    # 4. LayerNorm (Pre-LN before attention)
+    y_ln1 = 15.4
+    draw_box(5, y_ln1, 2.2, 0.6, "LayerNorm", norm_color, fontsize=9,
+             subtext=rf"(B, T, {n_embd})")
+    draw_arrow(5, 15.9, 5, 15.7)
+    
+    # 5. Multi-Head Attention block (place box below Add/LN so it doesn't obscure)
+    attn_center = 12.2
+    attn_h = 4.2
+    attn_top = attn_center + attn_h / 2
+    attn_bot = attn_center - attn_h / 2
+    rect = plt.Rectangle((1.4, attn_bot), 7.2, attn_h,
+                          facecolor='#FEF9E7', edgecolor='#F39C12', linewidth=2,
                           linestyle='--', zorder=1)
     ax.add_patch(rect)
-    ax.text(5, y + attn_height/2 - 0.3, f"Multi-Head Attention ({num_heads} head{'s' if num_heads > 1 else ''})", 
-            ha='center', va='center', fontsize=10, fontweight='bold', color='#B7950B')
+    ax.text(5, attn_top - 0.35, f"Multi-Head Attention ({num_heads} head{'s' if num_heads > 1 else ''})",
+            ha='center', va='center', fontsize=10, fontweight='bold', color='#B7950B', zorder=3)
     
-    draw_arrow(5, 14.7, 5, 14.2)
+    draw_arrow(5, 15.1, 5, attn_top - 0.5)
     
-    # Q, K, V linear layers
-    qkv_y = 13.5
-    draw_box(2.5, qkv_y, 1.8, 0.8, "W_Q", attention_color, 
-             subtext=f"({n_embd}→{head_size})")
-    draw_box(5, qkv_y, 1.8, 0.8, "W_K", attention_color,
-             subtext=f"({n_embd}→{head_size})")
-    draw_box(7.5, qkv_y, 1.8, 0.8, "W_V", attention_color,
-             subtext=f"({n_embd}→{head_size})")
+    qkv_y = 12.8
+    draw_box(2.5, qkv_y, 1.8, 0.75, r"W$_Q$", attention_color,
+             subtext=rf"C→d$_k$ ({n_embd}→{head_size})")
+    draw_box(5, qkv_y, 1.8, 0.75, r"W$_K$", attention_color,
+             subtext=rf"C→d$_k$ ({n_embd}→{head_size})")
+    draw_box(7.5, qkv_y, 1.8, 0.75, r"W$_V$", attention_color,
+             subtext=rf"C→d$_k$ ({n_embd}→{head_size})")
+    draw_arrow(5, attn_top - 0.55, 2.5, 13.15)
+    draw_arrow(5, attn_top - 0.55, 5, 13.15)
+    draw_arrow(5, attn_top - 0.55, 7.5, 13.15)
     
-    draw_arrow(5, 14.2, 2.5, 13.9)
-    draw_arrow(5, 14.2, 5, 13.9)
-    draw_arrow(5, 14.2, 7.5, 13.9)
+    qk_y = 11.6
+    ax.add_patch(plt.Rectangle((2.55, qk_y - 0.35), 2.4, 0.7, facecolor=attention_color,
+                                edgecolor='#2C3E50', linewidth=2, zorder=2))
+    ax.text(3.75, qk_y + 0.08, r"QK$^\top$ / $\sqrt{d_k}$", ha='center', va='center', fontsize=9, fontweight='bold', zorder=3)
+    ax.text(3.75, qk_y - 0.2, rf"(B,T,T)=({batch_size},{block_size},{block_size})", ha='center', va='center', fontsize=6, color='#555')
+    draw_arrow(2.5, 12.45, 3.2, 11.95)
+    draw_arrow(5, 12.45, 4.3, 11.95)
     
-    # QK^T and softmax
-    qk_y = 12.3
-    draw_box(3.75, qk_y, 2, 0.7, "QK^T / √d", attention_color, fontsize=8)
-    draw_arrow(2.5, 13.1, 3.2, 12.65)
-    draw_arrow(5, 13.1, 4.3, 12.65)
+    mask_y = 10.7
+    draw_box(3.75, mask_y, 2.2, 0.55, "Mask + Softmax", attention_color, fontsize=8)
+    draw_arrow(3.75, 11.25, 3.75, 10.95)
     
-    # Causal mask + Softmax
-    mask_y = 11.5
-    draw_box(3.75, mask_y, 2.2, 0.6, "Mask + Softmax", attention_color, fontsize=8)
-    draw_arrow(3.75, 11.95, 3.75, 11.8)
-    ax.text(6, mask_y, f"→ (B, T, T)", fontsize=7, va='center', color='#555')
+    av_y = 10.0
+    draw_box(5.5, av_y, 1.6, 0.55, "Attn × V", attention_color, fontsize=8)
+    draw_arrow(3.75, 10.45, 4.8, 10.25)
+    draw_arrow(7.5, 12.45, 6.3, 10.25)
     
-    # Attention × V
-    av_y = 10.8
-    draw_box(5.5, av_y, 1.8, 0.6, "Attn × V", attention_color, fontsize=8)
-    draw_arrow(3.75, 11.2, 5, 11.1)
-    draw_arrow(7.5, 13.1, 6.5, 11.1)
-    
-    # Concat heads (if multi-head)
     if num_heads > 1:
-        concat_y = 10.0
-        draw_box(5.5, concat_y, 2, 0.6, f"Concat {num_heads} heads", attention_color, fontsize=8)
-        draw_arrow(5.5, 10.5, 5.5, 10.3)
-        ax.text(7.8, concat_y, f"→ (B, T, {num_heads * head_size})", fontsize=7, va='center', color='#555')
+        concat_y = 9.2
+        draw_box(5.5, concat_y, 2, 0.55, f"Concat {num_heads} heads", attention_color, fontsize=8)
+        draw_arrow(5.5, 9.75, 5.5, 9.5)
+        ax.text(7.6, concat_y, rf"(B,T,{num_heads*head_size})=({batch_size},{block_size},{num_heads*head_size})", fontsize=6, va='center', color='#555')
+        proj_from_y = concat_y - 0.3
+    else:
+        proj_from_y = av_y - 0.35
     
-    # 6. Projection layer
-    y = 8.5
-    draw_box(5, y, 3, 0.8, "Projection", linear_color,
-             subtext=f"nn.Linear({num_heads * head_size}, {n_embd})")
-    draw_arrow(5.5 if num_heads > 1 else 5.5, 9.7 if num_heads > 1 else 10.5, 5, 8.9)
+    # 6. Projection
+    y_proj = 8.0
+    draw_box(5, y_proj, 2.8, 0.75, "Projection", linear_color,
+             subtext=rf"Linear({num_heads * head_size},{n_embd})")
+    draw_arrow(5.5, proj_from_y, 5, 8.4)
     
-    # 7. Residual connection
-    y = 7.5
-    draw_box(5, y, 2, 0.6, "+", '#FFF', fontsize=14)
-    draw_arrow(5, 8.1, 5, 7.8)
-    # Draw residual skip connection
-    ax.annotate('', xy=(4.5, 7.5), xytext=(1, 15),
-                arrowprops=dict(arrowstyle='->', color='#27AE60', lw=1.5, 
-                               connectionstyle='arc3,rad=0.2'))
-    ax.text(0.8, 12, "residual", fontsize=7, color='#27AE60', rotation=90, va='center')
+    # 7. Add & residual (from Add embeddings)
+    y_plus1 = 7.0
+    draw_box(5, y_plus1, 2, 0.55, "+", '#FFF', fontsize=14)
+    draw_arrow(5, 8.35, 5, 7.3)
+    residual_arrow(4.0, y_add, 4.0, y_plus1)
+    ax.text(3.6, (y_add + y_plus1) / 2, "residual", fontsize=7, color='#27AE60', rotation=90, va='center')
     
-    # 8. Feed Forward
-    y = 6
-    draw_box(5, y, 3.5, 1.2, "Feed Forward", linear_color,
-             subtext=f"Linear({n_embd}, {n_embd*16}) → ReLU → Linear({n_embd*16}, {n_embd})")
-    draw_arrow(5, 7.2, 5, 6.6)
+    # 8. LayerNorm (Pre-LN before FFN)
+    y_ln2 = 6.0
+    draw_box(5, y_ln2, 2.2, 0.55, "LayerNorm", norm_color, fontsize=9,
+             subtext=rf"(B, T, {n_embd})")
+    draw_arrow(5, 6.75, 5, 6.3)
     
-    # 9. Residual connection
-    y = 4.8
-    draw_box(5, y, 2, 0.6, "+", '#FFF', fontsize=14)
-    draw_arrow(5, 5.4, 5, 5.1)
-    # Draw residual skip connection
-    ax.annotate('', xy=(4.5, 4.8), xytext=(1, 7.5),
-                arrowprops=dict(arrowstyle='->', color='#27AE60', lw=1.5,
-                               connectionstyle='arc3,rad=0.15'))
+    # 9. Feed Forward
+    y_ff = 4.8
+    draw_box(5, y_ff, 3.2, 1, "Feed Forward", linear_color,
+             subtext=rf"Linear({n_embd},{n_embd*16})→ReLU→Linear({n_embd*16},{n_embd})")
+    draw_arrow(5, 5.75, 5, 5.3)
     
-    # 10. Output Linear (lm_head)
-    y = 3.5
-    draw_box(5, y, 3, 0.8, "LM Head", output_color,
-             subtext=f"nn.Linear({n_embd}, {vocab_size})")
-    draw_arrow(5, 4.5, 5, 3.9)
+    # 10. Add & residual (from first +)
+    y_plus2 = 3.6
+    draw_box(5, y_plus2, 2, 0.55, "+", '#FFF', fontsize=14)
+    draw_arrow(5, 4.35, 5, 3.85)
+    residual_arrow(4.0, y_plus1, 4.0, y_plus2)
+    ax.text(3.6, (y_plus1 + y_plus2) / 2, "residual", fontsize=7, color='#27AE60', rotation=90, va='center')
     
-    # 11. Softmax
-    y = 2.3
-    draw_box(5, y, 2.5, 0.7, "Softmax", output_color)
-    draw_arrow(5, 3.1, 5, 2.65)
+    # 11. LM Head
+    y_lm = 2.6
+    draw_box(5, y_lm, 2.6, 0.75, "LM Head", output_color,
+             subtext=rf"Linear({n_embd},{vocab_size})")
+    draw_arrow(5, 3.35, 5, 2.95)
     
-    # 12. Output
-    y = 1.2
-    draw_box(5, y, 3.5, 0.8, "Output Probabilities", output_color,
-             subtext=f"shape: (B, T, {vocab_size})")
-    draw_arrow(5, 1.95, 5, 1.6)
+    # 12. Softmax
+    y_sm = 1.6
+    draw_box(5, y_sm, 2.2, 0.6, "Softmax", output_color)
+    draw_arrow(5, 2.25, 5, 1.9)
+    
+    # 13. Output
+    y_out = 0.7
+    draw_box(5, y_out, 3.2, 0.65, "Output Probabilities", output_color,
+             subtext=rf"(B, T, vocab)=({batch_size},{block_size},{vocab_size})")
+    draw_arrow(5, 1.3, 5, 1.0)
     
     # Legend
-    legend_y = 0.3
-    legend_items = [
-        (embed_color, "Embeddings"),
-        (attention_color, "Attention"),
-        (linear_color, "Linear/FF"),
-        (output_color, "Output"),
-    ]
-    for i, (color, label) in enumerate(legend_items):
-        x = 2 + i * 2
-        rect = plt.Rectangle((x - 0.3, legend_y - 0.15), 0.6, 0.3, 
-                              facecolor=color, edgecolor='#2C3E50', linewidth=1)
-        ax.add_patch(rect)
-        ax.text(x + 0.5, legend_y, label, fontsize=7, va='center')
+    legend_y = 0.15
+    for i, (color, label) in enumerate([
+        (embed_color, "Embeddings"), (attention_color, "Attention"),
+        (linear_color, "Linear/FF"), (output_color, "Output"), (norm_color, "LayerNorm"),
+    ]):
+        x = 1.2 + i * 1.8
+        ax.add_patch(plt.Rectangle((x - 0.25, legend_y - 0.12), 0.5, 0.25,
+                                    facecolor=color, edgecolor='#2C3E50', linewidth=1))
+        ax.text(x + 0.35, legend_y, label, fontsize=7, va='center')
     
     plt.tight_layout()
     if save_path:
@@ -3370,7 +3386,10 @@ def load_checkpoint(config_name_actual: str, step: int = None):
         num_heads=model_config['num_heads'],
         head_size=model_config['head_size']
     )
-    model.load_state_dict(torch.load(checkpoint_dir / "model.pt"))
+    state = torch.load(checkpoint_dir / "model.pt")
+    load_result = model.load_state_dict(state, strict=False)
+    if load_result.missing_keys:
+        print(f"Warning: checkpoint missing keys (e.g. ln1/ln2); retrain for LayerNorm. Missing: {load_result.missing_keys}")
     model.eval()
     
     step_loaded = metadata.get("step")
