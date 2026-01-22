@@ -9,6 +9,7 @@ class Head(nn.Module):
 
     def __init__(self, n_embd: int, head_size: int, block_size: int):
         super().__init__()
+        self.head_size = head_size
         self.key = nn.Linear(n_embd, head_size, bias=False)
         self.query = nn.Linear(n_embd, head_size, bias=False)
         self.value = nn.Linear(n_embd, head_size, bias=False)
@@ -19,6 +20,8 @@ class Head(nn.Module):
         k = self.key(x)
         q = self.query(x)
         weight = q @ k.transpose(-2, -1)
+        # Scale by sqrt(d_k) to prevent attention from becoming too peaked
+        weight = weight / (self.head_size ** 0.5)
         weight = weight.masked_fill(self.tril[:T, :T].to(x.device) == 0, float("-inf"))
         weight = F.softmax(weight, dim=-1)
         v = self.value(x)
