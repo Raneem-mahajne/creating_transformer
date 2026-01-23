@@ -2418,30 +2418,82 @@ def plot_training_data_heatmap(training_sequences, generator, save_path=None, nu
     total_valid = total_correct + total_incorrect
     accuracy = total_correct / total_valid if total_valid > 0 else 0
     return accuracy, total_correct, total_incorrect
-def plot_architecture_diagram(config: dict, save_path: str = None):
-    """Generate a visual diagram of the model architecture based on config.
+def plot_architecture_diagram(config: dict, save_path: str = None, model=None, vocab_size=None, batch_size=None):
+    """Generate a visual diagram of the model architecture.
     
     Args:
-        config: Configuration dictionary with model parameters
+        config: Configuration dictionary with model parameters (used as fallback)
         save_path: Path to save the diagram (if None, displays interactively)
+        model: Optional model instance to extract architecture from dynamically
+        vocab_size: Optional vocab size (extracted from model if not provided)
+        batch_size: Optional batch size (from config if not provided)
     """
-    model_config = config['model']
-    data_config = config['data']
-    training_config = config.get('training', {})
+    # Extract architecture from model if provided, otherwise use config
+    has_ln1 = False
+    has_ln2 = False
     
-    vocab_size = data_config['max_value'] - data_config['min_value'] + 1
-    n_embd = model_config['n_embd']
-    block_size = model_config['block_size']
-    num_heads = model_config['num_heads']
-    head_size = model_config['head_size']
-    batch_size = training_config.get('batch_size', 4)
+    if model is not None:
+        # Inspect actual model structure
+        has_ln1 = hasattr(model, 'ln1') and 'ln1' in model._modules
+        has_ln2 = hasattr(model, 'ln2') and 'ln2' in model._modules
+        
+        # Extract dimensions directly from model
+        vocab_size_model = model.token_embedding.num_embeddings
+        n_embd = model.token_embedding.embedding_dim
+        block_size = model.block_size
+        num_heads = len(model.sa_heads.heads)
+        # Get head_size from first head
+        head_size = model.sa_heads.heads[0].head_size
+        # Get projection dimensions
+        proj_in_dim = model.proj.in_features
+        proj_out_dim = model.proj.out_features
+        # Get feedforward dimensions
+        ffwd_net = model.ffwd.net
+        ffwd_in_dim = ffwd_net[0].in_features
+        ffwd_hidden_dim = ffwd_net[0].out_features
+        ffwd_out_dim = ffwd_net[2].out_features
+        ffwd_mult = ffwd_hidden_dim // ffwd_in_dim
+        # Get LM head dimensions
+        lm_head_in_dim = model.lm_head.in_features
+        lm_head_out_dim = model.lm_head.out_features
+        
+        # Use provided vocab_size or model's vocab_size
+        if vocab_size is None:
+            vocab_size = vocab_size_model
+        
+        # Verify consistency
+        assert proj_in_dim == num_heads * head_size, f"Projection input dim mismatch: {proj_in_dim} != {num_heads * head_size}"
+        assert proj_out_dim == n_embd, f"Projection output dim mismatch: {proj_out_dim} != {n_embd}"
+        assert ffwd_in_dim == n_embd, f"FFN input dim mismatch: {ffwd_in_dim} != {n_embd}"
+        assert ffwd_out_dim == n_embd, f"FFN output dim mismatch: {ffwd_out_dim} != {n_embd}"
+        assert lm_head_in_dim == n_embd, f"LM head input dim mismatch: {lm_head_in_dim} != {n_embd}"
+        assert lm_head_out_dim == vocab_size, f"LM head output dim mismatch: {lm_head_out_dim} != {vocab_size}"
+    else:
+        # Fall back to config
+        model_config = config['model']
+        data_config = config['data']
+        training_config = config.get('training', {})
+        
+        if vocab_size is None:
+            vocab_size = data_config['max_value'] - data_config['min_value'] + 1
+            if data_config.get('generator_type') in ['PlusLastEvenRule']:
+                vocab_size += 1
+        
+        n_embd = model_config['n_embd']
+        block_size = model_config['block_size']
+        num_heads = model_config['num_heads']
+        head_size = model_config['head_size']
+        ffwd_mult = 16  # Default from model.py
+        ffwd_hidden_dim = n_embd * ffwd_mult
     
-    if data_config.get('generator_type') in ['PlusLastEvenRule']:
-        vocab_size += 1
+    # Get batch_size
+    if batch_size is None:
+        training_config = config.get('training', {})
+        batch_size = training_config.get('batch_size', 4)
     
-    fig, ax = plt.subplots(1, 1, figsize=(14, 20))
-    ax.set_xlim(0, 10)
-    ax.set_ylim(0, 22)
+    fig, ax = plt.subplots(1, 1, figsize=(24, 10))
+    ax.set_xlim(0, 24)
+    ax.set_ylim(0, 10)
     ax.set_aspect('equal')
     ax.axis('off')
     
@@ -2457,10 +2509,34 @@ def plot_architecture_diagram(config: dict, save_path: str = None):
         rect = plt.Rectangle((x - w/2, y - h/2), w, h,
                               facecolor=color, edgecolor='#2C3E50', linewidth=2, zorder=2)
         ax.add_patch(rect)
-        ax.text(x, y + (0.15 if subtext else 0), text, ha='center', va='center',
-                fontsize=fontsize, fontweight='bold', zorder=3, usetex=False)
+        # Handle multi-line text by splitting on newlines or wrapping long text
+        if '\n' in text:
+            lines = text.split('\n')
+            line_height = 0.3
+            start_y = y + (line_height * (len(lines) - 1) / 2) - (0.15 if subtext else 0)
+            for i, line in enumerate(lines):
+                ax.text(x, start_y - i * line_height, line, ha='center', va='center',
+                        fontsize=fontsize, fontweight='bold', zorder=3, usetex=False)
+        else:
+            ax.text(x, y + (0.15 if subtext else 0), text, ha='center', va='center',
+                    fontsize=fontsize, fontweight='bold', zorder=3, usetex=False)
         if subtext:
-            ax.text(x, y - 0.25, subtext, ha='center', va='center', fontsize=7, color='#555', zorder=3)
+            # Handle multi-line subtext
+            if '\n' in subtext:
+                sublines = subtext.split('\n')
+                subline_height = 0.22
+                # Calculate total height needed for all subtext lines
+                total_subtext_height = subline_height * (len(sublines) - 1)
+                # Center the subtext block vertically within the bottom portion of the box
+                # Position it in the lower half of the box, centered
+                bottom_margin = 0.15
+                available_height = h/2 - bottom_margin
+                start_y = y - h/2 + bottom_margin + (available_height - total_subtext_height)/2 + total_subtext_height
+                for i, line in enumerate(sublines):
+                    ax.text(x, start_y - i * subline_height, line, ha='center', va='center', 
+                            fontsize=7, color='#555', zorder=3)
+            else:
+                ax.text(x, y - 0.25, subtext, ha='center', va='center', fontsize=7, color='#555', zorder=3)
     
     def draw_arrow(x1, y1, x2, y2, label=None):
         ax.annotate('', xy=(x2, y2), xytext=(x1, y1),
@@ -2475,11 +2551,11 @@ def plot_architecture_diagram(config: dict, save_path: str = None):
                                    connectionstyle='arc3,rad=0.25'))
     
     config_name = config.get('name', 'Model')
-    ax.text(5, 21.2, f"Architecture: {config_name}", ha='center', va='center',
+    ax.text(12, 9.2, f"Architecture: {config_name}", ha='center', va='center',
             fontsize=14, fontweight='bold')
     
-    # Notation (define B, T, C, d_k, vocab; show actual dims)
-    ax.text(8.5, 20.2, "Notation (symbol -> actual)", ha='center', va='center', fontsize=9, fontweight='bold')
+    # Notation (define B, T, C, d_k, vocab; show actual dims) - place on right side
+    ax.text(20, 8.5, "Notation (symbol -> actual)", ha='center', va='center', fontsize=9, fontweight='bold')
     for i, line in enumerate([
         "B = batch size -> " + str(batch_size),
         "T = seq length -> " + str(block_size),
@@ -2487,145 +2563,164 @@ def plot_architecture_diagram(config: dict, save_path: str = None):
         r"d$_k$ = head_size -> " + str(head_size),
         "vocab -> " + str(vocab_size),
     ]):
-        ax.text(8.5, 19.5 - 0.35 * i, line, ha='center', va='center', fontsize=7, color='#333')
+        ax.text(20, 7.8 - 0.3 * i, line, ha='center', va='center', fontsize=7, color='#333')
     
     # 1. Input
-    y_in = 19
-    draw_box(5, y_in, 3, 0.8, "Input Tokens", input_color,
-             subtext=rf"(B, T) = ({batch_size}, {block_size})")
+    x_in = 1
+    draw_box(x_in, 5, 1.0, 3, "Input\nTokens", input_color,
+             subtext=f"(B, T) = ({batch_size}, {block_size})")
     
     # 2. Token & Position Embedding
-    y_emb = 17.5
-    draw_box(3.5, y_emb, 3.2, 1, "Token Embedding", embed_color,
-             subtext=rf"Embedding({vocab_size}, {n_embd})")
-    draw_box(6.5, y_emb, 3.2, 1, "Position Embedding", embed_color,
-             subtext=rf"Embedding({block_size}, {n_embd})")
-    draw_arrow(5, 18.6, 3.5, 18)
-    draw_arrow(5, 18.6, 6.5, 18)
+    x_emb = 2.5
+    draw_box(x_emb, 3.5, 1.3, 3.4, "Token\nEmbedding", embed_color,
+             subtext=f"Embedding\n({vocab_size}, {n_embd})")
+    draw_box(x_emb, 6.5, 1.3, 3.4, "Position\nEmbedding", embed_color,
+             subtext=f"Embedding\n({block_size}, {n_embd})")
+    draw_arrow(1.4, 5, 2, 3.5)
+    draw_arrow(1.4, 5, 2, 6.5)
     
     # 3. Add embeddings
-    y_add = 16.2
-    draw_box(5, y_add, 2, 0.6, "+", '#FFF', fontsize=14)
-    draw_arrow(3.5, 17, 4.5, 16.5)
-    draw_arrow(6.5, 17, 5.5, 16.5)
-    ax.text(7.2, y_add, rf"(B,T,C)=({batch_size},{block_size},{n_embd})", fontsize=7, va='center')
+    x_add = 4
+    draw_box(x_add, 5, 0.7, 2.2, "+", '#FFF', fontsize=14)
+    draw_arrow(3.1, 3.5, 3.65, 4.5)
+    draw_arrow(3.1, 6.5, 3.65, 5.5)
+    ax.text(x_add, 6.3, rf"(B,T,C)=({batch_size},{block_size},{n_embd})", fontsize=6.5, ha='center', rotation=0)
     
-    # 4. LayerNorm (Pre-LN before attention)
-    y_ln1 = 15.4
-    draw_box(5, y_ln1, 2.2, 0.6, "LayerNorm", norm_color, fontsize=9,
-             subtext=rf"(B, T, {n_embd})")
-    draw_arrow(5, 15.9, 5, 15.7)
+    # 4. LayerNorm (Pre-LN before attention) - only if it exists
+    if has_ln1:
+        x_ln1 = 5.3
+        draw_box(x_ln1, 5, 0.8, 2.2, "LayerNorm", norm_color, fontsize=9,
+                 subtext=f"(B, T, {n_embd})")
+        draw_arrow(4.3, 5, 4.9, 5)
+        attn_input_x = 4.9
+        attn_center = 8.5
+    else:
+        attn_input_x = 4.3
+        attn_center = 7.5  # Move attention block closer when no LayerNorm
     
-    # 5. Multi-Head Attention block (place box below Add/LN so it doesn't obscure)
-    attn_center = 12.2
-    attn_h = 4.2
-    attn_top = attn_center + attn_h / 2
-    attn_bot = attn_center - attn_h / 2
-    rect = plt.Rectangle((1.4, attn_bot), 7.2, attn_h,
+    # 5. Multi-Head Attention block (horizontal layout)
+    attn_w = 5.5
+    attn_left = attn_center - attn_w / 2
+    attn_right = attn_center + attn_w / 2
+    rect = plt.Rectangle((attn_left, 1.4), attn_w, 7.2,
                           facecolor='#FEF9E7', edgecolor='#F39C12', linewidth=2,
                           linestyle='--', zorder=1)
     ax.add_patch(rect)
-    ax.text(5, attn_top - 0.35, f"Multi-Head Attention ({num_heads} head{'s' if num_heads > 1 else ''})",
+    ax.text(attn_center, 8.35, f"Multi-Head Attention ({num_heads} head{'s' if num_heads > 1 else ''})",
             ha='center', va='center', fontsize=10, fontweight='bold', color='#B7950B', zorder=3)
     
-    draw_arrow(5, 15.1, 5, attn_top - 0.5)
+    draw_arrow(attn_input_x, 5, attn_left + 0.5, 5)
     
-    qkv_y = 12.8
-    draw_box(2.5, qkv_y, 1.8, 0.75, r"W$_Q$", attention_color,
-             subtext=rf"C->d$_k$ ({n_embd}->{head_size})")
-    draw_box(5, qkv_y, 1.8, 0.75, r"W$_K$", attention_color,
-             subtext=rf"C->d$_k$ ({n_embd}->{head_size})")
-    draw_box(7.5, qkv_y, 1.8, 0.75, r"W$_V$", attention_color,
-             subtext=rf"C->d$_k$ ({n_embd}->{head_size})")
-    draw_arrow(5, attn_top - 0.55, 2.5, 13.15)
-    draw_arrow(5, attn_top - 0.55, 5, 13.15)
-    draw_arrow(5, attn_top - 0.55, 7.5, 13.15)
+    qkv_x = 7.5
+    draw_box(qkv_x, 3.5, 1.0, 2.2, r"W$_Q$", attention_color,
+             subtext=f"C->d$_k$\n({n_embd}->{head_size})")
+    draw_box(qkv_x, 5, 1.0, 2.2, r"W$_K$", attention_color,
+             subtext=f"C->d$_k$\n({n_embd}->{head_size})")
+    draw_box(qkv_x, 6.5, 1.0, 2.2, r"W$_V$", attention_color,
+             subtext=f"C->d$_k$\n({n_embd}->{head_size})")
+    draw_arrow(attn_left + 0.55, 5, qkv_x - 0.4, 3.5)
+    draw_arrow(attn_left + 0.55, 5, qkv_x - 0.4, 5)
+    draw_arrow(attn_left + 0.55, 5, qkv_x - 0.4, 6.5)
     
-    qk_y = 11.6
-    ax.add_patch(plt.Rectangle((2.55, qk_y - 0.35), 2.4, 0.7, facecolor=attention_color,
+    qk_x = 9.2
+    qk_w = 1.0
+    qk_h = 2.8
+    ax.add_patch(plt.Rectangle((qk_x - qk_w/2, 3.6), qk_w, qk_h, facecolor=attention_color,
                                 edgecolor='#2C3E50', linewidth=2, zorder=2))
-    ax.text(3.75, qk_y + 0.08, r"QK$^\top$ / $\sqrt{d_k}$", ha='center', va='center', fontsize=9, fontweight='bold', zorder=3)
-    ax.text(3.75, qk_y - 0.2, rf"(B,T,T)=({batch_size},{block_size},{block_size})", ha='center', va='center', fontsize=6, color='#555')
-    draw_arrow(2.5, 12.45, 3.2, 11.95)
-    draw_arrow(5, 12.45, 4.3, 11.95)
+    ax.text(qk_x, 4.95, r"QK$^\top$", ha='center', va='center', fontsize=8, fontweight='bold', zorder=3, rotation=0)
+    ax.text(qk_x, 4.65, r"/ $\sqrt{d_k}$", ha='center', va='center', fontsize=7, fontweight='bold', zorder=3, rotation=0)
+    ax.text(qk_x, 4.25, f"(B,T,T)=", ha='center', va='center', fontsize=6, color='#555', rotation=0)
+    ax.text(qk_x, 4.0, f"({batch_size},{block_size},", ha='center', va='center', fontsize=6, color='#555', rotation=0)
+    ax.text(qk_x, 3.8, f"{block_size})", ha='center', va='center', fontsize=6, color='#555', rotation=0)
+    draw_arrow(qkv_x + 0.4, 3.5, qk_x - 0.4, 3.95)
+    draw_arrow(qkv_x + 0.4, 5, qk_x - 0.4, 4.3)
     
-    mask_y = 10.7
-    draw_box(3.75, mask_y, 2.2, 0.55, "Mask + Softmax", attention_color, fontsize=8)
-    draw_arrow(3.75, 11.25, 3.75, 10.95)
+    mask_x = 10.6
+    draw_box(mask_x, 4.75, 0.7, 2.4, "Mask +\nSoftmax", attention_color, fontsize=8)
+    draw_arrow(qk_x + 0.45, 4.75, mask_x - 0.35, 4.75)
     
-    av_y = 10.0
-    draw_box(5.5, av_y, 1.6, 0.55, "Attn × V", attention_color, fontsize=8)
-    draw_arrow(3.75, 10.45, 4.8, 10.25)
-    draw_arrow(7.5, 12.45, 6.3, 10.25)
+    av_x = 11.9
+    draw_box(av_x, 5.5, 0.7, 1.8, "Attn × V", attention_color, fontsize=8)
+    draw_arrow(mask_x + 0.3, 4.75, av_x - 0.3, 5.25)
+    draw_arrow(qkv_x + 0.4, 6.5, av_x - 0.3, 5.75)
     
     if num_heads > 1:
-        concat_y = 9.2
-        draw_box(5.5, concat_y, 2, 0.55, f"Concat {num_heads} heads", attention_color, fontsize=8)
-        draw_arrow(5.5, 9.75, 5.5, 9.5)
-        ax.text(7.6, concat_y, rf"(B,T,{num_heads*head_size})=({batch_size},{block_size},{num_heads*head_size})", fontsize=6, va='center', color='#555')
-        proj_from_y = concat_y - 0.3
+        concat_x = 13.1
+        draw_box(concat_x, 5.5, 0.7, 2.2, f"Concat\n{num_heads} heads", attention_color, fontsize=7.5)
+        draw_arrow(av_x + 0.35, 5.5, concat_x - 0.35, 5.5)
+        ax.text(concat_x, 6.7, rf"(B,T,{num_heads*head_size})=", fontsize=5.5, ha='center', color='#555')
+        ax.text(concat_x, 6.5, rf"({batch_size},{block_size},{num_heads*head_size})", fontsize=5.5, ha='center', color='#555')
+        proj_from_x = concat_x + 0.35
     else:
-        proj_from_y = av_y - 0.35
+        proj_from_x = av_x + 0.35
     
     # 6. Projection
-    y_proj = 8.0
-    draw_box(5, y_proj, 2.8, 0.75, "Projection", linear_color,
-             subtext=rf"Linear({num_heads * head_size},{n_embd})")
-    draw_arrow(5.5, proj_from_y, 5, 8.4)
+    x_proj = 14.6
+    draw_box(x_proj, 5, 1.0, 3.2, "Projection", linear_color,
+             subtext=f"Linear({num_heads * head_size},\n{n_embd})")
+    draw_arrow(proj_from_x, 5, x_proj - 0.4, 5)
     
     # 7. Add & residual (from Add embeddings)
-    y_plus1 = 7.0
-    draw_box(5, y_plus1, 2, 0.55, "+", '#FFF', fontsize=14)
-    draw_arrow(5, 8.35, 5, 7.3)
-    residual_arrow(4.0, y_add, 4.0, y_plus1)
-    ax.text(3.6, (y_add + y_plus1) / 2, "residual", fontsize=7, color='#27AE60', rotation=90, va='center')
+    x_plus1 = 16.1
+    draw_box(x_plus1, 5, 0.7, 2.2, "+", '#FFF', fontsize=14)
+    draw_arrow(x_proj + 0.45, 5, x_plus1 - 0.35, 5)
+    residual_arrow(x_add, 4.0, x_plus1, 4.0)
+    ax.text((x_add + x_plus1) / 2, 3.6, "residual", fontsize=7, color='#27AE60', rotation=0, ha='center')
     
-    # 8. LayerNorm (Pre-LN before FFN)
-    y_ln2 = 6.0
-    draw_box(5, y_ln2, 2.2, 0.55, "LayerNorm", norm_color, fontsize=9,
-             subtext=rf"(B, T, {n_embd})")
-    draw_arrow(5, 6.75, 5, 6.3)
+    # 8. LayerNorm (Pre-LN before FFN) - only if it exists
+    # Keep the overall left-to-right layout fixed; only change the input
+    # to the Feed Forward block depending on whether LayerNorm exists.
+    if has_ln2:
+        x_ln2 = 17.3
+        draw_box(x_ln2, 5, 0.8, 2.2, "LayerNorm", norm_color, fontsize=9,
+                 subtext=f"(B, T, {n_embd})")
+        draw_arrow(x_plus1 + 0.35, 5, x_ln2 - 0.4, 5)
+        ff_input_x = x_ln2 + 0.4
+    else:
+        ff_input_x = x_plus1 + 0.35
+
+    # Fixed x-positions for the rest of the block so all arrows go left -> right
+    x_ff = 18.6
+    x_plus2 = 20.1
+    x_lm = 21.3
+    x_sm = 22.6
+    x_out = 23.7
     
     # 9. Feed Forward
-    y_ff = 4.8
-    draw_box(5, y_ff, 3.2, 1, "Feed Forward", linear_color,
-             subtext=rf"Linear({n_embd},{n_embd*16})->ReLU->Linear({n_embd*16},{n_embd})")
-    draw_arrow(5, 5.75, 5, 5.3)
+    draw_box(x_ff, 5, 1.4, 3.8, "Feed\nForward", linear_color,
+             subtext=f"Linear({n_embd},{ffwd_hidden_dim})\n->ReLU->\nLinear({ffwd_hidden_dim},{n_embd})")
+    draw_arrow(ff_input_x, 5, x_ff - 0.6, 5)
     
     # 10. Add & residual (from first +)
-    y_plus2 = 3.6
-    draw_box(5, y_plus2, 2, 0.55, "+", '#FFF', fontsize=14)
-    draw_arrow(5, 4.35, 5, 3.85)
-    residual_arrow(4.0, y_plus1, 4.0, y_plus2)
-    ax.text(3.6, (y_plus1 + y_plus2) / 2, "residual", fontsize=7, color='#27AE60', rotation=90, va='center')
+    draw_box(x_plus2, 5, 0.7, 2.2, "+", '#FFF', fontsize=14)
+    draw_arrow(x_ff + 0.6, 5, x_plus2 - 0.35, 5)
+    residual_arrow(x_plus1, 4.0, x_plus2, 4.0)
+    ax.text((x_plus1 + x_plus2) / 2, 3.6, "residual", fontsize=7, color='#27AE60', rotation=0, ha='center')
     
     # 11. LM Head
-    y_lm = 2.6
-    draw_box(5, y_lm, 2.6, 0.75, "LM Head", output_color,
-             subtext=rf"Linear({n_embd},{vocab_size})")
-    draw_arrow(5, 3.35, 5, 2.95)
+    draw_box(x_lm, 5, 1.0, 3.0, "LM Head", output_color,
+             subtext=f"Linear({n_embd},\n{vocab_size})")
+    draw_arrow(x_plus2 + 0.35, 5, x_lm - 0.45, 5)
     
     # 12. Softmax
-    y_sm = 1.6
-    draw_box(5, y_sm, 2.2, 0.6, "Softmax", output_color)
-    draw_arrow(5, 2.25, 5, 1.9)
+    draw_box(x_sm, 5, 0.8, 2.2, "Softmax", output_color)
+    draw_arrow(x_lm + 0.45, 5, x_sm - 0.4, 5)
     
     # 13. Output
-    y_out = 0.7
-    draw_box(5, y_out, 3.2, 0.65, "Output Probabilities", output_color,
-             subtext=rf"(B, T, vocab)=({batch_size},{block_size},{vocab_size})")
-    draw_arrow(5, 1.3, 5, 1.0)
+    draw_box(x_out, 5, 1.0, 3.8, "Output\nProbabilities", output_color,
+             subtext=f"(B, T, vocab)=\n({batch_size},{block_size},\n{vocab_size})")
+    draw_arrow(x_sm + 0.4, 5, x_out - 0.4, 5)
     
     # Legend
-    legend_y = 0.15
+    legend_x = 1
     for i, (color, label) in enumerate([
         (embed_color, "Embeddings"), (attention_color, "Attention"),
         (linear_color, "Linear/FF"), (output_color, "Output"), (norm_color, "LayerNorm"),
     ]):
-        x = 1.2 + i * 1.8
-        ax.add_patch(plt.Rectangle((x - 0.25, legend_y - 0.12), 0.5, 0.25,
+        y = 0.5 + i * 0.4
+        ax.add_patch(plt.Rectangle((legend_x - 0.12, y - 0.25), 0.25, 0.5,
                                     facecolor=color, edgecolor='#2C3E50', linewidth=1))
-        ax.text(x + 0.35, legend_y, label, fontsize=7, va='center')
+        ax.text(legend_x + 0.35, y, label, fontsize=7, ha='left', va='center')
     
     plt.tight_layout()
     if save_path:

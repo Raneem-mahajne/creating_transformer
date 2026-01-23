@@ -131,7 +131,7 @@ def visualize_from_checkpoint(
 
     arch_path = os.path.join(str(get_plots_dir(config_name_actual)), "architecture.png")
     if not os.path.exists(arch_path):
-        plot_architecture_diagram(config, save_path=arch_path)
+        plot_architecture_diagram(config, save_path=arch_path, model=model, vocab_size=vocab_size, batch_size=training_config.get('batch_size', 4))
 
     plot_weights_qkv_two_sequences(
         model, X_list, itos, save_path=os.path.join(plots_dir, "qkv.png"), num_sequences=3
