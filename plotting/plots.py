@@ -2444,9 +2444,14 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
         num_heads = len(model.sa_heads.heads)
         # Get head_size from first head
         head_size = model.sa_heads.heads[0].head_size
-        # Get projection dimensions
-        proj_in_dim = model.proj.in_features
-        proj_out_dim = model.proj.out_features
+        # Check if projection exists
+        has_proj = hasattr(model, 'proj') and 'proj' in model._modules
+        if has_proj:
+            proj_in_dim = model.proj.in_features
+            proj_out_dim = model.proj.out_features
+        else:
+            proj_in_dim = num_heads * head_size
+            proj_out_dim = n_embd
         # Get feedforward dimensions
         ffwd_net = model.ffwd.net
         ffwd_in_dim = ffwd_net[0].in_features
@@ -2462,8 +2467,12 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
             vocab_size = vocab_size_model
         
         # Verify consistency
-        assert proj_in_dim == num_heads * head_size, f"Projection input dim mismatch: {proj_in_dim} != {num_heads * head_size}"
-        assert proj_out_dim == n_embd, f"Projection output dim mismatch: {proj_out_dim} != {n_embd}"
+        if has_proj:
+            assert proj_in_dim == num_heads * head_size, f"Projection input dim mismatch: {proj_in_dim} != {num_heads * head_size}"
+            assert proj_out_dim == n_embd, f"Projection output dim mismatch: {proj_out_dim} != {n_embd}"
+        else:
+            # Without projection, attention output must match n_embd
+            assert num_heads * head_size == n_embd, f"Without projection, attention output dim {num_heads * head_size} must equal n_embd {n_embd}"
         assert ffwd_in_dim == n_embd, f"FFN input dim mismatch: {ffwd_in_dim} != {n_embd}"
         assert ffwd_out_dim == n_embd, f"FFN output dim mismatch: {ffwd_out_dim} != {n_embd}"
         assert lm_head_in_dim == n_embd, f"LM head input dim mismatch: {lm_head_in_dim} != {n_embd}"
@@ -2485,6 +2494,7 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
         head_size = model_config['head_size']
         ffwd_mult = 16  # Default from model.py
         ffwd_hidden_dim = n_embd * ffwd_mult
+        has_proj = True  # Assume projection exists in config-based mode (for backward compat)
     
     # Get batch_size
     if batch_size is None:
@@ -2645,46 +2655,51 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
     draw_arrow(qkv_x + 0.4, 6.5, av_x - 0.3, 5.75)
     
     if num_heads > 1:
-        concat_x = 13.1
+        concat_x = 12.5
         draw_box(concat_x, 5.5, 0.7, 2.2, f"Concat\n{num_heads} heads", attention_color, fontsize=7.5)
         draw_arrow(av_x + 0.35, 5.5, concat_x - 0.35, 5.5)
         ax.text(concat_x, 6.7, rf"(B,T,{num_heads*head_size})=", fontsize=5.5, ha='center', color='#555')
         ax.text(concat_x, 6.5, rf"({batch_size},{block_size},{num_heads*head_size})", fontsize=5.5, ha='center', color='#555')
-        proj_from_x = concat_x + 0.35
+        attn_output_x = concat_x + 0.35
     else:
-        proj_from_x = av_x + 0.35
+        attn_output_x = av_x + 0.35
     
-    # 6. Projection
-    x_proj = 14.6
-    draw_box(x_proj, 5, 1.0, 3.2, "Projection", linear_color,
-             subtext=f"Linear({num_heads * head_size},\n{n_embd})")
-    draw_arrow(proj_from_x, 5, x_proj - 0.4, 5)
+    # 6. Projection (only if it exists in the model)
+    if has_proj:
+        x_proj = 13.5
+        draw_box(x_proj, 5, 1.0, 3.2, "Projection", linear_color,
+                 subtext=f"Linear({num_heads * head_size},\n{n_embd})")
+        draw_arrow(attn_output_x, 5, x_proj - 0.4, 5)
+        plus1_input_x = x_proj + 0.45
+        x_plus1 = 14.8
+    else:
+        # Skip projection, go directly to residual - make arrow short
+        plus1_input_x = attn_output_x
+        x_plus1 = 12.9  # Move plus much closer since no projection
     
     # 7. Add & residual (from Add embeddings)
-    x_plus1 = 16.1
     draw_box(x_plus1, 5, 0.7, 2.2, "+", '#FFF', fontsize=14)
-    draw_arrow(x_proj + 0.45, 5, x_plus1 - 0.35, 5)
+    draw_arrow(plus1_input_x, 5, x_plus1 - 0.35, 5)
     residual_arrow(x_add, 4.0, x_plus1, 4.0)
     ax.text((x_add + x_plus1) / 2, 3.6, "residual", fontsize=7, color='#27AE60', rotation=0, ha='center')
     
     # 8. LayerNorm (Pre-LN before FFN) - only if it exists
-    # Keep the overall left-to-right layout fixed; only change the input
-    # to the Feed Forward block depending on whether LayerNorm exists.
     if has_ln2:
-        x_ln2 = 17.3
+        x_ln2 = 14.2
         draw_box(x_ln2, 5, 0.8, 2.2, "LayerNorm", norm_color, fontsize=9,
                  subtext=f"(B, T, {n_embd})")
         draw_arrow(x_plus1 + 0.35, 5, x_ln2 - 0.4, 5)
         ff_input_x = x_ln2 + 0.4
+        x_ff = 15.5
     else:
         ff_input_x = x_plus1 + 0.35
+        x_ff = 14.2  # Move feedforward closer
 
-    # Fixed x-positions for the rest of the block so all arrows go left -> right
-    x_ff = 18.6
-    x_plus2 = 20.1
-    x_lm = 21.3
-    x_sm = 22.6
-    x_out = 23.7
+    # Adjust remaining positions to be more compact
+    x_plus2 = 15.8
+    x_lm = 17.0
+    x_sm = 18.2
+    x_out = 19.3
     
     # 9. Feed Forward
     draw_box(x_ff, 5, 1.4, 3.8, "Feed\nForward", linear_color,

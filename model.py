@@ -64,7 +64,7 @@ class BigramLanguageModel(nn.Module):
         self.token_embedding = nn.Embedding(vocab_size, n_embd)           # (vocab, n_embd)
         self.position_embedding_table = nn.Embedding(block_size, n_embd)  # (block_size, n_embd)
         self.sa_heads = MultiHeadAttention(num_heads, n_embd, head_size, block_size)
-        self.proj = nn.Linear(num_heads * head_size, n_embd)
+        # Projection removed: with single head and head_size=n_embd, attention output already matches n_embd
         self.ffwd = FeedForward(n_embd, ffwd_mult=16)
         self.lm_head = nn.Linear(n_embd, vocab_size)
         self.block_size = block_size
@@ -78,8 +78,7 @@ class BigramLanguageModel(nn.Module):
 
         x = token_emb + pos_emb  # (B,T,n_embd)
 
-        attn_out, wei = self.sa_heads(x)
-        attn_out = self.proj(attn_out)    # (B,T,n_embd)
+        attn_out, wei = self.sa_heads(x)  # (B,T,n_embd) - already correct dimension
         x = x + attn_out                  # residual connection
         x = x + self.ffwd(x)              # feedforward + residual
 
