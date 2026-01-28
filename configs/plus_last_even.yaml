@@ -30,4 +30,5 @@ training:
   learning_rate: 0.001
   eval_interval: 200
   eval_iterations: 50
+  checkpoint_interval: 100  # Save checkpoint every N steps (for smooth video)
 

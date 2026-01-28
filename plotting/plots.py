@@ -888,12 +888,19 @@ def plot_embeddings_pca(model, itos, save_path=None):
 
 
 @torch.no_grad()
-def plot_embeddings_scatterplots_only(model, itos, save_path=None):
+def plot_embeddings_scatterplots_only(model, itos, save_path=None, fixed_limits=None, step_label=None):
     """
     Create a separate figure with just the 3 scatterplots from plot_embeddings_pca:
     1. Token Embeddings scatterplot (warm colors: reds/oranges)
     2. Position Embeddings scatterplot (cool colors: blues/purples)
     3. Token+Position Embeddings scatterplot (merged colors)
+    
+    Args:
+        model: The model to visualize
+        itos: Index-to-string mapping
+        save_path: Path to save the figure
+        fixed_limits: Optional dict with keys 'token', 'position', 'combined' each containing (xlim, ylim) tuples
+        step_label: Optional label to add to the figure title (e.g., "Step: 1000")
     """
     import matplotlib.colors as mcolors
     
@@ -934,6 +941,10 @@ def plot_embeddings_scatterplots_only(model, itos, save_path=None):
     # Create figure: 1 row, 3 columns
     fig, axes = plt.subplots(1, 3, figsize=(20, 7))
     
+    # Add step label to figure title if provided
+    if step_label is not None:
+        fig.suptitle(f"Step: {step_label}", fontsize=16, fontweight='bold', y=0.98)
+    
     # Column 1: Token Embeddings scatterplot
     ax1 = axes[0]
     X_emb = embeddings.astype(np.float64)
@@ -942,10 +953,14 @@ def plot_embeddings_scatterplots_only(model, itos, save_path=None):
     if n_embd > 2:
         _, _, Vt = np.linalg.svd(X_emb, full_matrices=False)
         X2 = X_emb @ Vt[:2].T
-        # Set axis limits with margin
-        margin = 0.15 * max(X2[:, 0].max() - X2[:, 0].min(), X2[:, 1].max() - X2[:, 1].min())
-        ax1.set_xlim(X2[:, 0].min() - margin, X2[:, 0].max() + margin)
-        ax1.set_ylim(X2[:, 1].min() - margin, X2[:, 1].max() + margin)
+        # Set axis limits with margin (or use fixed limits)
+        if fixed_limits and 'token' in fixed_limits:
+            ax1.set_xlim(fixed_limits['token'][0])
+            ax1.set_ylim(fixed_limits['token'][1])
+        else:
+            margin = 0.15 * max(X2[:, 0].max() - X2[:, 0].min(), X2[:, 1].max() - X2[:, 1].min())
+            ax1.set_xlim(X2[:, 0].min() - margin, X2[:, 0].max() + margin)
+            ax1.set_ylim(X2[:, 1].min() - margin, X2[:, 1].max() + margin)
         ax1.set_title(f"Token Embeddings PCA 2D (vocab={vocab_size})", fontsize=14, fontweight='bold')
         ax1.set_xlabel("PC1", fontsize=12)
         ax1.set_ylabel("PC2", fontsize=12)
@@ -956,10 +971,14 @@ def plot_embeddings_scatterplots_only(model, itos, save_path=None):
                         ha='center', va='center', color=token_colors[i])
     elif n_embd == 2:
         X2 = X_emb
-        # Set axis limits with margin
-        margin = 0.15 * max(X2[:, 0].max() - X2[:, 0].min(), X2[:, 1].max() - X2[:, 1].min())
-        ax1.set_xlim(X2[:, 0].min() - margin, X2[:, 0].max() + margin)
-        ax1.set_ylim(X2[:, 1].min() - margin, X2[:, 1].max() + margin)
+        # Set axis limits with margin (or use fixed limits)
+        if fixed_limits and 'token' in fixed_limits:
+            ax1.set_xlim(fixed_limits['token'][0])
+            ax1.set_ylim(fixed_limits['token'][1])
+        else:
+            margin = 0.15 * max(X2[:, 0].max() - X2[:, 0].min(), X2[:, 1].max() - X2[:, 1].min())
+            ax1.set_xlim(X2[:, 0].min() - margin, X2[:, 0].max() + margin)
+            ax1.set_ylim(X2[:, 1].min() - margin, X2[:, 1].max() + margin)
         ax1.set_title(f"Token Embeddings (vocab={vocab_size})", fontsize=14, fontweight='bold')
         ax1.set_xlabel("Dim 0", fontsize=12)
         ax1.set_ylabel("Dim 1", fontsize=12)
@@ -970,9 +989,13 @@ def plot_embeddings_scatterplots_only(model, itos, save_path=None):
                         ha='center', va='center', color=token_colors[i])
     else:
         X1 = X_emb[:, 0]
-        margin = 0.15 * (X1.max() - X1.min())
-        ax1.set_xlim(X1.min() - margin, X1.max() + margin)
-        ax1.set_ylim(-0.5, 0.5)
+        if fixed_limits and 'token' in fixed_limits:
+            ax1.set_xlim(fixed_limits['token'][0])
+            ax1.set_ylim(fixed_limits['token'][1])
+        else:
+            margin = 0.15 * (X1.max() - X1.min())
+            ax1.set_xlim(X1.min() - margin, X1.max() + margin)
+            ax1.set_ylim(-0.5, 0.5)
         ax1.set_title(f"Token Embeddings 1D (vocab={vocab_size})", fontsize=14, fontweight='bold')
         ax1.set_xlabel("Embedding value", fontsize=12)
         ax1.set_ylabel("")
@@ -992,9 +1015,13 @@ def plot_embeddings_scatterplots_only(model, itos, save_path=None):
     if n_embd > 2:
         _, _, Vt_pos = np.linalg.svd(X_pos, full_matrices=False)
         X2_pos = X_pos @ Vt_pos[:2].T
-        margin = 0.15 * max(X2_pos[:, 0].max() - X2_pos[:, 0].min(), X2_pos[:, 1].max() - X2_pos[:, 1].min())
-        ax2.set_xlim(X2_pos[:, 0].min() - margin, X2_pos[:, 0].max() + margin)
-        ax2.set_ylim(X2_pos[:, 1].min() - margin, X2_pos[:, 1].max() + margin)
+        if fixed_limits and 'position' in fixed_limits:
+            ax2.set_xlim(fixed_limits['position'][0])
+            ax2.set_ylim(fixed_limits['position'][1])
+        else:
+            margin = 0.15 * max(X2_pos[:, 0].max() - X2_pos[:, 0].min(), X2_pos[:, 1].max() - X2_pos[:, 1].min())
+            ax2.set_xlim(X2_pos[:, 0].min() - margin, X2_pos[:, 0].max() + margin)
+            ax2.set_ylim(X2_pos[:, 1].min() - margin, X2_pos[:, 1].max() + margin)
         ax2.set_title(f"Position Embeddings PCA 2D (block_size={block_size})", fontsize=14, fontweight='bold')
         ax2.set_xlabel("PC1", fontsize=12)
         ax2.set_ylabel("PC2", fontsize=12)
@@ -1005,9 +1032,13 @@ def plot_embeddings_scatterplots_only(model, itos, save_path=None):
                         ha='center', va='center', color=pos_colors[i])
     elif n_embd == 2:
         X2_pos = X_pos
-        margin = 0.15 * max(X2_pos[:, 0].max() - X2_pos[:, 0].min(), X2_pos[:, 1].max() - X2_pos[:, 1].min())
-        ax2.set_xlim(X2_pos[:, 0].min() - margin, X2_pos[:, 0].max() + margin)
-        ax2.set_ylim(X2_pos[:, 1].min() - margin, X2_pos[:, 1].max() + margin)
+        if fixed_limits and 'position' in fixed_limits:
+            ax2.set_xlim(fixed_limits['position'][0])
+            ax2.set_ylim(fixed_limits['position'][1])
+        else:
+            margin = 0.15 * max(X2_pos[:, 0].max() - X2_pos[:, 0].min(), X2_pos[:, 1].max() - X2_pos[:, 1].min())
+            ax2.set_xlim(X2_pos[:, 0].min() - margin, X2_pos[:, 0].max() + margin)
+            ax2.set_ylim(X2_pos[:, 1].min() - margin, X2_pos[:, 1].max() + margin)
         ax2.set_title(f"Position Embeddings (block_size={block_size})", fontsize=14, fontweight='bold')
         ax2.set_xlabel("Dim 0", fontsize=12)
         ax2.set_ylabel("Dim 1", fontsize=12)
@@ -1018,9 +1049,13 @@ def plot_embeddings_scatterplots_only(model, itos, save_path=None):
                         ha='center', va='center', color=pos_colors[i])
     else:
         X1_pos = X_pos[:, 0]
-        margin = 0.15 * (X1_pos.max() - X1_pos.min())
-        ax2.set_xlim(X1_pos.min() - margin, X1_pos.max() + margin)
-        ax2.set_ylim(-0.5, block_size - 0.5)
+        if fixed_limits and 'position' in fixed_limits:
+            ax2.set_xlim(fixed_limits['position'][0])
+            ax2.set_ylim(fixed_limits['position'][1])
+        else:
+            margin = 0.15 * (X1_pos.max() - X1_pos.min())
+            ax2.set_xlim(X1_pos.min() - margin, X1_pos.max() + margin)
+            ax2.set_ylim(-0.5, block_size - 0.5)
         ax2.set_title(f"Position Embeddings 1D (block_size={block_size})", fontsize=14, fontweight='bold')
         ax2.set_xlabel("Embedding value", fontsize=12)
         ax2.set_ylabel("Position index", fontsize=12)
@@ -1059,9 +1094,13 @@ def plot_embeddings_scatterplots_only(model, itos, save_path=None):
         _, _, Vt_comb = np.linalg.svd(X_comb, full_matrices=False)
         X2_comb = X_comb @ Vt_comb[:2].T
         
-        margin = 0.15 * max(X2_comb[:, 0].max() - X2_comb[:, 0].min(), X2_comb[:, 1].max() - X2_comb[:, 1].min())
-        ax3.set_xlim(X2_comb[:, 0].min() - margin, X2_comb[:, 0].max() + margin)
-        ax3.set_ylim(X2_comb[:, 1].min() - margin, X2_comb[:, 1].max() + margin)
+        if fixed_limits and 'combined' in fixed_limits:
+            ax3.set_xlim(fixed_limits['combined'][0])
+            ax3.set_ylim(fixed_limits['combined'][1])
+        else:
+            margin = 0.15 * max(X2_comb[:, 0].max() - X2_comb[:, 0].min(), X2_comb[:, 1].max() - X2_comb[:, 1].min())
+            ax3.set_xlim(X2_comb[:, 0].min() - margin, X2_comb[:, 0].max() + margin)
+            ax3.set_ylim(X2_comb[:, 1].min() - margin, X2_comb[:, 1].max() + margin)
         
         for token_idx in range(max_token_idx):
             token_str = str(itos[token_idx])
@@ -1078,9 +1117,13 @@ def plot_embeddings_scatterplots_only(model, itos, save_path=None):
     elif n_embd == 2:
         X_comb = all_combinations.astype(np.float64)
         
-        margin = 0.15 * max(X_comb[:, 0].max() - X_comb[:, 0].min(), X_comb[:, 1].max() - X_comb[:, 1].min())
-        ax3.set_xlim(X_comb[:, 0].min() - margin, X_comb[:, 0].max() + margin)
-        ax3.set_ylim(X_comb[:, 1].min() - margin, X_comb[:, 1].max() + margin)
+        if fixed_limits and 'combined' in fixed_limits:
+            ax3.set_xlim(fixed_limits['combined'][0])
+            ax3.set_ylim(fixed_limits['combined'][1])
+        else:
+            margin = 0.15 * max(X_comb[:, 0].max() - X_comb[:, 0].min(), X_comb[:, 1].max() - X_comb[:, 1].min())
+            ax3.set_xlim(X_comb[:, 0].min() - margin, X_comb[:, 0].max() + margin)
+            ax3.set_ylim(X_comb[:, 1].min() - margin, X_comb[:, 1].max() + margin)
         
         for token_idx in range(max_token_idx):
             token_str = str(itos[token_idx])
@@ -1097,9 +1140,13 @@ def plot_embeddings_scatterplots_only(model, itos, save_path=None):
     else:
         X1_comb = all_combinations[:, 0]
         
-        margin = 0.15 * (X1_comb.max() - X1_comb.min())
-        ax3.set_xlim(X1_comb.min() - margin, X1_comb.max() + margin)
-        ax3.set_ylim(-0.5, 0.5)
+        if fixed_limits and 'combined' in fixed_limits:
+            ax3.set_xlim(fixed_limits['combined'][0])
+            ax3.set_ylim(fixed_limits['combined'][1])
+        else:
+            margin = 0.15 * (X1_comb.max() - X1_comb.min())
+            ax3.set_xlim(X1_comb.min() - margin, X1_comb.max() + margin)
+            ax3.set_ylim(-0.5, 0.5)
         
         for token_idx in range(max_token_idx):
             token_str = str(itos[token_idx])

@@ -25,6 +25,7 @@ from checkpoint import (
     create_decode_from_itos,
 )
 from visualize import visualize_from_checkpoint, visualize_all_checkpoints
+from video import create_embeddings_scatterplots_video
 from plotting import (
     plot_training_data_heatmap,
     plot_learning_curve,
@@ -70,6 +71,29 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
     plots_dir.mkdir(parents=True, exist_ok=True)
     plots_dir = str(plots_dir)  # Convert to string for os.path.join compatibility
     
+    # Handle video creation mode (early return)
+    if "--video" in sys.argv:
+        fps = 2
+        max_steps = None
+        if "--fps" in sys.argv:
+            fps_idx = sys.argv.index("--fps")
+            if fps_idx + 1 < len(sys.argv):
+                try:
+                    fps = int(sys.argv[fps_idx + 1])
+                except ValueError:
+                    print("Error: --fps must be followed by an integer")
+                    sys.exit(1)
+        if "--max-steps" in sys.argv:
+            max_steps_idx = sys.argv.index("--max-steps")
+            if max_steps_idx + 1 < len(sys.argv):
+                try:
+                    max_steps = int(sys.argv[max_steps_idx + 1])
+                except ValueError:
+                    print("Error: --max-steps must be followed by an integer")
+                    sys.exit(1)
+        create_embeddings_scatterplots_video(config_name_actual, config, fps=fps, max_steps=max_steps)
+        return
+    
     # Handle visualize_only mode
     if visualize_only:
         if visualize_all:
@@ -92,6 +116,14 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
     if checkpoint_data is None:
         # Need to train
         print("No checkpoint found or force_retrain=True. Training new model...")
+        
+        # Delete old checkpoints to avoid mixing with new training run
+        import shutil
+        checkpoint_base = get_checkpoint_dir(config_name_actual)
+        if checkpoint_base.exists():
+            print(f"Deleting old checkpoints from {checkpoint_base}...")
+            shutil.rmtree(checkpoint_base)
+            print("Old checkpoints deleted.")
 
         # 1) Generate integer string data using generator from config
         generator = get_generator_from_config(config)
