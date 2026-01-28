@@ -25,7 +25,7 @@ from checkpoint import (
     create_decode_from_itos,
 )
 from visualize import visualize_from_checkpoint, visualize_all_checkpoints
-from video import create_embeddings_scatterplots_video
+from video import create_embeddings_scatterplots_video, create_embedding_qkv_video
 from plotting import (
     plot_training_data_heatmap,
     plot_learning_curve,
@@ -72,7 +72,7 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
     plots_dir = str(plots_dir)  # Convert to string for os.path.join compatibility
     
     # Handle video creation mode (early return)
-    if "--video" in sys.argv:
+    if "--video" in sys.argv or "--video-qkv" in sys.argv:
         fps = 2
         max_steps = None
         if "--fps" in sys.argv:
@@ -91,7 +91,12 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
                 except ValueError:
                     print("Error: --max-steps must be followed by an integer")
                     sys.exit(1)
-        create_embeddings_scatterplots_video(config_name_actual, config, fps=fps, max_steps=max_steps)
+        
+        # Choose which video to create
+        if "--video-qkv" in sys.argv:
+            create_embedding_qkv_video(config_name_actual, config, fps=fps, max_steps=max_steps)
+        else:
+            create_embeddings_scatterplots_video(config_name_actual, config, fps=fps, max_steps=max_steps)
         return
     
     # Handle visualize_only mode

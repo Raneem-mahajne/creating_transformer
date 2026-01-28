@@ -20,6 +20,7 @@ from plotting import (
     plot_weights_qkv_two_sequences,
     plot_embeddings_pca,
     plot_embeddings_scatterplots_only,
+    plot_embedding_qkv_comprehensive,
     plot_qkv_transformations,
     plot_token_position_embedding_space,
     plot_attention_matrix,
@@ -139,6 +140,7 @@ def visualize_from_checkpoint(
     )
     plot_embeddings_pca(model, itos, save_path=os.path.join(plots_dir, "embeddings.png"))
     plot_embeddings_scatterplots_only(model, itos, save_path=os.path.join(plots_dir, "embeddings_scatterplots.png"))
+    plot_embedding_qkv_comprehensive(model, itos, save_path=os.path.join(plots_dir, "embedding_qkv_comprehensive.png"))
     plot_qkv_transformations(model, itos, save_path=os.path.join(plots_dir, "qkv_transformations.png"))
     plot_token_position_embedding_space(
         model, itos, save_path=os.path.join(plots_dir, "token_position_embedding_space.png")

@@ -19,7 +19,7 @@ from checkpoint import (
     get_plots_dir,
     list_available_checkpoints,
 )
-from plotting import plot_embeddings_scatterplots_only
+from plotting import plot_embeddings_scatterplots_only, plot_embedding_qkv_comprehensive
 
 
 def create_embeddings_scatterplots_video(config_name_actual: str, config: dict, fps: int = 2, max_steps: int = None):
@@ -250,3 +250,124 @@ def create_embeddings_scatterplots_video(config_name_actual: str, config: dict, 
         import shutil
         shutil.rmtree(temp_dir, ignore_errors=True)
         print("Temporary files cleaned up")
+
+
+def create_embedding_qkv_video(config_name_actual: str, config: dict, fps: int = 2, max_steps: int = None):
+    """
+    Create a video showing the comprehensive embedding/QKV figure evolving across training steps.
+    Single pass - generates frames directly without fixed limits.
+    """
+    import sys
+    
+    if not IMAGEIO_AVAILABLE:
+        print("Error: imageio is required to create videos. Install with: pip install imageio", flush=True)
+        return
+    
+    steps = list_available_checkpoints(config_name_actual)
+    if not steps:
+        print(f"No step checkpoints found for {config_name_actual}", flush=True)
+        return
+    
+    # Ensure steps are sorted numerically
+    steps = sorted(steps)
+    
+    # Filter to only include checkpoints within the config's max_steps
+    training_max_steps = config.get('training', {}).get('max_steps', float('inf'))
+    steps = [s for s in steps if s <= training_max_steps]
+    print(f"Filtered to {len(steps)} checkpoints within training range (max_steps={training_max_steps})", flush=True)
+    
+    if not steps:
+        print(f"No checkpoints found within training range (0-{training_max_steps})", flush=True)
+        return
+    
+    # Limit number of frames if requested
+    if max_steps:
+        steps = steps[:max_steps]
+    
+    print(f"Creating comprehensive video from {len(steps)} checkpoints (single pass)", flush=True)
+    print(f"Steps: {steps[0]} to {steps[-1]}", flush=True)
+    
+    # Single pass: generate all frames
+    temp_dir = Path(tempfile.mkdtemp())
+    print(f"Temp dir: {temp_dir}", flush=True)
+    frame_data = []
+    
+    for i, step in enumerate(steps):
+        try:
+            checkpoint_data = load_checkpoint(config_name_actual, step=step)
+            if not checkpoint_data:
+                print(f"Warning: Could not load checkpoint for step {step}, skipping...", flush=True)
+                continue
+            
+            model = checkpoint_data["model"]
+            itos = checkpoint_data["itos"]
+            
+            frame_path = temp_dir / f"frame_{step:06d}.png"
+            plot_embedding_qkv_comprehensive(
+                model, itos, 
+                save_path=str(frame_path),
+                fixed_limits=None,  # Dynamic limits per frame
+                step_label=step
+            )
+            if frame_path.exists():
+                frame_data.append((step, frame_path))
+            else:
+                print(f"Warning: Frame not created for step {step}", flush=True)
+                
+        except Exception as e:
+            print(f"Error at step {step}: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
+            continue
+        
+        if (i + 1) % 10 == 0:
+            print(f"  Generated {i + 1}/{len(steps)} frames...", flush=True)
+    
+    print(f"Frame generation complete: {len(frame_data)} frames", flush=True)
+    
+    # Sort frames by step number
+    frame_data.sort(key=lambda x: x[0])
+    
+    # Create video and GIF
+    print(f"Creating video and GIF from {len(frame_data)} frames...", flush=True)
+    plots_dir = get_plots_dir(config_name_actual)
+    plots_dir.mkdir(parents=True, exist_ok=True)
+    video_path = plots_dir / "embedding_qkv_evolution.mp4"
+    gif_path = plots_dir / "embedding_qkv_evolution.gif"
+    
+    try:
+        frames = []
+        for step, frame_path in frame_data:
+            if frame_path.exists():
+                try:
+                    frames.append(imageio.imread(frame_path))
+                except Exception as e:
+                    print(f"Warning: Failed to read frame for step {step}: {e}", flush=True)
+        
+        print(f"Successfully loaded {len(frames)} frames", flush=True)
+        
+        if frames:
+            try:
+                print(f"Writing MP4...", flush=True)
+                imageio.mimwrite(str(video_path), frames, fps=fps, codec='libx264', quality=8)
+                print(f"Video saved to: {video_path} ({len(frames)} frames, {len(frames)/fps:.1f}s at {fps} fps)", flush=True)
+            except Exception as e:
+                print(f"Error writing MP4: {e}", flush=True)
+            
+            try:
+                print(f"Writing GIF...", flush=True)
+                duration = 1.0 / fps
+                imageio.mimwrite(str(gif_path), frames, duration=duration, loop=0)
+                print(f"GIF saved to: {gif_path} ({len(frames)} frames, {len(frames)/fps:.1f}s at {fps} fps)", flush=True)
+            except Exception as e:
+                print(f"Error writing GIF: {e}", flush=True)
+        else:
+            print("Error: No frames were generated", flush=True)
+    except Exception as e:
+        print(f"Error creating video/GIF: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+    finally:
+        import shutil
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        print("Temporary files cleaned up", flush=True)
