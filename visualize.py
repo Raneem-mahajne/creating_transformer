@@ -26,6 +26,8 @@ from plotting import (
     plot_attention_matrix,
     plot_qk_embedding_space,
     plot_qk_full_attention_heatmap,
+    plot_lm_head_probability_heatmaps,
+    plot_v_before_after_demo_sequences,
 )
 
 
@@ -152,6 +154,14 @@ def visualize_from_checkpoint(
     plot_qk_full_attention_heatmap(
         model, itos, save_path=os.path.join(plots_dir, "qk_full_attention_heatmap.png")
     )
+    plot_lm_head_probability_heatmaps(
+        model, itos, save_path=os.path.join(plots_dir, "lm_head_probability_heatmaps.png")
+    )
+    demo_sequences = [s for s in train_sequences[:8] if len(s) >= 2]
+    if demo_sequences:
+        plot_v_before_after_demo_sequences(
+            model, itos, demo_sequences, save_dir=plots_dir,
+        )
 
     print(f"All visualizations saved to {plots_dir}")
 

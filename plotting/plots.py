@@ -7,6 +7,7 @@ from scipy.spatial.distance import pdist
 from scipy.cluster.hierarchy import linkage, leaves_list, fcluster
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
+import matplotlib.patheffects as pe
 import seaborn as sns
 
 from data import get_batch_from_sequences
@@ -3464,6 +3465,235 @@ def plot_qk_embedding_space(model, itos, save_path: str = None):
         print(f"Q/K embedding space plot saved to {save_path}")
     else:
         plt.show()
+
+
+def plot_lm_head_probability_heatmaps(model, itos, save_path=None, grid_resolution=80, extent_margin=0.5):
+    """
+    For n_embd==2 only: plot one heatmap per token (digit) showing P(token | (x,y))
+    over the 2D input space to the LM head. Each point (x,y) in the plane is passed
+    through the LM head and softmax to get the probability of each output token.
+
+    Args:
+        model: Trained model (BigramLanguageModel)
+        itos: Index-to-string mapping for tokens
+        save_path: Path to save the figure
+        grid_resolution: Number of points per axis (default 80)
+        extent_margin: Extra margin around embedding extent (default 0.5)
+    """
+    model.eval()
+    vocab_size = model.token_embedding.weight.shape[0]
+    n_embd = model.lm_head.in_features
+    if n_embd != 2:
+        print(f"plot_lm_head_probability_heatmaps: n_embd={n_embd}, need 2. Skipping.")
+        return
+
+    with torch.no_grad():
+        W = model.lm_head.weight.detach().cpu().numpy()   # (vocab_size, 2)
+        b = model.lm_head.bias.detach().cpu().numpy()     # (vocab_size,)
+        token_emb = model.token_embedding.weight.detach().cpu().numpy()
+        pos_emb = model.position_embedding_table.weight.detach().cpu().numpy()
+        combined = token_emb[:, None, :] + pos_emb[None, :, :]  # (vocab, block, 2)
+        flat = combined.reshape(-1, 2)
+        x_min, x_max = flat[:, 0].min() - extent_margin, flat[:, 0].max() + extent_margin
+        y_min, y_max = flat[:, 1].min() - extent_margin, flat[:, 1].max() + extent_margin
+
+    xs = np.linspace(x_min, x_max, grid_resolution)
+    ys = np.linspace(y_min, y_max, grid_resolution)
+    xx, yy = np.meshgrid(xs, ys)
+    points = np.stack([xx.ravel(), yy.ravel()], axis=1)  # (N, 2)
+    logits = points @ W.T + b                             # (N, vocab_size)
+    probs = np.exp(logits - logits.max(axis=1, keepdims=True))
+    probs /= probs.sum(axis=1, keepdims=True)             # (N, vocab_size)
+
+    n_cols = min(4, vocab_size)
+    n_rows = (vocab_size + n_cols - 1) // n_cols
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
+    axes = np.atleast_2d(axes).flatten()
+
+    vmin, vmax = 0.0, 1.0
+    for d in range(vocab_size):
+        ax = axes[d]
+        Z = probs[:, d].reshape(grid_resolution, grid_resolution)
+        im = ax.pcolormesh(xx, yy, Z, cmap='viridis', vmin=vmin, vmax=vmax, shading='auto')
+        ax.set_title(f"P({itos[d]})", fontsize=12, fontweight='bold')
+        ax.set_aspect('equal')
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
+        plt.colorbar(im, ax=ax, label='probability')
+    for j in range(vocab_size, len(axes)):
+        axes[j].set_visible(False)
+    fig.suptitle("LM head: P(digit | point in 2D input space)", fontsize=14, fontweight='bold', y=1.02)
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')
+        plt.close()
+        print(f"LM head probability heatmaps saved to {save_path}")
+    else:
+        plt.show()
+
+
+def _get_v_before_after_for_sequence(model, idx):
+    """
+    Run first attention head on sequence idx (1, T), return V_before and V_after as numpy (T, head_size).
+    """
+    model.eval()
+    with torch.no_grad():
+        B, T = idx.shape
+        token_emb = model.token_embedding(idx)
+        positions = torch.arange(T, device=idx.device) % model.block_size
+        pos_emb = model.position_embedding_table(positions)
+        x = (token_emb + pos_emb)  # (1, T, n_embd)
+        head = model.sa_heads.heads[0]
+        q = head.query(x)
+        k = head.key(x)
+        v = head.value(x)  # V_before
+        weight = q @ k.transpose(-2, -1) / (head.head_size ** 0.5)
+        weight = weight.masked_fill(head.tril[:T, :T].to(x.device) == 0, float("-inf"))
+        weight = F.softmax(weight, dim=-1)
+        out = weight @ v  # V_after
+        v_np = v[0].cpu().numpy()   # (T, head_size)
+        out_np = out[0].cpu().numpy()  # (T, head_size)
+        x_np = x[0].cpu().numpy()     # (T, n_embd)
+    return x_np, v_np, out_np
+
+
+def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, arrow_scale=0.15, grid_resolution=60):
+    """
+    For each demo sequence, create one figure. Each figure has one panel per output token.
+    On each panel: 2D embedding-space grid; at each position where the NEXT token equals
+    that panel's token, draw an arrow from (position + scale*V_before) to (position + scale*V_after).
+
+    Args:
+        model: Trained model (n_embd=2, head_size=2).
+        itos: Index-to-string for tokens.
+        sequences: List of sequences (each sequence = list of token ids, length <= block_size).
+        save_dir: Directory to save figures (one file per sequence, e.g. v_before_after_demo_0.png).
+        arrow_scale: Scale factor for V vectors so arrows fit on grid (default 0.15).
+        grid_resolution: Grid resolution for background heatmap (default 60).
+    """
+    model.eval()
+    vocab_size = model.token_embedding.weight.shape[0]
+    block_size = model.block_size
+    n_embd = model.lm_head.in_features
+    if n_embd != 2:
+        print(f"plot_v_before_after_demo_sequences: n_embd={n_embd}, need 2. Skipping.")
+        return
+
+    # Embedding extent and P(token) grid for background (same as lm_head heatmaps)
+    with torch.no_grad():
+        token_emb = model.token_embedding.weight.detach().cpu().numpy()
+        pos_emb = model.position_embedding_table.weight.detach().cpu().numpy()
+        combined = token_emb[:, None, :] + pos_emb[None, :, :]
+        flat = combined.reshape(-1, 2)
+        x_min, x_max = flat[:, 0].min() - 0.5, flat[:, 0].max() + 0.5
+        y_min, y_max = flat[:, 1].min() - 0.5, flat[:, 1].max() + 0.5
+        W = model.lm_head.weight.detach().cpu().numpy()
+        b = model.lm_head.bias.detach().cpu().numpy()
+
+    xs = np.linspace(x_min, x_max, grid_resolution)
+    ys = np.linspace(y_min, y_max, grid_resolution)
+    xx, yy = np.meshgrid(xs, ys)
+    points = np.stack([xx.ravel(), yy.ravel()], axis=1)
+    logits = points @ W.T + b
+    probs = np.exp(logits - logits.max(axis=1, keepdims=True))
+    probs /= probs.sum(axis=1, keepdims=True)  # (N, vocab_size)
+    argmax_token = logits.argmax(axis=1)  # (N,) which token has highest logit at each point
+
+    n_panels = vocab_size + 1  # +1 for argmax (winner) panel
+    n_cols = min(4, n_panels)
+    n_rows = (n_panels + n_cols - 1) // n_cols
+
+    for seq_idx, seq in enumerate(sequences):
+        if len(seq) < 2:
+            continue
+        seq = seq[:block_size]
+        idx = torch.tensor([seq], dtype=torch.long, device=next(model.parameters()).device)
+        T = idx.shape[1]
+        x_np, v_before, v_after = _get_v_before_after_for_sequence(model, idx)
+
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
+        axes = np.atleast_2d(axes).flatten()
+
+        # Panel 0: discrete map of which token has largest output at each point; annotate regions; show sequence points
+        ax0 = axes[0]
+        ax0.set_xlim(x_min, x_max)
+        ax0.set_ylim(y_min, y_max)
+        ax0.set_aspect('equal')
+        ax0.set_title("Argmax: predicted token", fontsize=11, fontweight='bold')
+        Z_argmax = argmax_token.reshape(grid_resolution, grid_resolution)
+        from matplotlib.colors import ListedColormap
+        _cm = plt.cm.tab20 if vocab_size > 10 else plt.cm.tab10
+        cmap_discrete = ListedColormap(_cm(np.linspace(0, 1, vocab_size)))
+        im0 = ax0.pcolormesh(xx, yy, Z_argmax, cmap=cmap_discrete, vmin=0, vmax=vocab_size - 0.01, shading='auto')
+        # Annotate each region with token label at centroid
+        xx_flat = xx.ravel()
+        yy_flat = yy.ravel()
+        for d in range(vocab_size):
+            mask = argmax_token == d
+            if mask.any():
+                cx, cy = xx_flat[mask].mean(), yy_flat[mask].mean()
+                ax0.text(cx, cy, str(itos[d]), fontsize=11, fontweight='bold', ha='center', va='center',
+                         color='black', zorder=3,
+                         path_effects=[pe.withStroke(linewidth=2, foreground='white')])
+        # Arrows and labels on argmax panel (no circles)
+        arrow_color = '#E63946'
+        for i in range(T):
+            x0_pt, y0_pt = x_np[i, 0], x_np[i, 1]
+            tail_x = x0_pt + arrow_scale * v_before[i, 0]
+            tail_y = y0_pt + arrow_scale * v_before[i, 1]
+            ax0.annotate('', xy=(x0_pt + arrow_scale * v_after[i, 0], y0_pt + arrow_scale * v_after[i, 1]),
+                         xytext=(tail_x, tail_y),
+                         arrowprops=dict(arrowstyle='->', color=arrow_color, lw=1.5), zorder=3)
+            lbl = f"{itos[seq[i]]}p{i}"
+            ax0.text(tail_x, tail_y, lbl, fontsize=5, fontweight='bold', ha='center', va='center',
+                     color='black', zorder=5,
+                     path_effects=[pe.withStroke(linewidth=1.2, foreground='white')])
+        ax0.set_xlabel('dim 0')
+        ax0.set_ylabel('dim 1')
+
+        for d in range(vocab_size):
+            ax = axes[d + 1]
+            ax.set_xlim(x_min, x_max)
+            ax.set_ylim(y_min, y_max)
+            ax.set_aspect('equal')
+            ax.set_title(f"Next token = {itos[d]}", fontsize=11, fontweight='bold')
+            # Background: P(this token) heatmap
+            Z = probs[:, d].reshape(grid_resolution, grid_resolution)
+            ax.pcolormesh(xx, yy, Z, cmap='viridis', vmin=0, vmax=1, shading='auto')
+            # Arrows from original V (tail) to V after; annotate token p position (no circles)
+            arrow_color = '#E63946'
+            for i in range(T):
+                x0, y0 = x_np[i, 0], x_np[i, 1]
+                tail_x = x0 + arrow_scale * v_before[i, 0]
+                tail_y = y0 + arrow_scale * v_before[i, 1]
+                head_x = x0 + arrow_scale * v_after[i, 0]
+                head_y = y0 + arrow_scale * v_after[i, 1]
+                ax.annotate('', xy=(head_x, head_y), xytext=(tail_x, tail_y),
+                            arrowprops=dict(arrowstyle='->', color=arrow_color, lw=2), zorder=3)
+                label = f"{itos[seq[i]]}p{i}"
+                ax.text(tail_x, tail_y, label, fontsize=5, fontweight='bold', ha='center', va='center',
+                        color='black', zorder=5,
+                        path_effects=[pe.withStroke(linewidth=1.2, foreground='white')])
+            ax.set_xlabel('dim 0')
+            ax.set_ylabel('dim 1')
+
+        for j in range(n_panels, len(axes)):
+            axes[j].set_visible(False)
+        seq_str = " ".join(str(itos[t]) for t in seq[:25])
+        if len(seq) > 25:
+            seq_str += "..."
+        fig.suptitle(f"Demo sequence {seq_idx}: V before → after transform (arrows at each position)\nSequence: {seq_str}", fontsize=10, fontweight='bold', y=1.02)
+        plt.tight_layout()
+        if save_dir:
+            path = os.path.join(save_dir, f"v_before_after_demo_{seq_idx}.png")
+            plt.savefig(path, bbox_inches='tight', dpi=150, facecolor='white')
+            plt.close()
+            print(f"V before/after demo figure saved to {path}")
+        else:
+            plt.show()
+
+    if save_dir and sequences:
+        print(f"Saved {min(len(sequences), len([s for s in sequences if len(s) >= 2]))} demo sequence figures to {save_dir}")
 
 
 def plot_qk_full_attention_heatmap(model, itos, save_path: str = None):
