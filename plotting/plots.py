@@ -3599,90 +3599,109 @@ def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, ar
     probs /= probs.sum(axis=1, keepdims=True)  # (N, vocab_size)
     argmax_token = logits.argmax(axis=1)  # (N,) which token has highest logit at each point
 
-    n_panels = vocab_size + 1  # +1 for argmax (winner) panel
-    n_cols = min(4, n_panels)
-    n_rows = (n_panels + n_cols - 1) // n_cols
+    n_data_rows = 3   # original V, transformed V, V+residual
+    n_cols = vocab_size  # one column per predicted digit
+    n_rows = n_data_rows
 
     for seq_idx, seq in enumerate(sequences):
         if len(seq) < 2:
             continue
         seq = seq[:block_size]
-        idx = torch.tensor([seq], dtype=torch.long, device=next(model.parameters()).device)
-        T = idx.shape[1]
+        T = len(seq)
+        dev = next(model.parameters()).device
+        idx = torch.tensor([seq], dtype=torch.long, device=dev)
+        with torch.no_grad():
+            logits, _ = model(idx)
+            pred_next = logits[0].argmax(dim=-1).cpu().numpy()
+        correct = np.array([i < T - 1 and pred_next[i] == seq[i + 1] for i in range(T)])
+        with torch.no_grad():
+            g_seed = 42 + seq_idx
+            torch.manual_seed(g_seed)
+            start = torch.tensor([[seq[0]]], dtype=torch.long, device=dev)
+            generated = model.generate(start, max_new_tokens=T - 1)[0].tolist()
         x_np, v_before, v_after = _get_v_before_after_for_sequence(model, idx)
+        land_x = x_np[:, 0] + v_after[:, 0]
+        land_y = x_np[:, 1] + v_after[:, 1]
+        margin = 0.6
+        plot_x_min = min(x_min, x_np[:, 0].min(), v_before[:, 0].min(), v_after[:, 0].min(), land_x.min()) - margin
+        plot_x_max = max(x_max, x_np[:, 0].max(), v_before[:, 0].max(), v_after[:, 0].max(), land_x.max()) + margin
+        plot_y_min = min(y_min, x_np[:, 1].min(), v_before[:, 1].min(), v_after[:, 1].min(), land_y.min()) - margin
+        plot_y_max = max(y_max, x_np[:, 1].max(), v_before[:, 1].max(), v_after[:, 1].max(), land_y.max()) + margin
+        xs_plot = np.linspace(plot_x_min, plot_x_max, grid_resolution)
+        ys_plot = np.linspace(plot_y_min, plot_y_max, grid_resolution)
+        xx_plot, yy_plot = np.meshgrid(xs_plot, ys_plot)
+        points_plot = np.stack([xx_plot.ravel(), yy_plot.ravel()], axis=1)
+        dev = next(model.parameters()).device
+        with torch.no_grad():
+            pts = torch.tensor(points_plot, dtype=torch.float32, device=dev)
+            h = pts + model.ffwd(pts)
+            logits_plot = model.lm_head(h).cpu().numpy()
+        probs_plot = np.exp(logits_plot - logits_plot.max(axis=1, keepdims=True))
+        probs_plot /= probs_plot.sum(axis=1, keepdims=True)
 
-        fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
-        axes = np.atleast_2d(axes).flatten()
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(2.2 * n_cols, 2.5 * n_rows), sharex=True, sharey=True)
+        if n_rows == 1 and n_cols == 1:
+            axes = np.array([[axes]])
+        elif n_rows == 1:
+            axes = axes.reshape(1, -1)
+        elif n_cols == 1:
+            axes = axes.reshape(-1, 1)
 
-        # Panel 0: discrete map of which token has largest output at each point; annotate regions; show sequence points
-        ax0 = axes[0]
-        ax0.set_xlim(x_min, x_max)
-        ax0.set_ylim(y_min, y_max)
-        ax0.set_aspect('equal')
-        ax0.set_title("Argmax: predicted token", fontsize=11, fontweight='bold')
-        Z_argmax = argmax_token.reshape(grid_resolution, grid_resolution)
-        from matplotlib.colors import ListedColormap
-        _cm = plt.cm.tab20 if vocab_size > 10 else plt.cm.tab10
-        cmap_discrete = ListedColormap(_cm(np.linspace(0, 1, vocab_size)))
-        im0 = ax0.pcolormesh(xx, yy, Z_argmax, cmap=cmap_discrete, vmin=0, vmax=vocab_size - 0.01, shading='auto')
-        # Annotate each region with token label at centroid
-        xx_flat = xx.ravel()
-        yy_flat = yy.ravel()
-        for d in range(vocab_size):
-            mask = argmax_token == d
-            if mask.any():
-                cx, cy = xx_flat[mask].mean(), yy_flat[mask].mean()
-                ax0.text(cx, cy, str(itos[d]), fontsize=11, fontweight='bold', ha='center', va='center',
-                         color='black', zorder=3,
-                         path_effects=[pe.withStroke(linewidth=2, foreground='white')])
-        # Arrows and labels on argmax panel (no circles)
-        arrow_color = '#E63946'
+        for r in range(n_rows):
+            for c in range(n_cols):
+                ax = axes[r, c]
+                ax.set_xlim(plot_x_min, plot_x_max)
+                ax.set_ylim(plot_y_min, plot_y_max)
+                ax.set_aspect('equal')
+                Z = probs_plot[:, c].reshape(grid_resolution, grid_resolution)
+                ax.pcolormesh(xx_plot, yy_plot, Z, cmap='viridis', vmin=0, vmax=1, shading='auto')
+                if c == 0:
+                    ax.set_ylabel("dim 1")
+                if r == 0:
+                    ax.set_title(f"P(next = {itos[c]})", fontsize=10)
+                if r == n_rows - 1:
+                    ax.set_xlabel("dim 0")
+
+        fs = 4.5
+        # Row 0: original V (v_before); row 1: transformed V (v_after); row 2: V+residual (x + v_after)
         for i in range(T):
-            x0_pt, y0_pt = x_np[i, 0], x_np[i, 1]
-            tail_x = x0_pt + arrow_scale * v_before[i, 0]
-            tail_y = y0_pt + arrow_scale * v_before[i, 1]
-            ax0.annotate('', xy=(x0_pt + arrow_scale * v_after[i, 0], y0_pt + arrow_scale * v_after[i, 1]),
-                         xytext=(tail_x, tail_y),
-                         arrowprops=dict(arrowstyle='->', color=arrow_color, lw=1.5), zorder=3)
             lbl = f"{itos[seq[i]]}p{i}"
-            ax0.text(tail_x, tail_y, lbl, fontsize=5, fontweight='bold', ha='center', va='center',
-                     color='black', zorder=5,
-                     path_effects=[pe.withStroke(linewidth=1.2, foreground='white')])
-        ax0.set_xlabel('dim 0')
-        ax0.set_ylabel('dim 1')
+            # Row 0: original V
+            px0, py0 = v_before[i, 0], v_before[i, 1]
+            for c in range(n_cols):
+                ax = axes[0, c]
+                ax.text(px0, py0, lbl, fontsize=fs, fontweight='bold', ha='center', va='center', color='white', zorder=5,
+                        path_effects=[pe.withStroke(linewidth=0.8, foreground='black')])
+            # Row 1: transformed V
+            px1, py1 = v_after[i, 0], v_after[i, 1]
+            for c in range(n_cols):
+                ax = axes[1, c]
+                ax.text(px1, py1, lbl, fontsize=fs, fontweight='bold', ha='center', va='center', color='white', zorder=5,
+                        path_effects=[pe.withStroke(linewidth=0.8, foreground='black')])
+            # Row 2: V + residual; white text, stroke color = correct (green) / wrong (red)
+            px2, py2 = x_np[i, 0] + v_after[i, 0], x_np[i, 1] + v_after[i, 1]
+            end_color = '#2E7D32' if correct[i] else '#C62828'
+            for c in range(n_cols):
+                ax = axes[2, c]
+                ax.text(px2, py2, lbl, fontsize=fs, fontweight='bold', ha='center', va='center', color='white', zorder=5,
+                        path_effects=[pe.withStroke(linewidth=0.8, foreground=end_color)])
 
-        for d in range(vocab_size):
-            ax = axes[d + 1]
-            ax.set_xlim(x_min, x_max)
-            ax.set_ylim(y_min, y_max)
-            ax.set_aspect('equal')
-            ax.set_title(f"Next token = {itos[d]}", fontsize=11, fontweight='bold')
-            # Background: P(this token) heatmap
-            Z = probs[:, d].reshape(grid_resolution, grid_resolution)
-            ax.pcolormesh(xx, yy, Z, cmap='viridis', vmin=0, vmax=1, shading='auto')
-            # Arrows from original V (tail) to V after; annotate token p position (no circles)
-            arrow_color = '#E63946'
-            for i in range(T):
-                x0, y0 = x_np[i, 0], x_np[i, 1]
-                tail_x = x0 + arrow_scale * v_before[i, 0]
-                tail_y = y0 + arrow_scale * v_before[i, 1]
-                head_x = x0 + arrow_scale * v_after[i, 0]
-                head_y = y0 + arrow_scale * v_after[i, 1]
-                ax.annotate('', xy=(head_x, head_y), xytext=(tail_x, tail_y),
-                            arrowprops=dict(arrowstyle='->', color=arrow_color, lw=2), zorder=3)
-                label = f"{itos[seq[i]]}p{i}"
-                ax.text(tail_x, tail_y, label, fontsize=5, fontweight='bold', ha='center', va='center',
-                        color='black', zorder=5,
-                        path_effects=[pe.withStroke(linewidth=1.2, foreground='white')])
-            ax.set_xlabel('dim 0')
-            ax.set_ylabel('dim 1')
+        # Row labels
+        axes[0, 0].set_ylabel("Original V\ndim 1", fontsize=9)
+        axes[1, 0].set_ylabel("Transformed V\ndim 1", fontsize=9)
+        axes[2, 0].set_ylabel("V + residual\ndim 1", fontsize=9)
 
-        for j in range(n_panels, len(axes)):
-            axes[j].set_visible(False)
         seq_str = " ".join(str(itos[t]) for t in seq[:25])
         if len(seq) > 25:
             seq_str += "..."
-        fig.suptitle(f"Demo sequence {seq_idx}: V before → after transform (arrows at each position)\nSequence: {seq_str}", fontsize=10, fontweight='bold', y=1.02)
+        gen_str = " ".join(str(itos[generated[i]]) for i in range(min(T, 25)))
+        if T > 25:
+            gen_str += "..."
+        n_correct = correct.sum()
+        print(f"Demo {seq_idx}  Sequence: {' '.join(str(itos[t]) for t in seq)}")
+        print(f"Demo {seq_idx}  Generated (sampled): {' '.join(str(itos[generated[i]]) for i in range(T))}")
+        print(f"Demo {seq_idx}  Pred next (argmax at each pos): {' '.join(str(itos[pred_next[i]]) for i in range(T))}")
+        fig.suptitle(f"Demo {seq_idx}: {seq_str}  |  Generated: {gen_str}  |  Correct: {n_correct}/{T-1} (row 3: green=correct, red=wrong)", fontsize=9, fontweight='bold', y=1.01)
         plt.tight_layout()
         if save_dir:
             path = os.path.join(save_dir, f"v_before_after_demo_{seq_idx}.png")

@@ -157,7 +157,7 @@ def visualize_from_checkpoint(
     plot_lm_head_probability_heatmaps(
         model, itos, save_path=os.path.join(plots_dir, "lm_head_probability_heatmaps.png")
     )
-    demo_sequences = [s for s in train_sequences[:8] if len(s) >= 2]
+    demo_sequences = [s for s in train_sequences[:3] if len(s) >= 2]
     if demo_sequences:
         plot_v_before_after_demo_sequences(
             model, itos, demo_sequences, save_dir=plots_dir,
