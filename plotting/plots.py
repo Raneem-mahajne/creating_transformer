@@ -3603,6 +3603,8 @@ def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, ar
     n_cols = vocab_size  # one column per predicted digit
     n_rows = n_data_rows
 
+    arrow_data_list = []  # for big arrow-only figure: (x_np, v_before, v_after, correct, seq, plot_x_min, plot_x_max, plot_y_min, plot_y_max, T)
+
     for seq_idx, seq in enumerate(sequences):
         if len(seq) < 2:
             continue
@@ -3627,6 +3629,7 @@ def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, ar
         plot_x_max = max(x_max, x_np[:, 0].max(), v_before[:, 0].max(), v_after[:, 0].max(), land_x.max()) + margin
         plot_y_min = min(y_min, x_np[:, 1].min(), v_before[:, 1].min(), v_after[:, 1].min(), land_y.min()) - margin
         plot_y_max = max(y_max, x_np[:, 1].max(), v_before[:, 1].max(), v_after[:, 1].max(), land_y.max()) + margin
+        arrow_data_list.append((x_np.copy(), v_before.copy(), v_after.copy(), correct.copy(), seq[:], plot_x_min, plot_x_max, plot_y_min, plot_y_max, T))
         xs_plot = np.linspace(plot_x_min, plot_x_max, grid_resolution)
         ys_plot = np.linspace(plot_y_min, plot_y_max, grid_resolution)
         xx_plot, yy_plot = np.meshgrid(xs_plot, ys_plot)

@@ -73,7 +73,7 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
     
     # Handle video creation mode (early return)
     if "--video" in sys.argv or "--video-qkv" in sys.argv:
-        fps = 2
+        fps = 20
         max_steps = None
         if "--fps" in sys.argv:
             fps_idx = sys.argv.index("--fps")

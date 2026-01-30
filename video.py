@@ -22,7 +22,7 @@ from checkpoint import (
 from plotting import plot_embeddings_scatterplots_only, plot_embedding_qkv_comprehensive
 
 
-def create_embeddings_scatterplots_video(config_name_actual: str, config: dict, fps: int = 2, max_steps: int = None):
+def create_embeddings_scatterplots_video(config_name_actual: str, config: dict, fps: int = 20, max_steps: int = None):
     """
     Create a video showing embedding scatterplots evolving across training steps.
     
@@ -252,7 +252,7 @@ def create_embeddings_scatterplots_video(config_name_actual: str, config: dict, 
         print("Temporary files cleaned up")
 
 
-def create_embedding_qkv_video(config_name_actual: str, config: dict, fps: int = 2, max_steps: int = None):
+def create_embedding_qkv_video(config_name_actual: str, config: dict, fps: int = 20, max_steps: int = None):
     """
     Create a video showing the comprehensive embedding/QKV figure evolving across training steps.
     Single pass - generates frames directly without fixed limits.
