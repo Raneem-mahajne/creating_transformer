@@ -28,6 +28,7 @@ from plotting import (
     plot_qk_full_attention_heatmap,
     plot_lm_head_probability_heatmaps,
     plot_v_before_after_demo_sequences,
+    plot_residuals,
 )
 
 
@@ -139,6 +140,9 @@ def visualize_from_checkpoint(
 
     plot_weights_qkv_two_sequences(
         model, X_list, itos, save_path=os.path.join(plots_dir, "qkv.png"), num_sequences=3
+    )
+    plot_residuals(
+        model, X_list, itos, save_path=os.path.join(plots_dir, "residuals.png"), num_sequences=3
     )
     plot_embeddings_pca(model, itos, save_path=os.path.join(plots_dir, "embeddings.png"))
     plot_embeddings_scatterplots_only(model, itos, save_path=os.path.join(plots_dir, "embeddings_scatterplots.png"))
