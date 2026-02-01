@@ -29,6 +29,7 @@ from plotting import (
     plot_lm_head_probability_heatmaps,
     plot_v_before_after_demo_sequences,
     plot_residuals,
+    plot_probability_heatmap_with_embeddings,
 )
 
 
@@ -160,6 +161,9 @@ def visualize_from_checkpoint(
     )
     plot_lm_head_probability_heatmaps(
         model, itos, save_path=os.path.join(plots_dir, "lm_head_probability_heatmaps.png")
+    )
+    plot_probability_heatmap_with_embeddings(
+        model, itos, save_path=os.path.join(plots_dir, "probability_heatmap_with_embeddings.png")
     )
     demo_sequences = [s for s in train_sequences[:3] if len(s) >= 2]
     if demo_sequences:

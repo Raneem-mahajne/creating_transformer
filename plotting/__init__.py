@@ -34,6 +34,7 @@ from plotting.plots import (
     plot_qk_softmax_attention_heatmap,
     plot_lm_head_probability_heatmaps,
     plot_v_before_after_demo_sequences,
+    plot_probability_heatmap_with_embeddings,
 )
 
 __all__ = [
@@ -71,4 +72,5 @@ __all__ = [
     "plot_qk_softmax_attention_heatmap",
     "plot_lm_head_probability_heatmaps",
     "plot_v_before_after_demo_sequences",
+    "plot_probability_heatmap_with_embeddings",
 ]

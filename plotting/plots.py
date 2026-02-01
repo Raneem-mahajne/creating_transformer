@@ -2352,7 +2352,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
     
     # Create figure: 3 columns (heatmaps on left) + 4 columns (scatters on right) = 7 columns
     # Left: V_transformed heatmap, Embeddings heatmap, Final heatmap
-    # Right: V_transformed scatter, Embeddings as vectors, V_transformed→Final arrows, Final scatter
+    # Right: V_transformed scatter, Embeddings scatter, Embed→Final arrows, Final scatter
     num_cols = 7
     fig = plt.figure(figsize=(6 * num_cols, 4 * num_sequences))
     gs = GridSpec(num_sequences, num_cols, figure=fig, hspace=0.4, wspace=0.3)
@@ -2458,18 +2458,11 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         ax.set_title(f"V Transformed{title_suffix}", fontsize=11)
         ax.grid(True, alpha=0.3)
         
-        # Column 4: Embeddings as vectors from origin
+        # Column 4: Embeddings scatter (points only, no arrows)
         ax = fig.add_subplot(gs[seq_idx, 4])
         embeddings_2d = pca_2d(embeddings)
-        # Draw arrows from origin to each embedding
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
             color = token_pos_to_color[(token, pos)]
-            # Calculate arrow length for head size scaling
-            arrow_length = np.sqrt(embeddings_2d[i, 0]**2 + embeddings_2d[i, 1]**2)
-            head_size = max(0.15, min(0.3, arrow_length * 0.15))  # Scale head size with arrow length
-            ax.arrow(0, 0, embeddings_2d[i, 0], embeddings_2d[i, 1],
-                    head_width=head_size, head_length=head_size, fc=color, ec=color, alpha=0.8, length_includes_head=True, width=0.02)
-            # Annotate at tip (end) of arrow
             ax.text(embeddings_2d[i, 0], embeddings_2d[i, 1], f'{token}p{pos}',
                    fontsize=9, fontweight='bold', ha='center', va='center', color=color)
         ax.set_xlim(xlim_shared)
@@ -2485,31 +2478,29 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
             title_suffix = ""
         ax.set_title(f"Embed{title_suffix}", fontsize=11)
         ax.grid(True, alpha=0.3)
-        ax.axhline(y=0, color='k', linestyle='--', linewidth=0.5)
-        ax.axvline(x=0, color='k', linestyle='--', linewidth=0.5)
         
-        # Column 5: V Transformed → Final arrows
+        # Column 5: Embeddings → Final arrows (showing how attention modifies the base representation)
         ax = fig.add_subplot(gs[seq_idx, 5])
-        V_transformed_2d = pca_2d(V_transformed)
+        embeddings_2d = pca_2d(embeddings)
         Final_2d = pca_2d(Sum)
-        # Draw arrows from V transformed points to Final points
+        # Draw arrows from embeddings to Final points
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
             color = token_pos_to_color[(token, pos)]
             # Calculate arrow length for head size scaling
-            dx = Final_2d[i, 0] - V_transformed_2d[i, 0]
-            dy = Final_2d[i, 1] - V_transformed_2d[i, 1]
+            dx = Final_2d[i, 0] - embeddings_2d[i, 0]
+            dy = Final_2d[i, 1] - embeddings_2d[i, 1]
             arrow_length = np.sqrt(dx**2 + dy**2)
             head_size = max(0.15, min(0.3, arrow_length * 0.15))  # Scale head size with arrow length
-            # Draw arrow from V transformed to Final
-            ax.arrow(V_transformed_2d[i, 0], V_transformed_2d[i, 1],
+            # Draw arrow from embeddings to Final
+            ax.arrow(embeddings_2d[i, 0], embeddings_2d[i, 1],
                     dx, dy,
                     head_width=head_size, head_length=head_size, fc=color, ec=color, alpha=0.8, length_includes_head=True, width=0.02)
-            # Annotate only at beginning (V transformed point)
-            ax.text(V_transformed_2d[i, 0], V_transformed_2d[i, 1], f'{token}p{pos}',
+            # Annotate only at beginning (embeddings point)
+            ax.text(embeddings_2d[i, 0], embeddings_2d[i, 1], f'{token}p{pos}',
                    fontsize=9, fontweight='bold', ha='center', va='center', color=color)
         ax.set_xlim(xlim_shared)
         ax.set_ylim(ylim_shared)
-        used_pca = V_transformed.shape[1] > 2
+        used_pca = embeddings.shape[1] > 2
         if used_pca:
             ax.set_xlabel("PC1", fontsize=10)
             ax.set_ylabel("PC2", fontsize=10)
@@ -2518,7 +2509,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
             ax.set_xlabel("Dim 1", fontsize=10)
             ax.set_ylabel("Dim 2", fontsize=10)
             title_suffix = ""
-        ax.set_title(f"V Transformed → Final{title_suffix}", fontsize=11)
+        ax.set_title(f"Embed → Final (Modified by Attention){title_suffix}", fontsize=11)
         ax.grid(True, alpha=0.3)
         
         # Column 6: Final scatter
@@ -3921,7 +3912,7 @@ def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, ar
     probs /= probs.sum(axis=1, keepdims=True)  # (N, vocab_size)
     argmax_token = logits.argmax(axis=1)  # (N,) which token has highest logit at each point
 
-    n_data_rows = 3   # original V, transformed V, V+residual
+    n_data_rows = 2   # Embed with arrows to Final, Final position
     n_cols = vocab_size  # one column per predicted digit
     n_rows = n_data_rows
 
@@ -3988,33 +3979,34 @@ def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, ar
                     ax.set_xlabel("dim 0")
 
         fs = 4.5
-        # Row 0: original V (v_before); row 1: transformed V (v_after); row 2: V+residual (x + v_after)
+        # Row 0: Embed with arrows to Final (x_np with arrows to x_np + v_after); Row 1: Final position (x_np + v_after)
         for i in range(T):
             lbl = f"{itos[seq[i]]}p{i}"
-            # Row 0: original V
-            px0, py0 = v_before[i, 0], v_before[i, 1]
+            # Row 0: Embed with arrows to Final
+            px0, py0 = x_np[i, 0], x_np[i, 1]  # Embed position
+            px_final, py_final = x_np[i, 0] + v_after[i, 0], x_np[i, 1] + v_after[i, 1]  # Final position
             for c in range(n_cols):
                 ax = axes[0, c]
+                # Draw arrow from embed to final
+                dx = px_final - px0
+                dy = py_final - py0
+                arrow_length = np.sqrt(dx**2 + dy**2)
+                head_size = max(0.1, min(0.2, arrow_length * 0.1))
+                ax.arrow(px0, py0, dx, dy,
+                        head_width=head_size, head_length=head_size, fc='white', ec='white', alpha=0.8, length_includes_head=True, width=0.01, zorder=4)
+                # Annotate at beginning (embed position)
                 ax.text(px0, py0, lbl, fontsize=fs, fontweight='bold', ha='center', va='center', color='white', zorder=5,
                         path_effects=[pe.withStroke(linewidth=0.8, foreground='black')])
-            # Row 1: transformed V
-            px1, py1 = v_after[i, 0], v_after[i, 1]
-            for c in range(n_cols):
-                ax = axes[1, c]
-                ax.text(px1, py1, lbl, fontsize=fs, fontweight='bold', ha='center', va='center', color='white', zorder=5,
-                        path_effects=[pe.withStroke(linewidth=0.8, foreground='black')])
-            # Row 2: V + residual; white text, stroke color = correct (green) / wrong (red)
-            px2, py2 = x_np[i, 0] + v_after[i, 0], x_np[i, 1] + v_after[i, 1]
+            # Row 1: Final position; white text, stroke color = correct (green) / wrong (red)
             end_color = '#2E7D32' if correct[i] else '#C62828'
             for c in range(n_cols):
-                ax = axes[2, c]
-                ax.text(px2, py2, lbl, fontsize=fs, fontweight='bold', ha='center', va='center', color='white', zorder=5,
+                ax = axes[1, c]
+                ax.text(px_final, py_final, lbl, fontsize=fs, fontweight='bold', ha='center', va='center', color='white', zorder=5,
                         path_effects=[pe.withStroke(linewidth=0.8, foreground=end_color)])
 
         # Row labels
-        axes[0, 0].set_ylabel("Original V\ndim 1", fontsize=9)
-        axes[1, 0].set_ylabel("Transformed V\ndim 1", fontsize=9)
-        axes[2, 0].set_ylabel("V + residual\ndim 1", fontsize=9)
+        axes[0, 0].set_ylabel("Embed → Final\ndim 1", fontsize=9)
+        axes[1, 0].set_ylabel("Final\ndim 1", fontsize=9)
 
         seq_str = " ".join(str(itos[t]) for t in seq[:25])
         if len(seq) > 25:
@@ -4026,7 +4018,7 @@ def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, ar
         print(f"Demo {seq_idx}  Sequence: {' '.join(str(itos[t]) for t in seq)}")
         print(f"Demo {seq_idx}  Generated (sampled): {' '.join(str(itos[generated[i]]) for i in range(T))}")
         print(f"Demo {seq_idx}  Pred next (argmax at each pos): {' '.join(str(itos[pred_next[i]]) for i in range(T))}")
-        fig.suptitle(f"Demo {seq_idx}: {seq_str}  |  Generated: {gen_str}  |  Correct: {n_correct}/{T-1} (row 3: green=correct, red=wrong)", fontsize=9, fontweight='bold', y=1.01)
+        fig.suptitle(f"Demo {seq_idx}: {seq_str}  |  Generated: {gen_str}  |  Correct: {n_correct}/{T-1} (row 2: green=correct, red=wrong)", fontsize=9, fontweight='bold', y=1.01)
         plt.tight_layout()
         if save_dir:
             path = os.path.join(save_dir, f"v_before_after_demo_{seq_idx}.png")
@@ -4038,6 +4030,119 @@ def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, ar
 
     if save_dir and sequences:
         print(f"Saved {min(len(sequences), len([s for s in sequences if len(s) >= 2]))} demo sequence figures to {save_dir}")
+
+
+@torch.no_grad()
+def plot_probability_heatmap_with_embeddings(model, itos, save_path=None, grid_resolution=80, extent_margin=0.5):
+    """
+    Plot probability heatmaps for each token with all token+position combinations from
+    the original embedding space overlaid on top.
+    
+    Args:
+        model: Trained model (BigramLanguageModel)
+        itos: Index-to-string mapping for tokens
+        save_path: Path to save the figure
+        grid_resolution: Number of points per axis (default 80)
+        extent_margin: Extra margin around embedding extent (default 0.5)
+    """
+    model.eval()
+    vocab_size = model.token_embedding.weight.shape[0]
+    block_size = model.position_embedding_table.weight.shape[0]
+    n_embd = model.lm_head.in_features
+    if n_embd != 2:
+        print(f"plot_probability_heatmap_with_embeddings: n_embd={n_embd}, need 2. Skipping.")
+        return
+
+    with torch.no_grad():
+        W = model.lm_head.weight.detach().cpu().numpy()   # (vocab_size, 2)
+        b = model.lm_head.bias.detach().cpu().numpy()     # (vocab_size,)
+        token_emb = model.token_embedding.weight.detach().cpu().numpy()
+        pos_emb = model.position_embedding_table.weight.detach().cpu().numpy()
+        combined = token_emb[:, None, :] + pos_emb[None, :, :]  # (vocab, block, 2)
+        flat = combined.reshape(-1, 2)
+        x_min, x_max = flat[:, 0].min() - extent_margin, flat[:, 0].max() + extent_margin
+        y_min, y_max = flat[:, 1].min() - extent_margin, flat[:, 1].max() + extent_margin
+
+    # Create probability grid - need to pass through feedforward first
+    xs = np.linspace(x_min, x_max, grid_resolution)
+    ys = np.linspace(y_min, y_max, grid_resolution)
+    xx, yy = np.meshgrid(xs, ys)
+    points = np.stack([xx.ravel(), yy.ravel()], axis=1)  # (N, 2)
+    
+    # Pass through feedforward + residual, then lm_head (same as v_before_after_demo)
+    dev = next(model.parameters()).device
+    with torch.no_grad():
+        pts = torch.tensor(points, dtype=torch.float32, device=dev)
+        h = pts + model.ffwd(pts)  # Feedforward + residual
+        logits = model.lm_head(h).cpu().numpy()  # (N, vocab_size)
+    
+    # Compute probabilities from logits
+    probs = np.exp(logits - logits.max(axis=1, keepdims=True))
+    probs /= probs.sum(axis=1, keepdims=True)             # (N, vocab_size)
+
+    # Get all token+position combinations
+    all_combinations = []
+    labels = []
+    for token_idx in range(vocab_size):
+        for pos_idx in range(block_size):
+            emb = token_emb[token_idx] + pos_emb[pos_idx]
+            all_combinations.append(emb)
+            labels.append(f"{itos[token_idx]}p{pos_idx}")
+    all_combinations = np.array(all_combinations)  # (vocab_size * block_size, 2)
+
+    # Create figure with one subplot per token
+    n_cols = min(4, vocab_size)
+    n_rows = (vocab_size + n_cols - 1) // n_cols
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
+    if n_rows == 1 and n_cols == 1:
+        axes = np.array([[axes]])
+    elif n_rows == 1:
+        axes = axes.reshape(1, -1)
+    elif n_cols == 1:
+        axes = axes.reshape(-1, 1)
+
+    for token_idx in range(vocab_size):
+        row = token_idx // n_cols
+        col = token_idx % n_cols
+        ax = axes[row, col]
+        
+        # Plot probability heatmap
+        Z = probs[:, token_idx].reshape(grid_resolution, grid_resolution)
+        im = ax.pcolormesh(xx, yy, Z, cmap='viridis', vmin=0, vmax=1, shading='auto')
+        
+        # Overlay all token+position combinations
+        for combo_idx, (emb, label) in enumerate(zip(all_combinations, labels)):
+            ax.scatter(emb[0], emb[1], s=20, c='white', edgecolors='black', linewidths=0.5, alpha=0.7, zorder=5)
+            # Only label if there aren't too many points
+            if vocab_size * block_size <= 200:
+                ax.text(emb[0], emb[1], label, fontsize=5, ha='center', va='center', 
+                       color='white', weight='bold', zorder=6,
+                       path_effects=[pe.withStroke(linewidth=0.5, foreground='black')])
+        
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
+        ax.set_aspect('equal')
+        ax.set_title(f"P(next = {itos[token_idx]})", fontsize=10)
+        if row == n_rows - 1:
+            ax.set_xlabel("dim 0", fontsize=9)
+        if col == 0:
+            ax.set_ylabel("dim 1", fontsize=9)
+
+    # Hide unused subplots
+    for token_idx in range(vocab_size, n_rows * n_cols):
+        row = token_idx // n_cols
+        col = token_idx % n_cols
+        axes[row, col].axis('off')
+
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')
+        plt.close()
+        print(f"Probability heatmap with embeddings saved to {save_path}")
+    else:
+        plt.show()
+    
+    model.train()
 
 
 def plot_qk_full_attention_heatmap(model, itos, save_path: str = None):
