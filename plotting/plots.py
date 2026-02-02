@@ -28,6 +28,19 @@ def sparse_ticks(chars, every=2):
     for i, ch in enumerate(chars):
         out.append(ch if i % every == 0 else "")
     return out
+
+# Unicode subscript digits ₀₁₂₃₄₅₆₇₈₉ for position labels (e.g. "8₃" = token 8 at position 3)
+_SUBSCRIPT_DIGITS = "₀₁₂₃₄₅₆₇₈₉"
+def _pos_subscript(n):
+    """Format integer n as subscript (e.g. 3 -> ₃, 12 -> ₁₂)."""
+    return "".join(_SUBSCRIPT_DIGITS[int(d)] for d in str(n))
+def _token_pos_label(token_str, pos_idx):
+    """Label for token at position: token with position as subscript (e.g. '8₃')."""
+    return f"{token_str}{_pos_subscript(pos_idx)}"
+def _pos_only_label(pos_idx):
+    """Label for position-only: p with subscript (e.g. 'p₀')."""
+    return f"p{_pos_subscript(pos_idx)}"
+
 # -----------------------------
 def plot_token_embeddings_heatmap(model, itos, save_path=None):
     """
@@ -561,18 +574,19 @@ def plot_embeddings_pca(model, itos, save_path=None):
     
     # Dynamic font sizing based on number of items
     def get_fontsize(num_items):
+        # Subscript labels (e.g. 8₃) are more compact than "8p3", so we can use larger fonts
         if num_items <= 12:
-            return 20
+            return 22
         elif num_items <= 20:
-            return 16
+            return 18
         elif num_items <= 40:
-            return 12
+            return 14
         elif num_items <= 80:
-            return 10
+            return 12
         elif num_items <= 150:
-            return 8
+            return 10
         else:
-            return 6
+            return 8
     
     model.eval()
     
@@ -730,7 +744,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
         pos_fontsize = get_fontsize(block_size)
         if block_size <= 80:
             for i in range(block_size):
-                ax6.text(X2_pos[i, 0], X2_pos[i, 1], f"p{i}", fontsize=pos_fontsize, fontweight='bold',
+                ax6.text(X2_pos[i, 0], X2_pos[i, 1], _pos_only_label(i), fontsize=pos_fontsize, fontweight='bold',
                         ha='center', va='center', color=pos_colors[i])
     elif n_embd == 2:
         # For 2D embeddings, show raw data
@@ -744,7 +758,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
         pos_fontsize = get_fontsize(block_size)
         if block_size <= 80:
             for i in range(block_size):
-                ax6.text(X_pos[i, 0], X_pos[i, 1], f"p{i}", fontsize=pos_fontsize, fontweight='bold',
+                ax6.text(X_pos[i, 0], X_pos[i, 1], _pos_only_label(i), fontsize=pos_fontsize, fontweight='bold',
                         ha='center', va='center', color=pos_colors[i])
     else:
         # For 1D embeddings, just plot the single dimension
@@ -759,7 +773,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
         pos_fontsize = get_fontsize(block_size)
         if block_size <= 80:
             for i in range(block_size):
-                ax6.text(X1_pos[i], i, f"p{i}", fontsize=pos_fontsize, fontweight='bold',
+                ax6.text(X1_pos[i], i, _pos_only_label(i), fontsize=pos_fontsize, fontweight='bold',
                         ha='center', va='center', color=pos_colors[i])
     
     # Row 3: Token+Position embeddings (heatmaps for each dimension, then PCA)
@@ -782,7 +796,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
             dim0_heatmap[token_idx, pos_idx] = all_combinations[idx, 0]
     
     token_labels = [itos[i] for i in range(max_token_idx)]
-    pos_labels = [f"p{i}" for i in range(block_size)]
+    pos_labels = [_pos_only_label(i) for i in range(block_size)]
     sns.heatmap(dim0_heatmap, yticklabels=token_labels, xticklabels=pos_labels, cmap="RdBu_r", center=0, ax=ax10)
     ax10.set_title(f"Token+Position: Dim 0 (tokens×positions)", fontsize=11)
     ax10.set_xlabel("Position")
@@ -826,7 +840,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
             token_str = str(itos[token_idx])
             for pos_idx in range(block_size):
                 idx = token_idx * block_size + pos_idx
-                label = f"{token_str}p{pos_idx}"
+                label = _token_pos_label(token_str, pos_idx)
                 color = blend_colors(token_colors[token_idx], pos_colors[pos_idx])
                 ax12.text(X2_comb[idx, 0], X2_comb[idx, 1], label, fontsize=combo_fontsize, fontweight='bold',
                          ha='center', va='center', color=color)
@@ -847,7 +861,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
             token_str = str(itos[token_idx])
             for pos_idx in range(block_size):
                 idx = token_idx * block_size + pos_idx
-                label = f"{token_str}p{pos_idx}"
+                label = _token_pos_label(token_str, pos_idx)
                 color = blend_colors(token_colors[token_idx], pos_colors[pos_idx])
                 ax12.text(X_comb[idx, 0], X_comb[idx, 1], label, fontsize=combo_fontsize, fontweight='bold',
                          ha='center', va='center', color=color)
@@ -868,7 +882,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
             token_str = str(itos[token_idx])
             for pos_idx in range(block_size):
                 idx = token_idx * block_size + pos_idx
-                label = f"{token_str}p{pos_idx}"
+                label = _token_pos_label(token_str, pos_idx)
                 color = blend_colors(token_colors[token_idx], pos_colors[pos_idx])
                 ax12.text(X1_comb[idx], 0, label, fontsize=combo_fontsize, fontweight='bold',
                          ha='center', va='center', color=color)
@@ -907,18 +921,19 @@ def plot_embeddings_scatterplots_only(model, itos, save_path=None, fixed_limits=
     
     # Dynamic font sizing based on number of items
     def get_fontsize(num_items):
+        # Subscript labels are more compact, so we can use larger fonts
         if num_items <= 12:
-            return 22
+            return 24
         elif num_items <= 20:
-            return 18
+            return 20
         elif num_items <= 40:
-            return 14
+            return 16
         elif num_items <= 80:
-            return 11
+            return 13
         elif num_items <= 150:
-            return 9
+            return 11
         else:
-            return 7
+            return 9
     
     model.eval()
     
@@ -1029,7 +1044,7 @@ def plot_embeddings_scatterplots_only(model, itos, save_path=None, fixed_limits=
         pos_fontsize = get_fontsize(block_size)
         if block_size <= 80:
             for i in range(block_size):
-                ax2.text(X2_pos[i, 0], X2_pos[i, 1], f"p{i}", fontsize=pos_fontsize, fontweight='bold',
+                ax2.text(X2_pos[i, 0], X2_pos[i, 1], _pos_only_label(i), fontsize=pos_fontsize, fontweight='bold',
                         ha='center', va='center', color=pos_colors[i])
     elif n_embd == 2:
         X2_pos = X_pos
@@ -1046,7 +1061,7 @@ def plot_embeddings_scatterplots_only(model, itos, save_path=None, fixed_limits=
         pos_fontsize = get_fontsize(block_size)
         if block_size <= 80:
             for i in range(block_size):
-                ax2.text(X2_pos[i, 0], X2_pos[i, 1], f"p{i}", fontsize=pos_fontsize, fontweight='bold',
+                ax2.text(X2_pos[i, 0], X2_pos[i, 1], _pos_only_label(i), fontsize=pos_fontsize, fontweight='bold',
                         ha='center', va='center', color=pos_colors[i])
     else:
         X1_pos = X_pos[:, 0]
@@ -1063,7 +1078,7 @@ def plot_embeddings_scatterplots_only(model, itos, save_path=None, fixed_limits=
         pos_fontsize = get_fontsize(block_size)
         if block_size <= 80:
             for i in range(block_size):
-                ax2.text(X1_pos[i], i, f"p{i}", fontsize=pos_fontsize, fontweight='bold',
+                ax2.text(X1_pos[i], i, _pos_only_label(i), fontsize=pos_fontsize, fontweight='bold',
                         ha='center', va='center', color=pos_colors[i])
     ax2.grid(True, alpha=0.3)
     
@@ -1107,7 +1122,7 @@ def plot_embeddings_scatterplots_only(model, itos, save_path=None, fixed_limits=
             token_str = str(itos[token_idx])
             for pos_idx in range(block_size):
                 idx = token_idx * block_size + pos_idx
-                label = f"{token_str}p{pos_idx}"
+                label = _token_pos_label(token_str, pos_idx)
                 color = blend_colors(token_colors[token_idx], pos_colors[pos_idx])
                 ax3.text(X2_comb[idx, 0], X2_comb[idx, 1], label, fontsize=combo_fontsize, fontweight='bold',
                         ha='center', va='center', color=color)
@@ -1130,7 +1145,7 @@ def plot_embeddings_scatterplots_only(model, itos, save_path=None, fixed_limits=
             token_str = str(itos[token_idx])
             for pos_idx in range(block_size):
                 idx = token_idx * block_size + pos_idx
-                label = f"{token_str}p{pos_idx}"
+                label = _token_pos_label(token_str, pos_idx)
                 color = blend_colors(token_colors[token_idx], pos_colors[pos_idx])
                 ax3.text(X_comb[idx, 0], X_comb[idx, 1], label, fontsize=combo_fontsize, fontweight='bold',
                         ha='center', va='center', color=color)
@@ -1153,7 +1168,7 @@ def plot_embeddings_scatterplots_only(model, itos, save_path=None, fixed_limits=
             token_str = str(itos[token_idx])
             for pos_idx in range(block_size):
                 idx = token_idx * block_size + pos_idx
-                label = f"{token_str}p{pos_idx}"
+                label = _token_pos_label(token_str, pos_idx)
                 color = blend_colors(token_colors[token_idx], pos_colors[pos_idx])
                 ax3.text(X1_comb[idx], 0, label, fontsize=combo_fontsize, fontweight='bold',
                         ha='center', va='center', color=color)
@@ -1194,18 +1209,19 @@ def plot_embedding_qkv_comprehensive(model, itos, save_path=None, fixed_limits=N
     
     # Dynamic font sizing
     def get_fontsize(num_items):
+        # Subscript labels are more compact, so we can use larger fonts
         if num_items <= 12:
-            return 18
+            return 20
         elif num_items <= 20:
-            return 14
+            return 16
         elif num_items <= 40:
-            return 11
+            return 13
         elif num_items <= 80:
-            return 9
+            return 11
         elif num_items <= 150:
-            return 7
+            return 9
         else:
-            return 5
+            return 7
     
     # Get embeddings
     embeddings = model.token_embedding.weight.detach().cpu().numpy()
@@ -1234,7 +1250,7 @@ def plot_embedding_qkv_comprehensive(model, itos, save_path=None, fixed_limits=N
         for pos_idx in range(block_size):
             idx = token_idx * block_size + pos_idx
             all_combinations[idx] = embeddings[token_idx] + pos_emb_all[pos_idx]
-            combo_labels.append(f"{itos[token_idx]}p{pos_idx}")
+            combo_labels.append(_token_pos_label(itos[token_idx], pos_idx))
             combo_colors.append(blend_colors(token_colors[token_idx], pos_colors[pos_idx]))
     
     # Get QKV weights from first head
@@ -1318,7 +1334,7 @@ def plot_embedding_qkv_comprehensive(model, itos, save_path=None, fixed_limits=N
     set_limits(ax2, 'position', x_pos, y_pos)
     fs_pos = get_fontsize(block_size)
     for i in range(block_size):
-        ax2.text(x_pos[i], y_pos[i], f"p{i}", fontsize=fs_pos, fontweight='bold',
+        ax2.text(x_pos[i], y_pos[i], _pos_only_label(i), fontsize=fs_pos, fontweight='bold',
                 ha='center', va='center', color=pos_colors[i])
     ax2.set_title("Position Embeddings", fontsize=14, fontweight='bold')
     ax2.set_xlabel("Dim 0")
@@ -1458,7 +1474,7 @@ def plot_token_position_embedding_space(model, itos, save_path=None):
         for pos_idx in range(block_size):
             idx = token_idx * block_size + pos_idx
             all_combinations[idx] = embeddings[token_idx] + pos_emb_all[pos_idx]
-            labels.append(f"{token_str}p{pos_idx}")  # No underscore
+            labels.append(_token_pos_label(token_str, pos_idx))
     
     # Create BIG figure: 1 row, 2 columns (RAW and PCA)
     fig, axes = plt.subplots(1, 2, figsize=(24, 12))
@@ -1469,7 +1485,7 @@ def plot_token_position_embedding_space(model, itos, save_path=None):
         X_orig = all_combinations[:, [0, 1]]
         ax1.scatter(X_orig[:, 0], X_orig[:, 1], s=0, alpha=0)  # s=0 for invisible dots
         for i in range(len(labels)):
-            ax1.text(X_orig[i, 0], X_orig[i, 1], labels[i], fontsize=6, ha='center', va='center')
+            ax1.text(X_orig[i, 0], X_orig[i, 1], labels[i], fontsize=9, ha='center', va='center')
         ax1.set_title(f"Original Token+Position Embeddings: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=14)
         ax1.set_xlabel("Embedding Dim 0", fontsize=12)
         ax1.set_ylabel("Embedding Dim 1", fontsize=12)
@@ -1480,7 +1496,7 @@ def plot_token_position_embedding_space(model, itos, save_path=None):
         X_orig_1d = all_combinations[:, 0]
         ax1.scatter(X_orig_1d, np.zeros_like(X_orig_1d), s=0, alpha=0)
         for i in range(len(labels)):
-            ax1.text(X_orig_1d[i], 0, labels[i], fontsize=6, ha='center', va='center', rotation=90)
+            ax1.text(X_orig_1d[i], 0, labels[i], fontsize=9, ha='center', va='center', rotation=90)
         ax1.set_title(f"Original Token+Position Embeddings: Dim 0\n(All tokens, {num_combinations} combinations)", fontsize=14)
         ax1.set_xlabel("Embedding Dim 0", fontsize=12)
         ax1.set_ylabel("")
@@ -1498,7 +1514,7 @@ def plot_token_position_embedding_space(model, itos, save_path=None):
         # Plot with s=0 so only annotations are visible
         ax2.scatter(X2_comb[:, 0], X2_comb[:, 1], s=0, alpha=0)
         for i in range(len(labels)):
-            ax2.text(X2_comb[i, 0], X2_comb[i, 1], labels[i], fontsize=6, ha='center', va='center')
+            ax2.text(X2_comb[i, 0], X2_comb[i, 1], labels[i], fontsize=9, ha='center', va='center')
         
         ax2.set_title(f"Token+Position Embeddings: PCA 2D\n(All tokens, {num_combinations} combinations)", fontsize=14)
         ax2.set_xlabel("PC1", fontsize=12)
@@ -1510,7 +1526,7 @@ def plot_token_position_embedding_space(model, itos, save_path=None):
         X1_comb = all_combinations[:, 0]
         ax2.scatter(X1_comb, np.zeros_like(X1_comb), s=0, alpha=0)
         for i in range(len(labels)):
-            ax2.text(X1_comb[i], 0, labels[i], fontsize=6, ha='center', va='center', rotation=90)
+            ax2.text(X1_comb[i], 0, labels[i], fontsize=9, ha='center', va='center', rotation=90)
         ax2.set_title(f"Token+Position Embeddings: PCA 1D\n(All tokens, {num_combinations} combinations)", fontsize=14)
         ax2.set_xlabel("PC1", fontsize=12)
         ax2.set_ylabel("")
@@ -1724,7 +1740,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         for pos_idx in range(block_size):
             idx = token_idx * block_size + pos_idx
             all_combinations[idx] = embeddings[token_idx] + pos_emb_all[pos_idx]
-            labels.append(f"{token_str}p{pos_idx}")  # No underscore
+            labels.append(_token_pos_label(token_str, pos_idx))
     
     # Transform by Q, K, V
     # all_combinations is (N, n_embd), W_Q is (hs, n_embd)
@@ -1749,7 +1765,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         X_orig = all_combinations[:, [0, 1]]
         ax0.scatter(X_orig[:, 0], X_orig[:, 1], s=0, alpha=0)
         for i in range(len(labels)):
-            ax0.text(X_orig[i, 0], X_orig[i, 1], labels[i], fontsize=6, ha='center', va='center')
+            ax0.text(X_orig[i, 0], X_orig[i, 1], labels[i], fontsize=9, ha='center', va='center')
         ax0.set_title(f"Original Token+Position Embeddings: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=12)
         ax0.set_xlabel("Embedding Dim 0")
         ax0.set_ylabel("Embedding Dim 1")
@@ -1760,7 +1776,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         X_orig_1d = all_combinations[:, 0]
         ax0.scatter(X_orig_1d, np.zeros_like(X_orig_1d), s=0, alpha=0)
         for i in range(len(labels)):
-            ax0.text(X_orig_1d[i], 0, labels[i], fontsize=6, ha='center', va='center', rotation=90)
+            ax0.text(X_orig_1d[i], 0, labels[i], fontsize=9, ha='center', va='center', rotation=90)
         ax0.set_title(f"Original Token+Position Embeddings: Dim 0\n(All tokens, {num_combinations} combinations)", fontsize=12)
         ax0.set_xlabel("Embedding Dim 0")
         ax0.set_ylabel("")
@@ -1798,7 +1814,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         Q_2d = Q_transformed[:, [0, 1]]
         ax4.scatter(Q_2d[:, 0], Q_2d[:, 1], s=0, alpha=0)
         for i in range(len(labels)):
-            ax4.text(Q_2d[i, 0], Q_2d[i, 1], labels[i], fontsize=7, ha='center', va='center')
+            ax4.text(Q_2d[i, 0], Q_2d[i, 1], labels[i], fontsize=10, ha='center', va='center')
         ax4.set_title(f"Q-Transformed: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=12)
         ax4.set_xlabel("Head Dim 0")
         ax4.set_ylabel("Head Dim 1")
@@ -1809,7 +1825,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         Q_1d = Q_transformed[:, 0]
         ax4.scatter(Q_1d, np.zeros_like(Q_1d), s=0, alpha=0)
         for i in range(len(labels)):
-            ax4.text(Q_1d[i], 0, labels[i], fontsize=7, ha='center', va='center', rotation=90)
+            ax4.text(Q_1d[i], 0, labels[i], fontsize=10, ha='center', va='center', rotation=90)
         ax4.set_title(f"Q-Transformed: Dim 0\n(All tokens, {num_combinations} combinations)", fontsize=12)
         ax4.set_xlabel("Head Dim 0")
         ax4.set_ylabel("")
@@ -1822,7 +1838,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         K_2d = K_transformed[:, [0, 1]]
         ax5.scatter(K_2d[:, 0], K_2d[:, 1], s=0, alpha=0)
         for i in range(len(labels)):
-            ax5.text(K_2d[i, 0], K_2d[i, 1], labels[i], fontsize=7, ha='center', va='center')
+            ax5.text(K_2d[i, 0], K_2d[i, 1], labels[i], fontsize=10, ha='center', va='center')
         ax5.set_title(f"K-Transformed: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=12)
         ax5.set_xlabel("Head Dim 0")
         ax5.set_ylabel("Head Dim 1")
@@ -1832,7 +1848,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         K_1d = K_transformed[:, 0]
         ax5.scatter(K_1d, np.zeros_like(K_1d), s=0, alpha=0)
         for i in range(len(labels)):
-            ax5.text(K_1d[i], 0, labels[i], fontsize=7, ha='center', va='center', rotation=90)
+            ax5.text(K_1d[i], 0, labels[i], fontsize=10, ha='center', va='center', rotation=90)
         ax5.set_title(f"K-Transformed: Dim 0\n(All tokens, {num_combinations} combinations)", fontsize=12)
         ax5.set_xlabel("Head Dim 0")
         ax5.set_ylabel("")
@@ -1874,7 +1890,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
     # Row 4: Q/K/V Dim 0 heatmaps (tokens × positions)
     # Create heatmap data: reshape transformed values into (tokens, positions) grid
     token_labels = [str(itos[i]) for i in range(vocab_size)]
-    pos_labels = [f"p{i}" for i in range(block_size)]
+    pos_labels = [_pos_only_label(i) for i in range(block_size)]
     
     # Q Dim 0 heatmap
     ax7 = fig.add_subplot(gs[3, 0])
@@ -2095,10 +2111,10 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         # Annotate all points with token and position (markers removed, keeping only annotations)
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
             # Annotate Q points (blue for Query)
-            ax.text(Q_2d[i, 0], Q_2d[i, 1], f'{token}p{pos}', 
+            ax.text(Q_2d[i, 0], Q_2d[i, 1], _token_pos_label(token, pos), 
                    fontsize=14, fontweight='bold', ha='center', va='center', color='blue')
             # Annotate K points (red for Key)
-            ax.text(K_2d[i, 0], K_2d[i, 1], f'{token}p{pos}', 
+            ax.text(K_2d[i, 0], K_2d[i, 1], _token_pos_label(token, pos), 
                    fontsize=14, fontweight='bold', ha='center', va='center', color='red')
         
         # Update axis labels based on whether PCA was used
@@ -2218,7 +2234,7 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         
         # Annotate V points with token and position (no scatter points)
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
-            ax.text(V_2d[i, 0], V_2d[i, 1], f'{token}p{pos}', 
+            ax.text(V_2d[i, 0], V_2d[i, 1], _token_pos_label(token, pos), 
                    fontsize=9, fontweight='bold', ha='center', va='center', color='blue')
         
         # Update axis labels based on whether PCA was used
@@ -2242,7 +2258,7 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         
         # Annotate Final Output points with token and position (no scatter points)
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
-            ax.text(Final_Output_2d[i, 0], Final_Output_2d[i, 1], f'{token}p{pos}', 
+            ax.text(Final_Output_2d[i, 0], Final_Output_2d[i, 1], _token_pos_label(token, pos), 
                    fontsize=9, fontweight='bold', ha='center', va='center', color='red')
         
         # Update axis labels based on whether PCA was used
@@ -2442,7 +2458,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         V_transformed_2d = pca_2d(V_transformed)
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
             color = token_pos_to_color[(token, pos)]
-            ax.text(V_transformed_2d[i, 0], V_transformed_2d[i, 1], f'{token}p{pos}',
+            ax.text(V_transformed_2d[i, 0], V_transformed_2d[i, 1], _token_pos_label(token, pos),
                    fontsize=9, fontweight='bold', ha='center', va='center', color=color)
         ax.set_xlim(xlim_shared)
         ax.set_ylim(ylim_shared)
@@ -2463,7 +2479,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         embeddings_2d = pca_2d(embeddings)
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
             color = token_pos_to_color[(token, pos)]
-            ax.text(embeddings_2d[i, 0], embeddings_2d[i, 1], f'{token}p{pos}',
+            ax.text(embeddings_2d[i, 0], embeddings_2d[i, 1], _token_pos_label(token, pos),
                    fontsize=9, fontweight='bold', ha='center', va='center', color=color)
         ax.set_xlim(xlim_shared)
         ax.set_ylim(ylim_shared)
@@ -2496,7 +2512,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
                     dx, dy,
                     head_width=head_size, head_length=head_size, fc=color, ec=color, alpha=0.8, length_includes_head=True, width=0.02)
             # Annotate only at beginning (embeddings point)
-            ax.text(embeddings_2d[i, 0], embeddings_2d[i, 1], f'{token}p{pos}',
+            ax.text(embeddings_2d[i, 0], embeddings_2d[i, 1], _token_pos_label(token, pos),
                    fontsize=9, fontweight='bold', ha='center', va='center', color=color)
         ax.set_xlim(xlim_shared)
         ax.set_ylim(ylim_shared)
@@ -2517,7 +2533,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         Final_2d = pca_2d(Sum)
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
             color = token_pos_to_color[(token, pos)]
-            ax.text(Final_2d[i, 0], Final_2d[i, 1], f'{token}p{pos}',
+            ax.text(Final_2d[i, 0], Final_2d[i, 1], _token_pos_label(token, pos),
                    fontsize=9, fontweight='bold', ha='center', va='center', color=color)
         ax.set_xlim(xlim_shared)
         ax.set_ylim(ylim_shared)
@@ -3689,7 +3705,7 @@ def plot_qk_embedding_space(model, itos, save_path: str = None):
     """
     Create a single scatter plot showing ALL Q and K transformed embeddings
     with both token AND position labels for every combination.
-    Uses consistent format: Q{token}p{pos} and K{token}p{pos}
+    Uses consistent format: token with position subscript (e.g. 8₃)
     
     Args:
         model: Trained TransformerLM
@@ -3727,7 +3743,7 @@ def plot_qk_embedding_space(model, itos, save_path: str = None):
             Q_all.append(q)
             K_all.append(k)
             token_str = str(itos[t])
-            labels.append(f"{token_str}p{p}")
+            labels.append(_token_pos_label(token_str, p))
     
     Q_all = np.array(Q_all)  # (num_combinations, head_size)
     K_all = np.array(K_all)  # (num_combinations, head_size)
@@ -3754,11 +3770,11 @@ def plot_qk_embedding_space(model, itos, save_path: str = None):
     
     # Add text labels for ALL Q points (blue)
     for i in range(num_combinations):
-        ax.text(Q_2d[i, 0], Q_2d[i, 1], labels[i], fontsize=6, ha='center', va='center', color='blue')
+        ax.text(Q_2d[i, 0], Q_2d[i, 1], labels[i], fontsize=9, ha='center', va='center', color='blue')
     
     # Add text labels for ALL K points (red)
     for i in range(num_combinations):
-        ax.text(K_2d[i, 0], K_2d[i, 1], labels[i], fontsize=6, ha='center', va='center', color='red')
+        ax.text(K_2d[i, 0], K_2d[i, 1], labels[i], fontsize=9, ha='center', va='center', color='red')
     
     ax.set_xlabel("Dimension 1" + (" (PCA)" if head_size != 2 else ""), fontsize=12)
     ax.set_ylabel("Dimension 2" + (" (PCA)" if head_size != 2 else ""), fontsize=12)
@@ -3766,7 +3782,7 @@ def plot_qk_embedding_space(model, itos, save_path: str = None):
     ax.grid(True, alpha=0.3)
     
     # Add legend
-    ax.text(0.02, 0.98, "Blue = Query, Red = Key\nFormat: {token}p{position}", 
+    ax.text(0.02, 0.98, "Blue = Query, Red = Key\nFormat: token with position subscript (e.g. 8₃)", 
             transform=ax.transAxes, fontsize=10, verticalalignment='top',
             bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.9))
     
@@ -3981,7 +3997,7 @@ def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, ar
         fs = 4.5
         # Row 0: Embed with arrows to Final (x_np with arrows to x_np + v_after); Row 1: Final position (x_np + v_after)
         for i in range(T):
-            lbl = f"{itos[seq[i]]}p{i}"
+            lbl = _token_pos_label(itos[seq[i]], i)
             # Row 0: Embed with arrows to Final
             px0, py0 = x_np[i, 0], x_np[i, 1]  # Embed position
             px_final, py_final = x_np[i, 0] + v_after[i, 0], x_np[i, 1] + v_after[i, 1]  # Final position
@@ -4087,7 +4103,7 @@ def plot_probability_heatmap_with_embeddings(model, itos, save_path=None, grid_r
         for pos_idx in range(block_size):
             emb = token_emb[token_idx] + pos_emb[pos_idx]
             all_combinations.append(emb)
-            labels.append(f"{itos[token_idx]}p{pos_idx}")
+            labels.append(_token_pos_label(itos[token_idx], pos_idx))
     all_combinations = np.array(all_combinations)  # (vocab_size * block_size, 2)
 
     # Create figure with one subplot per token
@@ -4115,7 +4131,7 @@ def plot_probability_heatmap_with_embeddings(model, itos, save_path=None, grid_r
             ax.scatter(emb[0], emb[1], s=20, c='white', edgecolors='black', linewidths=0.5, alpha=0.7, zorder=5)
             # Only label if there aren't too many points
             if vocab_size * block_size <= 200:
-                ax.text(emb[0], emb[1], label, fontsize=5, ha='center', va='center', 
+                ax.text(emb[0], emb[1], label, fontsize=7, ha='center', va='center', 
                        color='white', weight='bold', zorder=6,
                        path_effects=[pe.withStroke(linewidth=0.5, foreground='black')])
         
@@ -4183,7 +4199,7 @@ def plot_qk_full_attention_heatmap(model, itos, save_path: str = None):
             combined_emb = token_emb[t] + pos_emb[p]
             Q_all[idx] = W_Q @ combined_emb
             K_all[idx] = W_K @ combined_emb
-            labels.append(f"{itos[t]}@{p}")
+            labels.append(_token_pos_label(itos[t], p))
             idx += 1
     
     # Compute full attention matrix: Q_all @ K_all.T / sqrt(d)
