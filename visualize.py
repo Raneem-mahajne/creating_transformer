@@ -25,6 +25,7 @@ from plotting import (
     plot_token_position_embedding_space,
     plot_attention_matrix,
     plot_qk_embedding_space,
+    plot_qk_embedding_space_focused_query,
     plot_qk_full_attention_heatmap,
     plot_lm_head_probability_heatmaps,
     plot_v_before_after_demo_sequences,
@@ -156,6 +157,10 @@ def visualize_from_checkpoint(
         model, X_list, itos, save_path=os.path.join(plots_dir, "attention_matrix.png"), num_sequences=3
     )
     plot_qk_embedding_space(model, itos, save_path=os.path.join(plots_dir, "qk_embedding_space.png"))
+    plot_qk_embedding_space_focused_query(
+        model, itos, token_str="+", position=5,
+        save_path=os.path.join(plots_dir, "qk_embedding_space_plus5_focus.png"),
+    )
     plot_qk_full_attention_heatmap(
         model, itos, save_path=os.path.join(plots_dir, "qk_full_attention_heatmap.png")
     )
