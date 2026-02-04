@@ -1217,6 +1217,68 @@ class PlusLastEvenRule(OperatorBasedGenerator):
         return correctness, all(c == 1 for c in correctness)
 
 
+class Lucky7Rule(IntegerStringGenerator):
+    """
+    Rule: Every time a 7 appears, the next number must be the same as the number before the 7.
+    So ... X 7 Y ... with Y == X. All other positions are unconstrained.
+    seven_probability: when choosing a random token (not after a 7), probability of emitting 7
+    so the rule gets more training signal (default 0.25 = 7 appears ~4x more than uniform 1/11).
+    """
+    LUCKY = 7
+
+    def __init__(self, min_value: int = 0, max_value: int = 20, sequence_length: int = None,
+                 seven_probability: float = 0.0):
+        super().__init__(min_value, max_value, sequence_length)
+        self.all_nums = list(range(min_value, max_value + 1))
+        self.fallback = min_value
+        # 0 = uniform over all_nums; >0 = bias toward 7 (e.g. 0.25) so "after 7" examples are common
+        self.seven_probability = seven_probability
+        self._seven_in_range = self.min_value <= self.LUCKY <= self.max_value
+
+    def _random_token(self) -> int:
+        if self.seven_probability > 0 and self._seven_in_range and random.random() < self.seven_probability:
+            return self.LUCKY
+        return random.choice(self.all_nums) if self.all_nums else self.fallback
+
+    def generate_sequence(self, length: int) -> list[int]:
+        """
+        Generate a sequence where after each 7, the next token equals the token before the 7.
+        When not forced, uses seven_probability to oversample 7 so the rule is seen more often.
+        """
+        if length == 0:
+            return []
+        sequence = []
+        current = self._random_token()
+        sequence.append(current)
+        for _ in range(length - 1):
+            if len(sequence) >= 2 and sequence[-1] == self.LUCKY:
+                current = sequence[-2]
+            else:
+                current = self._random_token()
+            sequence.append(current)
+        return sequence
+
+    def verify_sequence(self, sequence: list[int]) -> tuple[list[int], bool]:
+        """Verify: if previous token is 7, current must equal the token before the 7."""
+        if len(sequence) == 0:
+            return [], True
+        correctness = [1]
+        for i in range(1, len(sequence)):
+            if sequence[i - 1] == self.LUCKY and i >= 2:
+                correctness.append(1 if sequence[i] == sequence[i - 2] else 0)
+            else:
+                correctness.append(1)
+        return correctness, all(c == 1 for c in correctness)
+
+    def valence_mask(self, sequence: list) -> list[bool]:
+        if len(sequence) == 0:
+            return []
+        mask = [False]
+        for i in range(1, len(sequence)):
+            mask.append(bool(sequence[i - 1] == self.LUCKY and i >= 2))
+        return mask
+
+
 def main():
     generator = OddEvenIndexRule(min_value=0, max_value=20)
     sequences = generator.generate_dataset(5, min_length=10, max_length=20)

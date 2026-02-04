@@ -58,8 +58,9 @@ class BigramLanguageModel(nn.Module):
     """
     - token_embedding: maps token id -> embedding vector (n_embd)
     - lm_head: maps attention output -> logits over vocab
+    - use_residual: if False, disable residual connections (no x+attn, no x+ffwd)
     """
-    def __init__(self, vocab_size: int, n_embd: int, block_size: int, num_heads: int, head_size: int):
+    def __init__(self, vocab_size: int, n_embd: int, block_size: int, num_heads: int, head_size: int, use_residual: bool = True):
         super().__init__()
         self.token_embedding = nn.Embedding(vocab_size, n_embd)           # (vocab, n_embd)
         self.position_embedding_table = nn.Embedding(block_size, n_embd)  # (block_size, n_embd)
@@ -68,6 +69,7 @@ class BigramLanguageModel(nn.Module):
         self.ffwd = FeedForward(n_embd, ffwd_mult=16)
         self.lm_head = nn.Linear(n_embd, vocab_size)
         self.block_size = block_size
+        self.use_residual = use_residual
 
     def forward(self, idx: torch.Tensor, targets: torch.Tensor | None = None, return_wei: bool = False):
         B, T = idx.shape
@@ -78,9 +80,14 @@ class BigramLanguageModel(nn.Module):
 
         x = token_emb + pos_emb  # (B,T,n_embd)
 
-        attn_out, wei = self.sa_heads(x)  # (B,T,n_embd) - already correct dimension
-        x = x + attn_out                  # residual connection
-        x = x + self.ffwd(x)              # feedforward + residual
+        attn_out, wei = self.sa_heads(x)  # (B,T,n_embd)
+        if self.use_residual:
+            x = x + attn_out
+            x = x + self.ffwd(x)
+        else:
+            # No residuals: just pass through attention then FFN
+            x = attn_out
+            x = self.ffwd(x)
 
         logits = self.lm_head(x)  # (B,T,vocab)
 

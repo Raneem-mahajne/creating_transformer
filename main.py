@@ -189,8 +189,9 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
         block_size = model_config['block_size']
         num_heads = model_config['num_heads']
         head_size = model_config['head_size']
+        use_residual = model_config.get('use_residual', True)
         
-        model = BigramLanguageModel(vocab_size, n_embd, block_size, num_heads, head_size)
+        model = BigramLanguageModel(vocab_size, n_embd, block_size, num_heads, head_size, use_residual=use_residual)
         optimizer = torch.optim.AdamW(model.parameters(), lr=training_config['learning_rate'])
 
         # Generate "before training" sequences (E0) without perturbing RNG state for training

@@ -9,7 +9,7 @@ from IntegerStringGenerator import (
     EvenAbsDiffRule, CopyModuloRule, SuccessorRule, ConditionalTransformRule, 
     LookupPermutationRule, ParityBasedRule, EvenGreaterThan10Rule, TwoTokenParityRule,
     IntegerStringGenerator, OperatorBasedGenerator, PlusMeansEvenRule, PlusMaxOfTwoRule,
-    PlusLastEvenRule
+    PlusLastEvenRule, Lucky7Rule
 )
 
 
@@ -91,6 +91,9 @@ def get_generator_from_config(config: dict) -> IntegerStringGenerator:
         operator_probability = data_config.get('operator_probability', 0.3)
         return PlusLastEvenRule(min_value=min_value, max_value=max_value, 
                                 operator_probability=operator_probability)
+    elif generator_type == "Lucky7Rule":
+        seven_probability = data_config.get('seven_probability', 0.25)
+        return Lucky7Rule(min_value=min_value, max_value=max_value, seven_probability=seven_probability)
     else:
         raise ValueError(f"Unknown generator type: {generator_type}")
 

@@ -1,0 +1,27 @@
+# Lucky 7: after every 7, next number = number before the 7. No residual connections.
+
+name: "lucky7"
+
+data:
+  generator_type: "Lucky7Rule"
+  min_value: 0
+  max_value: 10
+  num_sequences: 5000
+  min_length: 30
+  max_length: 80
+  seven_probability: 0.25   # bias so 7 appears ~1/4 of the time (more "after 7" examples)
+
+model:
+  n_embd: 2
+  block_size: 8
+  num_heads: 1
+  head_size: 2
+  use_residual: true
+
+training:
+  max_steps: 40000
+  batch_size: 8
+  learning_rate: 0.0005
+  eval_interval: 200
+  eval_iterations: 50
+  checkpoint_interval: 100
