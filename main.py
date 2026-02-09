@@ -26,6 +26,11 @@ from checkpoint import (
 )
 from visualize import visualize_from_checkpoint, visualize_all_checkpoints
 from video import create_embeddings_scatterplots_video, create_embedding_qkv_video
+from learning_videos import (
+    create_qk_space_video,
+    create_qk_space_and_attention_video,
+    create_output_heatmaps_video,
+)
 from plotting import (
     plot_training_data_heatmap,
     plot_learning_curve,
@@ -74,7 +79,6 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
     # Handle video creation mode (early return)
     if "--video" in sys.argv or "--video-qkv" in sys.argv:
         fps = 20
-        max_steps = None
         if "--fps" in sys.argv:
             fps_idx = sys.argv.index("--fps")
             if fps_idx + 1 < len(sys.argv):
@@ -83,20 +87,17 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
                 except ValueError:
                     print("Error: --fps must be followed by an integer")
                     sys.exit(1)
-        if "--max-steps" in sys.argv:
-            max_steps_idx = sys.argv.index("--max-steps")
-            if max_steps_idx + 1 < len(sys.argv):
-                try:
-                    max_steps = int(sys.argv[max_steps_idx + 1])
-                except ValueError:
-                    print("Error: --max-steps must be followed by an integer")
-                    sys.exit(1)
-        
-        # Choose which video to create
+
+        # Always use ALL checkpoints up to training max_steps; no manual cap.
         if "--video-qkv" in sys.argv:
-            create_embedding_qkv_video(config_name_actual, config, fps=fps, max_steps=max_steps)
+            # Backwards-compatible: only the embeddings/QKV video
+            create_embedding_qkv_video(config_name_actual, config, fps=fps, max_steps=None)
         else:
-            create_embeddings_scatterplots_video(config_name_actual, config, fps=fps, max_steps=max_steps)
+            # Full learning-dynamics suite (no standalone QK-only video)
+            create_embeddings_scatterplots_video(config_name_actual, config, fps=fps, max_steps=None)
+            create_embedding_qkv_video(config_name_actual, config, fps=fps, max_steps=None)
+            create_qk_space_and_attention_video(config_name_actual, config, fps=fps, max_steps=None)
+            create_output_heatmaps_video(config_name_actual, config, fps=fps, max_steps=None)
         return
     
     # Handle visualize_only mode

@@ -19,7 +19,25 @@ from checkpoint import (
     get_plots_dir,
     list_available_checkpoints,
 )
-from plotting import plot_embeddings_scatterplots_only, plot_embedding_qkv_comprehensive
+from plotting import (
+    plot_embeddings_scatterplots_only,
+    plot_embedding_qkv_comprehensive,
+    plot_tokenpos_qkv_simple,
+    plot_qk_embedding_space,
+    plot_qk_space_and_attention_heatmap,
+    plot_probability_heatmap_with_embeddings,
+)
+
+
+def _get_learning_dynamics_dir(config_name_actual: str) -> Path:
+    """
+    Returns the directory where learning-dynamics videos/GIFs should be written:
+    <run_name>/plots/learning_dynamics
+    """
+    base_plots = get_plots_dir(config_name_actual)
+    ld_dir = base_plots / "learning_dynamics"
+    ld_dir.mkdir(parents=True, exist_ok=True)
+    return ld_dir
 
 
 def create_embeddings_scatterplots_video(config_name_actual: str, config: dict, fps: int = 20, max_steps: int = None):
@@ -193,10 +211,9 @@ def create_embeddings_scatterplots_video(config_name_actual: str, config: dict, 
     
     # Create video and GIF
     print(f"Creating video and GIF from {len(frame_data)} frames...")
-    plots_dir = get_plots_dir(config_name_actual)
-    plots_dir.mkdir(parents=True, exist_ok=True)
-    video_path = plots_dir / "embeddings_scatterplots_evolution.mp4"
-    gif_path = plots_dir / "embeddings_scatterplots_evolution.gif"
+    ld_dir = _get_learning_dynamics_dir(config_name_actual)
+    video_path = ld_dir / "01_embeddings_scatterplots.mp4"
+    gif_path = ld_dir / "01_embeddings_scatterplots.gif"
     
     try:
         # Read all frames in correct order
@@ -303,11 +320,13 @@ def create_embedding_qkv_video(config_name_actual: str, config: dict, fps: int =
             itos = checkpoint_data["itos"]
             
             frame_path = temp_dir / f"frame_{step:06d}.png"
-            plot_embedding_qkv_comprehensive(
-                model, itos, 
+            # Use the simpler 2x2 \"embeddings, Q, K, V\" view for learning-dynamics video
+            plot_tokenpos_qkv_simple(
+                model,
+                itos,
                 save_path=str(frame_path),
-                fixed_limits=None,  # Dynamic limits per frame
-                step_label=step
+                fixed_limits=None,
+                step_label=step,
             )
             if frame_path.exists():
                 frame_data.append((step, frame_path))
@@ -330,10 +349,9 @@ def create_embedding_qkv_video(config_name_actual: str, config: dict, fps: int =
     
     # Create video and GIF
     print(f"Creating video and GIF from {len(frame_data)} frames...", flush=True)
-    plots_dir = get_plots_dir(config_name_actual)
-    plots_dir.mkdir(parents=True, exist_ok=True)
-    video_path = plots_dir / "embedding_qkv_evolution.mp4"
-    gif_path = plots_dir / "embedding_qkv_evolution.gif"
+    ld_dir = _get_learning_dynamics_dir(config_name_actual)
+    video_path = ld_dir / "02_embedding_qkv_comprehensive.mp4"
+    gif_path = ld_dir / "02_embedding_qkv_comprehensive.gif"
     
     try:
         frames = []

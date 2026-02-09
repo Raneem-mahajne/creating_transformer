@@ -1439,12 +1439,114 @@ def plot_embedding_qkv_comprehensive(model, itos, save_path=None, fixed_limits=N
     plt.tight_layout(rect=[0, 0, 1, 0.96] if step_label else [0, 0, 1, 1])
     
     if save_path:
-        # For video frames, use fixed size (no bbox_inches='tight') to ensure consistent dimensions
-        if step_label is not None:
-            plt.savefig(save_path, dpi=150)
-        else:
-            plt.savefig(save_path, bbox_inches='tight', dpi=150)
+        # For static figures, keep tight layout
+        plt.savefig(save_path, bbox_inches='tight', dpi=150)
         plt.close()
+    else:
+        plt.show()
+
+
+def plot_tokenpos_qkv_simple(model, itos, save_path=None, fixed_limits=None, step_label: int | None = None):
+    """
+    Simpler 2x2 figure:
+    - Token+position (sum) embedding space
+    - Q-transformed space
+    - K-transformed space
+    - V-transformed space
+
+    This matches the requested \"embeddings, Q, K, V\" learning-dynamics view.
+    """
+    model.eval()
+
+    # Get embeddings
+    embeddings = model.token_embedding.weight.detach().cpu().numpy()
+    vocab_size, n_embd = embeddings.shape
+    block_size = model.block_size
+    pos_emb_all = model.position_embedding_table.weight.detach().cpu().numpy()
+
+    # Create token+position combinations
+    num_combinations = vocab_size * block_size
+    all_combinations = np.zeros((num_combinations, n_embd))
+    combo_labels: list[str] = []
+    for token_idx in range(vocab_size):
+        for pos_idx in range(block_size):
+            idx = token_idx * block_size + pos_idx
+            all_combinations[idx] = embeddings[token_idx] + pos_emb_all[pos_idx]
+            combo_labels.append(_token_pos_label(itos[token_idx], pos_idx))
+
+    # First head Q/K/V
+    head = model.sa_heads.heads[0]
+    W_Q = head.query.weight.detach().cpu().numpy()
+    W_K = head.key.weight.detach().cpu().numpy()
+    W_V = head.value.weight.detach().cpu().numpy()
+
+    Q_transformed = all_combinations @ W_Q.T
+    K_transformed = all_combinations @ W_K.T
+    V_transformed = all_combinations @ W_V.T
+
+    def get_2d(data):
+        if data.shape[1] >= 2:
+            return data[:, 0], data[:, 1]
+        else:
+            return data[:, 0], np.zeros(len(data))
+
+    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+    if step_label is not None:
+        fig.suptitle(f"Step: {step_label}", fontsize=18, fontweight="bold", y=0.98)
+
+    # Panel 1: token+position embeddings (black)
+    ax_emb = axes[0, 0]
+    x_e, y_e = get_2d(all_combinations)
+    ax_emb.scatter(x_e, y_e, s=0, alpha=0)
+    for i, label in enumerate(combo_labels):
+        ax_emb.text(x_e[i], y_e[i], label, fontsize=9, ha="center", va="center", color="black")
+    ax_emb.set_title("Token+Position embeddings", fontsize=12, fontweight="bold")
+    ax_emb.set_xlabel("Dim 0", fontsize=10)
+    ax_emb.set_ylabel("Dim 1", fontsize=10)
+    ax_emb.grid(True, alpha=0.3)
+
+    # Panel 2: Q (blue)
+    ax_q = axes[0, 1]
+    x_q, y_q = get_2d(Q_transformed)
+    ax_q.scatter(x_q, y_q, s=0, alpha=0)
+    for i, label in enumerate(combo_labels):
+        ax_q.text(x_q[i], y_q[i], label, fontsize=9, ha="center", va="center", color="blue")
+    ax_q.set_title("Q-transformed", fontsize=12, fontweight="bold")
+    ax_q.set_xlabel("Head dim 0", fontsize=10)
+    ax_q.set_ylabel("Head dim 1", fontsize=10)
+    ax_q.grid(True, alpha=0.3)
+
+    # Panel 3: K (red)
+    ax_k = axes[1, 0]
+    x_k, y_k = get_2d(K_transformed)
+    ax_k.scatter(x_k, y_k, s=0, alpha=0)
+    for i, label in enumerate(combo_labels):
+        ax_k.text(x_k[i], y_k[i], label, fontsize=9, ha="center", va="center", color="red")
+    ax_k.set_title("K-transformed", fontsize=12, fontweight="bold")
+    ax_k.set_xlabel("Head dim 0", fontsize=10)
+    ax_k.set_ylabel("Head dim 1", fontsize=10)
+    ax_k.grid(True, alpha=0.3)
+
+    # Panel 4: V (green)
+    ax_v = axes[1, 1]
+    x_v, y_v = get_2d(V_transformed)
+    ax_v.scatter(x_v, y_v, s=0, alpha=0)
+    for i, label in enumerate(combo_labels):
+        ax_v.text(x_v[i], y_v[i], label, fontsize=9, ha="center", va="center", color="green")
+    ax_v.set_title("V-transformed", fontsize=12, fontweight="bold")
+    ax_v.set_xlabel("Head dim 0", fontsize=10)
+    ax_v.set_ylabel("Head dim 1", fontsize=10)
+    ax_v.grid(True, alpha=0.3)
+
+    plt.tight_layout(rect=[0, 0, 1, 0.96] if step_label is not None else None)
+
+    if save_path:
+        # For video frames (step_label not None), avoid bbox_inches='tight' so all frames share the same size.
+        if step_label is not None:
+            plt.savefig(save_path, dpi=150, facecolor="white")
+        else:
+            plt.savefig(save_path, bbox_inches="tight", dpi=150, facecolor="white")
+        plt.close(fig)
     else:
         plt.show()
     
@@ -3702,7 +3804,7 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
 # -----------------------------
 # Q/K Embedding Space Visualization
 # -----------------------------
-def plot_qk_embedding_space(model, itos, save_path: str = None):
+def plot_qk_embedding_space(model, itos, save_path: str = None, step_label: int | None = None):
     """
     Create a single scatter plot showing ALL Q and K transformed embeddings
     with both token AND position labels for every combination.
@@ -3763,6 +3865,8 @@ def plot_qk_embedding_space(model, itos, save_path: str = None):
     
     # Create single large figure
     fig, ax = plt.subplots(figsize=(20, 16))
+    if step_label is not None:
+        fig.suptitle(f"Step: {step_label}", fontsize=18, fontweight="bold", y=0.98)
     label_fontsize = 11
     title_fontsize = 18
     axis_fontsize = 14
@@ -4171,7 +4275,9 @@ def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, ar
 
 
 @torch.no_grad()
-def plot_probability_heatmap_with_embeddings(model, itos, save_path=None, grid_resolution=80, extent_margin=0.5):
+def plot_probability_heatmap_with_embeddings(
+    model, itos, save_path=None, grid_resolution=80, extent_margin=0.5, step_label: int | None = None
+):
     """
     Plot probability heatmaps for each token with all token+position combinations from
     the original embedding space overlaid on top.
@@ -4232,6 +4338,8 @@ def plot_probability_heatmap_with_embeddings(model, itos, save_path=None, grid_r
     n_cols = min(4, vocab_size)
     n_rows = (vocab_size + n_cols - 1) // n_cols
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
+    if step_label is not None:
+        fig.suptitle(f"Step: {step_label}", fontsize=16, fontweight="bold", y=0.98)
     if n_rows == 1 and n_cols == 1:
         axes = np.array([[axes]])
     elif n_rows == 1:
@@ -4488,6 +4596,145 @@ def plot_qk_softmax_attention_heatmap(model, itos, save_path: str = None):
         print(f"Softmax attention heatmap saved to {save_path}")
     else:
         plt.show()
+
+
+def plot_qk_space_and_attention_heatmap(model, itos, save_path: str = None, step_label: int | None = None):
+    """
+    Combined visualization:
+    - Left: Q/K embedding space (queries in blue, keys in red) for all token–position pairs
+    - Right: full pre-softmax attention matrix Q·K with causal masking
+
+    This is designed specifically for learning-dynamics videos so we can see how
+    the Q/K geometry and the induced attention pattern co-evolve over training.
+    """
+    model.eval()
+
+    # Model parameters
+    vocab_size = model.token_embedding.weight.shape[0]
+    block_size = model.position_embedding_table.weight.shape[0]
+
+    head = model.sa_heads.heads[0]
+    W_Q = head.query.weight.detach().cpu().numpy()
+    W_K = head.key.weight.detach().cpu().numpy()
+    head_size = W_Q.shape[0]
+
+    token_emb = model.token_embedding.weight.detach().cpu().numpy()
+    pos_emb = model.position_embedding_table.weight.detach().cpu().numpy()
+
+    # Compute Q and K for all token-position combinations
+    num_combinations = vocab_size * block_size
+    Q_all = np.zeros((num_combinations, head_size))
+    K_all = np.zeros((num_combinations, head_size))
+    labels = []
+
+    idx = 0
+    for t in range(vocab_size):
+        for p in range(block_size):
+            combined_emb = token_emb[t] + pos_emb[p]
+            Q_all[idx] = W_Q @ combined_emb
+            K_all[idx] = W_K @ combined_emb
+            labels.append(_token_pos_label(itos[t], p))
+            idx += 1
+
+    # 2D projection for Q/K scatter (direct if head_size==2, PCA otherwise)
+    if head_size == 2:
+        Q_2d = Q_all
+        K_2d = K_all
+    else:
+        from sklearn.decomposition import PCA
+        combined = np.vstack([Q_all, K_all])
+        pca = PCA(n_components=2)
+        combined_2d = pca.fit_transform(combined)
+        Q_2d = combined_2d[:num_combinations]
+        K_2d = combined_2d[num_combinations:]
+
+    # Full attention matrix Q·K / sqrt(d)
+    attention_matrix = (Q_all @ K_all.T) / np.sqrt(head_size)
+
+    # Causal masking: query at position p can only attend to keys at position <= p
+    query_positions = np.array([p for t in range(vocab_size) for p in range(block_size)])
+    key_positions = np.array([p for t in range(vocab_size) for p in range(block_size)])
+    causal_mask = query_positions[:, None] >= key_positions[None, :]
+    masked_attention = np.where(causal_mask, attention_matrix, np.nan)
+
+    # Figure with two panels: left scatter, right heatmap
+    fig, (ax_scatter, ax_heat) = plt.subplots(1, 2, figsize=(24, 10))
+    if step_label is not None:
+        fig.suptitle(f"Step: {step_label}", fontsize=18, fontweight="bold", y=0.98)
+
+    # --- Left: Q/K embedding space ---
+    all_x = np.concatenate([Q_2d[:, 0], K_2d[:, 0]])
+    all_y = np.concatenate([Q_2d[:, 1], K_2d[:, 1]])
+    ax_scatter.scatter(all_x, all_y, s=0, alpha=0)
+
+    label_fontsize = 9
+    axis_fontsize = 12
+
+    for i in range(num_combinations):
+        ax_scatter.text(
+            Q_2d[i, 0],
+            Q_2d[i, 1],
+            labels[i],
+            fontsize=label_fontsize,
+            ha="center",
+            va="center",
+            color="blue",
+        )
+    for i in range(num_combinations):
+        ax_scatter.text(
+            K_2d[i, 0],
+            K_2d[i, 1],
+            labels[i],
+            fontsize=label_fontsize,
+            ha="center",
+            va="center",
+            color="red",
+        )
+
+    ax_scatter.set_xlabel("Q/K dim 1" + (" (PCA)" if head_size != 2 else ""), fontsize=axis_fontsize)
+    ax_scatter.set_ylabel("Q/K dim 2" + (" (PCA)" if head_size != 2 else ""), fontsize=axis_fontsize)
+    ax_scatter.set_title("Q/K embedding space", fontsize=axis_fontsize + 2, fontweight="bold")
+    ax_scatter.grid(True, alpha=0.3)
+
+    # --- Right: attention heatmap ---
+    im = ax_heat.imshow(masked_attention, cmap="nipy_spectral", aspect="auto")
+
+    xtick_positions = []
+    xtick_labels = []
+    ytick_positions = []
+    ytick_labels = []
+    for t in range(vocab_size):
+        mid_pos = t * block_size + block_size // 2
+        xtick_positions.append(mid_pos)
+        xtick_labels.append(itos[t])
+        ytick_positions.append(mid_pos)
+        ytick_labels.append(itos[t])
+
+    ax_heat.set_xticks(xtick_positions)
+    ax_heat.set_xticklabels(xtick_labels, fontsize=8, fontweight="bold", rotation=45, ha="right")
+    ax_heat.set_yticks(ytick_positions)
+    ax_heat.set_yticklabels(ytick_labels, fontsize=8, fontweight="bold")
+
+    for t in range(vocab_size + 1):
+        ax_heat.axhline(y=t * block_size - 0.5, color="white", linewidth=1.0, alpha=0.8)
+        ax_heat.axvline(x=t * block_size - 0.5, color="white", linewidth=1.0, alpha=0.8)
+
+    ax_heat.set_xlabel("Key token", fontsize=axis_fontsize)
+    ax_heat.set_ylabel("Query token", fontsize=axis_fontsize)
+    ax_heat.set_title(f"Full attention matrix Q·K / √{head_size} (causal masked)", fontsize=axis_fontsize + 2, fontweight="bold")
+
+    cbar = plt.colorbar(im, ax=ax_heat, shrink=0.7)
+    cbar.set_label("Attention score (pre-softmax)", fontsize=axis_fontsize - 1)
+
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, bbox_inches="tight", dpi=150, facecolor="white")
+        plt.close(fig)
+        print(f"Q/K space + attention heatmap saved to {save_path}")
+    else:
+        plt.show()
+
 
 # -----------------------------
 # Checkpoint saving/loading
