@@ -1217,6 +1217,81 @@ class PlusLastEvenRule(OperatorBasedGenerator):
         return correctness, all(c == 1 for c in correctness)
 
 
+class StepBackRule(IntegerStringGenerator):
+    """
+    Rule: Every time a trigger value appears, the next number must be the value that appeared
+    exactly `step_back` positions before the trigger.
+    
+    Example (trigger=9, step_back=3):
+    4, 8, 1, 5, 9, 8  (because 8 was three steps before the 9)
+    """
+    
+    def __init__(
+        self,
+        min_value: int = 0,
+        max_value: int = 20,
+        sequence_length: int = None,
+        trigger_value: int = 9,
+        step_back: int = 3,
+        trigger_probability: float = 0.0,
+    ):
+        super().__init__(min_value, max_value, sequence_length)
+        self.all_nums = list(range(min_value, max_value + 1))
+        self.fallback = min_value
+        self.trigger_value = trigger_value
+        self.step_back = step_back
+        self.trigger_probability = trigger_probability
+        self._trigger_in_range = self.min_value <= self.trigger_value <= self.max_value
+    
+    def _random_token(self) -> int:
+        if self.trigger_probability > 0 and self._trigger_in_range and random.random() < self.trigger_probability:
+            return self.trigger_value
+        return random.choice(self.all_nums) if self.all_nums else self.fallback
+    
+    def generate_sequence(self, length: int) -> list[int]:
+        """
+        Generate a sequence where after each trigger value, the next token equals the value
+        `step_back` positions before the trigger. Otherwise emit random tokens.
+        """
+        if length == 0:
+            return []
+        sequence = []
+        current = self._random_token()
+        sequence.append(current)
+        for _ in range(length - 1):
+            if (
+                len(sequence) >= self.step_back + 1
+                and sequence[-1] == self.trigger_value
+            ):
+                current = sequence[-(self.step_back + 1)]
+            else:
+                current = self._random_token()
+            sequence.append(current)
+        return sequence
+    
+    def verify_sequence(self, sequence: list[int]) -> tuple[list[int], bool]:
+        """Verify: if previous token is trigger and history is sufficient, current must match step_back."""
+        if len(sequence) == 0:
+            return [], True
+        correctness = [1]
+        for i in range(1, len(sequence)):
+            if sequence[i - 1] == self.trigger_value and (i - 1) >= self.step_back:
+                expected = sequence[i - 1 - self.step_back]
+                correctness.append(1 if sequence[i] == expected else 0)
+            else:
+                correctness.append(1)
+        return correctness, all(c == 1 for c in correctness)
+    
+    def valence_mask(self, sequence: list) -> list[bool]:
+        if len(sequence) == 0:
+            return []
+        mask = [False]
+        for i in range(1, len(sequence)):
+            constrained = bool(sequence[i - 1] == self.trigger_value and (i - 1) >= self.step_back)
+            mask.append(constrained)
+        return mask
+
+
 class Lucky7Rule(IntegerStringGenerator):
     """
     Rule: Every time a 7 appears, the next number must be the same as the number before the 7.

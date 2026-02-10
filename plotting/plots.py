@@ -1852,17 +1852,14 @@ def plot_qkv_transformations(model, itos, save_path=None):
     K_transformed = all_combinations @ W_K.T  # (N, hs)
     V_transformed = all_combinations @ W_V.T  # (N, hs)
     
-    # Create figure: 5 rows, 3 columns
-    # Row 1: Original token+position embeddings (spanning all 3 columns)
-    # Row 2: QKV weights
-    # Row 3: Transformed token-position combinations (scatter)
-    # Row 4: Q/K/V Dim 0 heatmaps (tokens × positions)
-    # Row 5: Q/K/V Dim 1 heatmaps (tokens × positions)
-    fig = plt.figure(figsize=(24, 32))
-    gs = GridSpec(5, 3, figure=fig, hspace=0.4, wspace=0.3)
+    # Create figure: 2 rows, 4 columns
+    # Row 1: Original token+position embeddings + W_Q, W_K, W_V
+    # Row 2: Q, K, V transformed embeddings (aligned under W_Q/W_K/W_V)
+    fig = plt.figure(figsize=(20, 10))
+    gs = GridSpec(2, 4, figure=fig, hspace=0.35, wspace=0.3)
     
-    # Row 1: Original token+position embeddings (spanning all 3 columns)
-    ax0 = fig.add_subplot(gs[0, :])
+    # Row 1, Col 1: Original token+position embeddings
+    ax0 = fig.add_subplot(gs[0, 0])
     if n_embd >= 2:
         # Plot original embeddings in first 2 dimensions
         X_orig = all_combinations[:, [0, 1]]
@@ -1873,7 +1870,8 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax0.set_xlabel("Embedding Dim 0")
         ax0.set_ylabel("Embedding Dim 1")
         ax0.grid(True, alpha=0.3)
-        ax0.axis('equal')
+        ax0.set_aspect('equal', adjustable='box')
+        ax0.set_xlim(left=-5)
     else:
         # 1D case
         X_orig_1d = all_combinations[:, 0]
@@ -1886,9 +1884,9 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax0.grid(True, alpha=0.3)
         ax0.set_yticks([])
     
-    # Row 2: QKV weights
+    # Row 1: QKV weights
     # W_Q
-    ax1 = fig.add_subplot(gs[1, 0])
+    ax1 = fig.add_subplot(gs[0, 1])
     x_labels = list(range(n_embd))
     y_labels_local = list(range(head_size))
     sns.heatmap(W_Q, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax1)
@@ -1897,27 +1895,30 @@ def plot_qkv_transformations(model, itos, save_path=None):
     ax1.set_ylabel("hs (head_size)")
     
     # W_K
-    ax2 = fig.add_subplot(gs[1, 1])
+    ax2 = fig.add_subplot(gs[0, 2])
     sns.heatmap(W_K, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax2)
     ax2.set_title(f"W_K (hs×C={head_size}×{n_embd})", fontsize=12)
     ax2.set_xlabel("C (embedding dim)")
     ax2.set_ylabel("hs (head_size)")
     
     # W_V
-    ax3 = fig.add_subplot(gs[1, 2])
+    ax3 = fig.add_subplot(gs[0, 3])
     sns.heatmap(W_V, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax3)
     ax3.set_title(f"W_V (hs×C={head_size}×{n_embd})", fontsize=12)
     ax3.set_xlabel("C (embedding dim)")
     ax3.set_ylabel("hs (head_size)")
     
-    # Row 3: Transformed token-position combinations
+    # Row 2: Transformed token-position combinations
+    ax_empty = fig.add_subplot(gs[1, 0])
+    ax_empty.axis("off")
+
     # Q-transformed
-    ax4 = fig.add_subplot(gs[2, 0])
+    ax4 = fig.add_subplot(gs[1, 1])
     if head_size >= 2:
         Q_2d = Q_transformed[:, [0, 1]]
         ax4.scatter(Q_2d[:, 0], Q_2d[:, 1], s=0, alpha=0)
         for i in range(len(labels)):
-            ax4.text(Q_2d[i, 0], Q_2d[i, 1], labels[i], fontsize=10, ha='center', va='center')
+            ax4.text(Q_2d[i, 0], Q_2d[i, 1], labels[i], fontsize=10, ha='center', va='center', color='blue')
         ax4.set_title(f"Q-Transformed: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=12)
         ax4.set_xlabel("Head Dim 0")
         ax4.set_ylabel("Head Dim 1")
@@ -1928,7 +1929,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         Q_1d = Q_transformed[:, 0]
         ax4.scatter(Q_1d, np.zeros_like(Q_1d), s=0, alpha=0)
         for i in range(len(labels)):
-            ax4.text(Q_1d[i], 0, labels[i], fontsize=10, ha='center', va='center', rotation=90)
+            ax4.text(Q_1d[i], 0, labels[i], fontsize=10, ha='center', va='center', rotation=90, color='blue')
         ax4.set_title(f"Q-Transformed: Dim 0\n(All tokens, {num_combinations} combinations)", fontsize=12)
         ax4.set_xlabel("Head Dim 0")
         ax4.set_ylabel("")
@@ -1936,12 +1937,12 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax4.set_yticks([])
     
     # K-transformed
-    ax5 = fig.add_subplot(gs[2, 1])
+    ax5 = fig.add_subplot(gs[1, 2])
     if head_size >= 2:
         K_2d = K_transformed[:, [0, 1]]
         ax5.scatter(K_2d[:, 0], K_2d[:, 1], s=0, alpha=0)
         for i in range(len(labels)):
-            ax5.text(K_2d[i, 0], K_2d[i, 1], labels[i], fontsize=10, ha='center', va='center')
+            ax5.text(K_2d[i, 0], K_2d[i, 1], labels[i], fontsize=10, ha='center', va='center', color='red')
         ax5.set_title(f"K-Transformed: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=12)
         ax5.set_xlabel("Head Dim 0")
         ax5.set_ylabel("Head Dim 1")
@@ -1951,7 +1952,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         K_1d = K_transformed[:, 0]
         ax5.scatter(K_1d, np.zeros_like(K_1d), s=0, alpha=0)
         for i in range(len(labels)):
-            ax5.text(K_1d[i], 0, labels[i], fontsize=10, ha='center', va='center', rotation=90)
+            ax5.text(K_1d[i], 0, labels[i], fontsize=10, ha='center', va='center', rotation=90, color='red')
         ax5.set_title(f"K-Transformed: Dim 0\n(All tokens, {num_combinations} combinations)", fontsize=12)
         ax5.set_xlabel("Head Dim 0")
         ax5.set_ylabel("")
@@ -1959,7 +1960,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax5.set_yticks([])
     
     # V-transformed
-    ax6 = fig.add_subplot(gs[2, 2])
+    ax6 = fig.add_subplot(gs[1, 3])
     # V colors: green spectrum
     v_cmap = plt.cm.get_cmap('Greens')
     v_colors = [v_cmap(0.3 + 0.6 * i / max(num_combinations - 1, 1)) for i in range(num_combinations)]
@@ -1989,68 +1990,6 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax6.set_ylabel("")
         ax6.grid(True, alpha=0.3)
         ax6.set_yticks([])
-    
-    # Row 4: Q/K/V Dim 0 heatmaps (tokens × positions)
-    # Create heatmap data: reshape transformed values into (tokens, positions) grid
-    token_labels = [str(itos[i]) for i in range(vocab_size)]
-    pos_labels = [_pos_only_label(i) for i in range(block_size)]
-    
-    # Q Dim 0 heatmap
-    ax7 = fig.add_subplot(gs[3, 0])
-    Q_dim0_heatmap = Q_transformed[:, 0].reshape(vocab_size, block_size)
-    sns.heatmap(Q_dim0_heatmap, cmap="RdBu_r", center=0, xticklabels=pos_labels, yticklabels=token_labels, cbar=True, ax=ax7)
-    ax7.set_title(f"Q-Transformed: Dim 0 (tokens×positions)", fontsize=12)
-    ax7.set_xlabel("Position")
-    ax7.set_ylabel("Token")
-    
-    # K Dim 0 heatmap
-    ax8 = fig.add_subplot(gs[3, 1])
-    K_dim0_heatmap = K_transformed[:, 0].reshape(vocab_size, block_size)
-    sns.heatmap(K_dim0_heatmap, cmap="RdBu_r", center=0, xticklabels=pos_labels, yticklabels=token_labels, cbar=True, ax=ax8)
-    ax8.set_title(f"K-Transformed: Dim 0 (tokens×positions)", fontsize=12)
-    ax8.set_xlabel("Position")
-    ax8.set_ylabel("Token")
-    
-    # V Dim 0 heatmap
-    ax9 = fig.add_subplot(gs[3, 2])
-    V_dim0_heatmap = V_transformed[:, 0].reshape(vocab_size, block_size)
-    sns.heatmap(V_dim0_heatmap, cmap="RdBu_r", center=0, xticklabels=pos_labels, yticklabels=token_labels, cbar=True, ax=ax9)
-    ax9.set_title(f"V-Transformed: Dim 0 (tokens×positions)", fontsize=12)
-    ax9.set_xlabel("Position")
-    ax9.set_ylabel("Token")
-    
-    # Row 5: Q/K/V Dim 1 heatmaps (tokens × positions) - only if head_size >= 2
-    if head_size >= 2:
-        # Q Dim 1 heatmap
-        ax10 = fig.add_subplot(gs[4, 0])
-        Q_dim1_heatmap = Q_transformed[:, 1].reshape(vocab_size, block_size)
-        sns.heatmap(Q_dim1_heatmap, cmap="RdBu_r", center=0, xticklabels=pos_labels, yticklabels=token_labels, cbar=True, ax=ax10)
-        ax10.set_title(f"Q-Transformed: Dim 1 (tokens×positions)", fontsize=12)
-        ax10.set_xlabel("Position")
-        ax10.set_ylabel("Token")
-        
-        # K Dim 1 heatmap
-        ax11 = fig.add_subplot(gs[4, 1])
-        K_dim1_heatmap = K_transformed[:, 1].reshape(vocab_size, block_size)
-        sns.heatmap(K_dim1_heatmap, cmap="RdBu_r", center=0, xticklabels=pos_labels, yticklabels=token_labels, cbar=True, ax=ax11)
-        ax11.set_title(f"K-Transformed: Dim 1 (tokens×positions)", fontsize=12)
-        ax11.set_xlabel("Position")
-        ax11.set_ylabel("Token")
-        
-        # V Dim 1 heatmap
-        ax12 = fig.add_subplot(gs[4, 2])
-        V_dim1_heatmap = V_transformed[:, 1].reshape(vocab_size, block_size)
-        sns.heatmap(V_dim1_heatmap, cmap="RdBu_r", center=0, xticklabels=pos_labels, yticklabels=token_labels, cbar=True, ax=ax12)
-        ax12.set_title(f"V-Transformed: Dim 1 (tokens×positions)", fontsize=12)
-        ax12.set_xlabel("Position")
-        ax12.set_ylabel("Token")
-    else:
-        # For 1D head_size, show placeholder
-        for col in range(3):
-            ax = fig.add_subplot(gs[4, col])
-            ax.text(0.5, 0.5, "N/A (1D head_size)", ha='center', va='center', transform=ax.transAxes, fontsize=12)
-            ax.set_title(f"{'QKV'[col]}-Transformed: Dim 1 (N/A)", fontsize=12)
-            ax.axis('off')
     
     plt.tight_layout()
     if save_path:
@@ -3867,10 +3806,10 @@ def plot_qk_embedding_space(model, itos, save_path: str = None, step_label: int 
     fig, ax = plt.subplots(figsize=(20, 16))
     if step_label is not None:
         fig.suptitle(f"Step: {step_label}", fontsize=18, fontweight="bold", y=0.98)
-    label_fontsize = 11
-    title_fontsize = 18
-    axis_fontsize = 14
-    tick_fontsize = 12
+    label_fontsize = 20
+    title_fontsize = 24
+    axis_fontsize = 24
+    tick_fontsize = 22
 
     # Plot invisible scatter points (for axis scaling)
     all_x = np.concatenate([Q_2d[:, 0], K_2d[:, 0]])
@@ -3897,9 +3836,6 @@ def plot_qk_embedding_space(model, itos, save_path: str = None, step_label: int 
         Patch(facecolor='red', edgecolor='black', label='Key'),
     ]
     leg = ax.legend(handles=legend_handles, loc='upper left', fontsize=axis_fontsize)
-    ax.text(0.02, 0.88, "Format: token with position subscript (e.g. 8₃)",
-            transform=ax.transAxes, fontsize=tick_fontsize, verticalalignment='top',
-            bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.9))
 
     plt.tight_layout()
 

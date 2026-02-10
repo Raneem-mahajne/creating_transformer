@@ -1,4 +1,5 @@
 """Visualization from checkpoints."""
+import csv
 import os
 import random
 import torch
@@ -65,6 +66,11 @@ def visualize_from_checkpoint(
     generator = get_generator_from_config(config)
 
     decoded_train_sequences = [decode(seq) for seq in train_sequences[:6]]
+    manifest = _load_plots_manifest()
+
+    def _plot_path(default_name: str, base_dir: str = plots_dir) -> str:
+        mapped = _lookup_manifest_filename(manifest, config_name_actual, default_name)
+        return os.path.join(base_dir, mapped)
     with open(os.path.join(plots_dir, "training_data_samples.txt"), "w", encoding="utf-8") as f:
         f.write(f"# Training Data Samples for: {config_name_actual}\n")
         f.write(f"# {len(decoded_train_sequences)} sample sequences (decoded from train_sequences)\n")
@@ -75,7 +81,7 @@ def visualize_from_checkpoint(
     _train_acc, _train_correct, _train_incorrect = plot_training_data_heatmap(
         decoded_train_sequences,
         generator,
-        save_path=os.path.join(plots_dir, "training_data_heatmap.png"),
+        save_path=_plot_path("training_data_heatmap.png"),
         num_sequences=len(decoded_train_sequences),
         max_length=50,
     )
@@ -106,7 +112,7 @@ def visualize_from_checkpoint(
         train_loss_history,
         val_loss_history,
         rule_error_history=rule_error_history,
-        save_path=os.path.join(plots_dir, "learning_curve.png"),
+        save_path=_plot_path("learning_curve.png"),
         eval_interval=eval_interval,
     )
 
@@ -115,7 +121,7 @@ def visualize_from_checkpoint(
             generated_sequences_e0,
             generated_sequences,
             generator,
-            save_path=os.path.join(plots_dir, "generated_sequences_heatmap.png"),
+            save_path=_plot_path("generated_sequences_heatmap.png"),
             num_sequences=5,
             max_length=50,
         )
@@ -125,7 +131,7 @@ def visualize_from_checkpoint(
         heatmap_accuracy, correct_count, incorrect_count = plot_generated_sequences_heatmap(
             generated_sequences,
             generator,
-            save_path=os.path.join(plots_dir, "generated_sequences_heatmap.png"),
+            save_path=_plot_path("generated_sequences_heatmap.png"),
             num_sequences=len(generated_sequences),
             max_length=50,
         )
@@ -136,7 +142,8 @@ def visualize_from_checkpoint(
     X3, _ = get_batch_from_sequences(train_sequences, block_size, 1)
     X_list = [X1, X2, X3]
 
-    arch_path = os.path.join(str(get_plots_dir(config_name_actual)), "architecture.png")
+    base_plots_dir = str(get_plots_dir(config_name_actual))
+    arch_path = _plot_path("architecture.png", base_dir=base_plots_dir)
     if not os.path.exists(arch_path):
         plot_architecture_diagram(config, save_path=arch_path, model=model, vocab_size=vocab_size, batch_size=training_config.get('batch_size', 4))
 
@@ -144,37 +151,38 @@ def visualize_from_checkpoint(
         model, X_list, itos, save_path=os.path.join(plots_dir, "qkv.png"), num_sequences=3
     )
     plot_residuals(
-        model, X_list, itos, save_path=os.path.join(plots_dir, "residuals.png"), num_sequences=3
+        model, X_list, itos, save_path=_plot_path("residuals.png"), num_sequences=3
     )
-    plot_embeddings_pca(model, itos, save_path=os.path.join(plots_dir, "embeddings.png"))
-    plot_embeddings_scatterplots_only(model, itos, save_path=os.path.join(plots_dir, "embeddings_scatterplots.png"))
-    plot_embedding_qkv_comprehensive(model, itos, save_path=os.path.join(plots_dir, "embedding_qkv_comprehensive.png"))
-    plot_qkv_transformations(model, itos, save_path=os.path.join(plots_dir, "qkv_transformations.png"))
+    plot_embeddings_pca(model, itos, save_path=_plot_path("embeddings.png"))
+    plot_embeddings_scatterplots_only(model, itos, save_path=_plot_path("embeddings_scatterplots.png"))
+    plot_embedding_qkv_comprehensive(model, itos, save_path=_plot_path("embedding_qkv_comprehensive.png"))
+    plot_qkv_transformations(model, itos, save_path=_plot_path("qkv_transformations.png"))
     plot_token_position_embedding_space(
-        model, itos, save_path=os.path.join(plots_dir, "token_position_embedding_space.png")
+        model, itos, save_path=_plot_path("token_position_embedding_space.png")
     )
     plot_attention_matrix(
-        model, X_list, itos, save_path=os.path.join(plots_dir, "attention_matrix.png"), num_sequences=3
+        model, X_list, itos, save_path=_plot_path("attention_matrix.png"), num_sequences=3
     )
-    plot_qk_embedding_space(model, itos, save_path=os.path.join(plots_dir, "qk_embedding_space.png"))
+    plot_qk_embedding_space(model, itos, save_path=_plot_path("qk_embedding_space.png"))
     plot_qk_embedding_space_focused_query(
         model, itos, token_str="+", position=5,
-        save_path=os.path.join(plots_dir, "qk_embedding_space_plus5_focus.png"),
+        save_path=_plot_path("qk_embedding_space_plus5_focus.png"),
     )
     plot_qk_full_attention_heatmap(
-        model, itos, save_path=os.path.join(plots_dir, "qk_full_attention_heatmap.png")
+        model, itos, save_path=_plot_path("qk_full_attention_heatmap.png")
     )
     plot_lm_head_probability_heatmaps(
-        model, itos, save_path=os.path.join(plots_dir, "lm_head_probability_heatmaps.png")
+        model, itos, save_path=_plot_path("lm_head_probability_heatmaps.png")
     )
     plot_probability_heatmap_with_embeddings(
-        model, itos, save_path=os.path.join(plots_dir, "probability_heatmap_with_embeddings.png")
+        model, itos, save_path=_plot_path("probability_heatmap_with_embeddings.png")
     )
     demo_sequences = [s for s in train_sequences[:3] if len(s) >= 2]
     if demo_sequences:
         plot_v_before_after_demo_sequences(
             model, itos, demo_sequences, save_dir=plots_dir,
         )
+        _rename_demo_outputs(plots_dir, manifest, config_name_actual)
 
     print(f"All visualizations saved to {plots_dir}")
 
@@ -193,3 +201,38 @@ def visualize_all_checkpoints(config_name_actual: str, config: dict):
             visualize_from_checkpoint(config_name_actual, checkpoint_data, config, step=step)
         else:
             print(f"Warning: Could not load checkpoint at step {step}")
+
+
+def _load_plots_manifest() -> list[dict]:
+    manifest_path = os.path.join(os.path.dirname(__file__), "plots_manifest.csv")
+    if not os.path.exists(manifest_path):
+        return []
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        return [row for row in reader if row.get("config") and row.get("default_name") and row.get("filename")]
+
+
+def _lookup_manifest_filename(manifest: list[dict], config_name: str, default_name: str) -> str:
+    for row in manifest:
+        if row["config"] == config_name and row["default_name"] == default_name:
+            return row["filename"]
+    return default_name
+
+
+def _rename_demo_outputs(plots_dir: str, manifest: list[dict], config_name: str) -> None:
+    demo_defaults = [
+        "v_before_after_demo_0.png",
+        "v_before_after_demo_1.png",
+        "v_before_after_demo_2.png",
+    ]
+    for default_name in demo_defaults:
+        src = os.path.join(plots_dir, default_name)
+        if not os.path.exists(src):
+            continue
+        dst_name = _lookup_manifest_filename(manifest, config_name, default_name)
+        if dst_name == default_name:
+            continue
+        dst = os.path.join(plots_dir, dst_name)
+        if os.path.exists(dst):
+            os.remove(dst)
+        os.rename(src, dst)

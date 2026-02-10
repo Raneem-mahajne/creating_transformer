@@ -1,0 +1,13 @@
+inputs a token string of length block_size N
+convert string to token and position embedding matrices (block_size*embedding_size) 
+output_matrix: adding the position embedding matrix to the token embedding matrix 
+
+
+self attention: 
+Q = output_matrix * W_Q
+K = output_matrix * W_K
+V = output_matrix * W_V
+
+attention matrix: Q * K^T / sqrt (of smth)
+apply masking
+final_output = softmax(attention matrix * V)
