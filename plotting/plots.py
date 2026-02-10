@@ -2466,7 +2466,7 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         ax.set_xlim(x_min - x_margin, x_max + x_margin)
         ax.set_ylim(y_min - y_margin, y_max + y_margin)
         
-        # Background overlay: ALL Q/K combinations (annotated, dark visible grey)
+        # Background overlay: ALL Q/K combinations (annotated, lighter grey)
         # Draw overlay FIRST so it's underneath
         for i, label in enumerate(all_QK_labels):
             x_q, y_q = all_Q_2d_overlay[i, 0], all_Q_2d_overlay[i, 1]
@@ -2475,11 +2475,11 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
             if x_min - x_margin <= x_q <= x_max + x_margin and y_min - y_margin <= y_q <= y_max + y_margin:
                 ax.text(x_q, y_q, label,
                        fontsize=11, alpha=0.7, ha='center', va='center', 
-                       color='#404040', zorder=1)  # Smaller font size, darker grey
+                       color='#808080', zorder=1)  # Lighter grey
             if x_min - x_margin <= x_k <= x_max + x_margin and y_min - y_margin <= y_k <= y_max + y_margin:
                 ax.text(x_k, y_k, label,
                        fontsize=11, alpha=0.7, ha='center', va='center', 
-                       color='#404040', zorder=1)  # Smaller font size, darker grey
+                       color='#808080', zorder=1)  # Lighter grey
         
         # Foreground: Sequence-specific Q/K points
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
@@ -2647,7 +2647,7 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         ax.set_xlim(xlim_shared)
         ax.set_ylim(ylim_shared)
         
-        # Background overlay: ALL V combinations (annotated, dark visible grey)
+        # Background overlay: ALL V combinations (annotated, lighter grey)
         # Draw overlay FIRST so it's underneath
         for i, label in enumerate(all_V_labels):
             # Check if point is within axis limits before drawing
@@ -2655,7 +2655,7 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
             if xlim_shared[0] <= x <= xlim_shared[1] and ylim_shared[0] <= y <= ylim_shared[1]:
                 ax.text(x, y, label,
                        fontsize=7, alpha=0.7, ha='center', va='center', 
-                       color='#404040', zorder=1)  # Smaller font size, darker grey
+                       color='#808080', zorder=1)  # Lighter grey
         
         # Foreground: Sequence-specific V points
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
@@ -4551,6 +4551,11 @@ def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, ar
         elif n_cols == 1:
             axes = axes.reshape(-1, 1)
 
+        # Increase font sizes for seq_idx==0 (plot 15) and seq_idx==2 (plot 17)
+        title_fs = 14 if (seq_idx == 0 or seq_idx == 2) else 10
+        label_fs = 11 if (seq_idx == 0 or seq_idx == 2) else 9
+        fs = 7.0 if (seq_idx == 0 or seq_idx == 2) else 4.5  # Font size for point labels
+        
         for r in range(n_rows):
             for c in range(n_cols):
                 ax = axes[r, c]
@@ -4560,13 +4565,13 @@ def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, ar
                 Z = probs_plot[:, c].reshape(grid_resolution, grid_resolution)
                 ax.pcolormesh(xx_plot, yy_plot, Z, cmap='viridis', vmin=0, vmax=1, shading='auto')
                 if c == 0:
-                    ax.set_ylabel("dim 1")
+                    ax.set_ylabel("dim 1", fontsize=label_fs)
                 if r == 0:
-                    ax.set_title(f"P(next = {itos[c]})", fontsize=10)
+                    ax.set_title(f"P(next = {itos[c]})", fontsize=title_fs)
                 if r == n_rows - 1:
-                    ax.set_xlabel("dim 0")
-
-        fs = 4.5
+                    ax.set_xlabel("dim 0", fontsize=label_fs)
+                # Increase tick label font sizes for plots 15 and 17
+                ax.tick_params(axis='both', which='major', labelsize=label_fs)
         # Row 0: Embed with arrows to Final (x_np with arrows to x_np + v_after); Row 1: Final position (x_np + v_after)
         for i in range(T):
             lbl = _token_pos_label(itos[seq[i]], i)
@@ -4594,8 +4599,8 @@ def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, ar
                         path_effects=[pe.withStroke(linewidth=0.8, foreground=end_color)])
 
         # Row labels
-        axes[0, 0].set_ylabel("Embed → Final\ndim 1", fontsize=9)
-        axes[1, 0].set_ylabel("Final\ndim 1", fontsize=9)
+        axes[0, 0].set_ylabel("Embed → Final\ndim 1", fontsize=label_fs)
+        axes[1, 0].set_ylabel("Final\ndim 1", fontsize=label_fs)
 
         seq_str = " ".join(str(itos[t]) for t in seq[:25])
         if len(seq) > 25:
@@ -4607,9 +4612,16 @@ def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, ar
         print(f"Demo {seq_idx}  Sequence: {' '.join(str(itos[t]) for t in seq)}")
         print(f"Demo {seq_idx}  Generated (sampled): {' '.join(str(itos[generated[i]]) for i in range(T))}")
         print(f"Demo {seq_idx}  Pred next (argmax at each pos): {' '.join(str(itos[pred_next[i]]) for i in range(T))}")
-        # Only add title for seq_idx != 1 (plot 18 is seq_idx=1, remove title)
+        # Only add title for seq_idx != 1 (plot 16 is seq_idx=1, remove title)
+        # For seq_idx==0 (plot 15) and seq_idx==2 (plot 17), remove only the "Generated: {gen_str}" part
+        title_fontsize = 13 if (seq_idx == 0 or seq_idx == 2) else 9  # Bigger title font for plots 15 and 17
         if seq_idx != 1:
-            fig.suptitle(f"Demo {seq_idx}: {seq_str}  |  Generated: {gen_str}  |  Correct: {n_correct}/{T-1} (row 2: green=correct, red=wrong)", fontsize=9, fontweight='bold', y=1.01)
+            if seq_idx == 0 or seq_idx == 2:
+                # Remove only the generated sequence part
+                fig.suptitle(f"Demo {seq_idx}: {seq_str}  |  Correct: {n_correct}/{T-1} (row 2: green=correct, red=wrong)", fontsize=title_fontsize, fontweight='bold', y=1.01)
+            else:
+                # Keep full title for other sequences (if any)
+                fig.suptitle(f"Demo {seq_idx}: {seq_str}  |  Generated: {gen_str}  |  Correct: {n_correct}/{T-1} (row 2: green=correct, red=wrong)", fontsize=title_fontsize, fontweight='bold', y=1.01)
         plt.tight_layout()
         if save_dir:
             path = os.path.join(save_dir, f"v_before_after_demo_{seq_idx}.png")
