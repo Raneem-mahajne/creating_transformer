@@ -172,7 +172,7 @@ def visualize_from_checkpoint(
         plot_architecture_diagram(config, save_path=arch_path, model=model, vocab_size=vocab_size, batch_size=training_config.get('batch_size', 4))
 
     plot_weights_qkv_two_sequences(
-        model, X_list, itos, save_path=os.path.join(plots_dir, "qkv.png"), num_sequences=3
+        model, X_list, itos, save_path=_plot_path("qkv_query_key_attention.png"), num_sequences=3
     )
     plot_residuals(
         model, X_list, itos, save_path=_plot_path("residuals.png"), num_sequences=3

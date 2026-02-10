@@ -2467,13 +2467,19 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         ax.set_ylim(y_min - y_margin, y_max + y_margin)
         
         # Background overlay: ALL Q/K combinations (annotated, dark visible grey)
+        # Draw overlay FIRST so it's underneath
         for i, label in enumerate(all_QK_labels):
-            # Overlay Q points (dark grey, more visible)
-            ax.text(all_Q_2d_overlay[i, 0], all_Q_2d_overlay[i, 1], label,
-                   fontsize=14, alpha=0.6, ha='center', va='center', color='dimgray', zorder=1)
-            # Overlay K points (dark grey, more visible)
-            ax.text(all_K_2d_overlay[i, 0], all_K_2d_overlay[i, 1], label,
-                   fontsize=14, alpha=0.6, ha='center', va='center', color='dimgray', zorder=1)
+            x_q, y_q = all_Q_2d_overlay[i, 0], all_Q_2d_overlay[i, 1]
+            x_k, y_k = all_K_2d_overlay[i, 0], all_K_2d_overlay[i, 1]
+            # Check if points are within axis limits before drawing
+            if x_min - x_margin <= x_q <= x_max + x_margin and y_min - y_margin <= y_q <= y_max + y_margin:
+                ax.text(x_q, y_q, label,
+                       fontsize=11, alpha=0.7, ha='center', va='center', 
+                       color='#404040', zorder=1)  # Smaller font size, darker grey
+            if x_min - x_margin <= x_k <= x_max + x_margin and y_min - y_margin <= y_k <= y_max + y_margin:
+                ax.text(x_k, y_k, label,
+                       fontsize=11, alpha=0.7, ha='center', va='center', 
+                       color='#404040', zorder=1)  # Smaller font size, darker grey
         
         # Foreground: Sequence-specific Q/K points
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
@@ -2516,8 +2522,11 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
     
     plt.tight_layout(rect=[0, 0, 1, 0.98])
     if save_path:
-        # Save with meaningful name: query_key_attention (contains Q, K, masked QK^T, Attention)
-        save_path_part1 = save_path.replace('qkv.png', 'qkv_query_key_attention.png') if 'qkv.png' in save_path else save_path.replace('.png', '_query_key_attention.png') if save_path.endswith('.png') else save_path + '_query_key_attention.png'
+        # Save directly to the numbered filename (12_qk_attention.png)
+        # Extract directory and base name, then construct numbered filename
+        import os
+        save_dir = os.path.dirname(save_path)
+        save_path_part1 = os.path.join(save_dir, "12_qk_attention.png")
         plt.savefig(save_path_part1, bbox_inches='tight', dpi=150)
         plt.close()
     else:
@@ -2639,9 +2648,14 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         ax.set_ylim(ylim_shared)
         
         # Background overlay: ALL V combinations (annotated, dark visible grey)
+        # Draw overlay FIRST so it's underneath
         for i, label in enumerate(all_V_labels):
-            ax.text(all_V_2d_overlay[i, 0], all_V_2d_overlay[i, 1], label,
-                   fontsize=9, alpha=0.6, ha='center', va='center', color='dimgray', zorder=1)
+            # Check if point is within axis limits before drawing
+            x, y = all_V_2d_overlay[i, 0], all_V_2d_overlay[i, 1]
+            if xlim_shared[0] <= x <= xlim_shared[1] and ylim_shared[0] <= y <= ylim_shared[1]:
+                ax.text(x, y, label,
+                       fontsize=7, alpha=0.7, ha='center', va='center', 
+                       color='#404040', zorder=1)  # Smaller font size, darker grey
         
         # Foreground: Sequence-specific V points
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
@@ -2686,8 +2700,11 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
     
     plt.tight_layout(rect=[0, 0, 1, 0.98])
     if save_path:
-        # Save with meaningful name: value_output (contains Attention, V, Final Output)
-        save_path_part2 = save_path.replace('qkv.png', 'qkv_value_output.png') if 'qkv.png' in save_path else save_path.replace('.png', '_value_output.png') if save_path.endswith('.png') else save_path + '_value_output.png'
+        # Save directly to the numbered filename (13_value_output.png)
+        # Extract directory and base name, then construct numbered filename
+        import os
+        save_dir = os.path.dirname(save_path)
+        save_path_part2 = os.path.join(save_dir, "13_value_output.png")
         plt.savefig(save_path_part2, bbox_inches='tight', dpi=150)
         plt.close()
     else:
@@ -4558,17 +4575,18 @@ def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, ar
             px_final, py_final = x_np[i, 0] + v_after[i, 0], x_np[i, 1] + v_after[i, 1]  # Final position
             for c in range(n_cols):
                 ax = axes[0, c]
-                # Draw arrow from embed to final
-                dx = px_final - px0
-                dy = py_final - py0
-                arrow_length = np.sqrt(dx**2 + dy**2)
-                head_size = max(0.1, min(0.2, arrow_length * 0.1))
-                ax.arrow(px0, py0, dx, dy,
-                        head_width=head_size, head_length=head_size, fc='white', ec='white', alpha=0.8, length_includes_head=True, width=0.01, zorder=4)
-                # Annotate at beginning (embed position)
+                # Draw arrow from embed to final (skip arrows for seq_idx==1, but keep labels)
+                if seq_idx != 1:  # Only draw arrows if NOT seq_idx==1 (plot 16)
+                    dx = px_final - px0
+                    dy = py_final - py0
+                    arrow_length = np.sqrt(dx**2 + dy**2)
+                    head_size = max(0.1, min(0.2, arrow_length * 0.1))
+                    ax.arrow(px0, py0, dx, dy,
+                            head_width=head_size, head_length=head_size, fc='white', ec='white', alpha=0.8, length_includes_head=True, width=0.01, zorder=4)
+                # Annotate at beginning (embed position) - keep this for all sequences
                 ax.text(px0, py0, lbl, fontsize=fs, fontweight='bold', ha='center', va='center', color='white', zorder=5,
                         path_effects=[pe.withStroke(linewidth=0.8, foreground='black')])
-            # Row 1: Final position; white text, stroke color = correct (green) / wrong (red)
+            # Row 1: Final position; white text, stroke color = correct (green) / wrong (red) - keep this for all sequences
             end_color = '#2E7D32' if correct[i] else '#C62828'
             for c in range(n_cols):
                 ax = axes[1, c]
