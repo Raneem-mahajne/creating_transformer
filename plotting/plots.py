@@ -2358,10 +2358,63 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
             'T': T
         })
     
+    # Get all possible Q/K combinations for overlay
+    vocab_size = model.token_embedding.weight.shape[0]
+    block_size = model.block_size
+    head = model.sa_heads.heads[0]  # Use first head for overlay
+    W_Q = head.query.weight.detach().cpu().numpy()  # (head_size, n_embd)
+    W_K = head.key.weight.detach().cpu().numpy()  # (head_size, n_embd)
+    all_token_emb = model.token_embedding.weight.detach().cpu().numpy()  # (vocab_size, n_embd)
+    all_pos_emb = model.position_embedding_table.weight.detach().cpu().numpy()  # (block_size, n_embd)
+    
+    # Create all Q and K combinations
+    all_Q_combinations = []
+    all_K_combinations = []
+    all_QK_labels = []
+    for token_idx in range(vocab_size):
+        token_str = str(itos[token_idx])
+        for pos_idx in range(block_size):
+            combined_emb = all_token_emb[token_idx] + all_pos_emb[pos_idx]
+            q_vec = W_Q @ combined_emb  # (head_size,)
+            k_vec = W_K @ combined_emb  # (head_size,)
+            all_Q_combinations.append(q_vec)
+            all_K_combinations.append(k_vec)
+            all_QK_labels.append(_token_pos_label(token_str, pos_idx))
+    
+    all_Q_combinations = np.array(all_Q_combinations)  # (vocab_size * block_size, head_size)
+    all_K_combinations = np.array(all_K_combinations)  # (vocab_size * block_size, head_size)
+    
     # ========== PLOT 1: Q, K, masked QK^T, Attention, scatter(Q vs K) ==========
     num_cols_plot1 = 5  # Q, K, masked QK^T, Attention, scatter
     fig1 = plt.figure(figsize=(6 * num_cols_plot1, 4 * num_sequences))
     gs1 = GridSpec(num_sequences, num_cols_plot1, figure=fig1, hspace=0.4, wspace=0.3)
+    
+    # Collect all Q and K from all sequences to compute consistent PCA
+    all_Q_data = []
+    all_K_data = []
+    for data_dict in all_data:
+        all_Q_data.append(data_dict['Q'])
+        all_K_data.append(data_dict['K'])
+    all_Q_data = np.vstack(all_Q_data)  # (total_T, head_size)
+    all_K_data = np.vstack(all_K_data)  # (total_T, head_size)
+    
+    # Compute PCA transformation from ALL sequence data (to apply consistently)
+    combined_QK_for_pca = np.vstack([all_Q_data, all_K_data, all_Q_combinations, all_K_combinations])
+    pca_transform = None
+    if combined_QK_for_pca.shape[1] > 2:
+        # Compute PCA transformation from all data
+        data_centered = combined_QK_for_pca - combined_QK_for_pca.mean(axis=0, keepdims=True)
+        U, s, Vt = np.linalg.svd(data_centered, full_matrices=False)
+        pca_transform = Vt[:2].T  # (head_size, 2)
+        # Apply PCA to all combinations
+        all_Q_centered = all_Q_combinations - combined_QK_for_pca.mean(axis=0, keepdims=True)
+        all_K_centered = all_K_combinations - combined_QK_for_pca.mean(axis=0, keepdims=True)
+        all_Q_2d_overlay = all_Q_centered @ pca_transform
+        all_K_2d_overlay = all_K_centered @ pca_transform
+    else:
+        # Use raw dimensions
+        all_Q_2d_overlay = all_Q_combinations[:, :2] if all_Q_combinations.shape[1] >= 2 else pca_2d(all_Q_combinations)
+        all_K_2d_overlay = all_K_combinations[:, :2] if all_K_combinations.shape[1] >= 2 else pca_2d(all_K_combinations)
     
     for data_dict in all_data:
         seq_idx = data_dict['seq_idx']
@@ -2393,11 +2446,19 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         
         # Column 2: Scatter plot Q vs K
         ax = fig1.add_subplot(gs1[seq_idx, 2])
-        Q_2d = pca_2d(Q)
-        K_2d = pca_2d(K)
         
-        # Combine Q and K data to set axis limits properly
-        all_data_2d = np.vstack([Q_2d, K_2d])
+        # Apply consistent PCA transformation to sequence-specific Q/K
+        if pca_transform is not None:
+            Q_centered = Q - combined_QK_for_pca.mean(axis=0, keepdims=True)
+            K_centered = K - combined_QK_for_pca.mean(axis=0, keepdims=True)
+            Q_2d = Q_centered @ pca_transform
+            K_2d = K_centered @ pca_transform
+        else:
+            Q_2d = pca_2d(Q)
+            K_2d = pca_2d(K)
+        
+        # Combine Q and K data (including overlay) to set axis limits properly
+        all_data_2d = np.vstack([Q_2d, K_2d, all_Q_2d_overlay, all_K_2d_overlay])
         x_min, x_max = all_data_2d[:, 0].min(), all_data_2d[:, 0].max()
         y_min, y_max = all_data_2d[:, 1].min(), all_data_2d[:, 1].max()
         x_margin = (x_max - x_min) * 0.1
@@ -2405,14 +2466,23 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         ax.set_xlim(x_min - x_margin, x_max + x_margin)
         ax.set_ylim(y_min - y_margin, y_max + y_margin)
         
-        # Annotate all points with token and position (markers removed, keeping only annotations)
+        # Background overlay: ALL Q/K combinations (annotated, dark visible grey)
+        for i, label in enumerate(all_QK_labels):
+            # Overlay Q points (dark grey, more visible)
+            ax.text(all_Q_2d_overlay[i, 0], all_Q_2d_overlay[i, 1], label,
+                   fontsize=14, alpha=0.6, ha='center', va='center', color='dimgray', zorder=1)
+            # Overlay K points (dark grey, more visible)
+            ax.text(all_K_2d_overlay[i, 0], all_K_2d_overlay[i, 1], label,
+                   fontsize=14, alpha=0.6, ha='center', va='center', color='dimgray', zorder=1)
+        
+        # Foreground: Sequence-specific Q/K points
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
             # Annotate Q points (blue for Query)
             ax.text(Q_2d[i, 0], Q_2d[i, 1], _token_pos_label(token, pos), 
-                   fontsize=14, fontweight='bold', ha='center', va='center', color='blue')
+                   fontsize=14, fontweight='bold', ha='center', va='center', color='blue', zorder=3)
             # Annotate K points (red for Key)
             ax.text(K_2d[i, 0], K_2d[i, 1], _token_pos_label(token, pos), 
-                   fontsize=14, fontweight='bold', ha='center', va='center', color='red')
+                   fontsize=14, fontweight='bold', ha='center', va='center', color='red', zorder=3)
         
         # Update axis labels based on whether PCA was used
         if Q.shape[1] > 2:
@@ -2453,6 +2523,20 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
     else:
         plt.show()
     
+    # Get all possible V combinations for overlay
+    W_V = head.value.weight.detach().cpu().numpy()  # (head_size, n_embd)
+    all_V_combinations = []
+    all_V_labels = []
+    for token_idx in range(vocab_size):
+        token_str = str(itos[token_idx])
+        for pos_idx in range(block_size):
+            combined_emb = all_token_emb[token_idx] + all_pos_emb[pos_idx]
+            v_vec = W_V @ combined_emb  # (head_size,)
+            all_V_combinations.append(v_vec)
+            all_V_labels.append(_token_pos_label(token_str, pos_idx))
+    
+    all_V_combinations = np.array(all_V_combinations)  # (vocab_size * block_size, head_size)
+    
     # ========== PLOT 2: Attention, V, Final Output, scatter(V), scatter(Final Output) ==========
     # Final Output = Attention @ V: weighted sum of value vectors where attention weights determine
     # how much each position contributes. For position i: Final_Output[i] = sum_j(Attention[i,j] * V[j])
@@ -2460,19 +2544,44 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
     fig2 = plt.figure(figsize=(6 * num_cols_plot2, 4 * num_sequences))
     gs2 = GridSpec(num_sequences, num_cols_plot2, figure=fig2, hspace=0.4, wspace=0.3)
     
-    # First pass: collect all scatter data to calculate shared axis limits
+    # First pass: collect all V data to compute consistent PCA
+    all_V_data = []
+    for data_dict in all_data:
+        all_V_data.append(data_dict['V'])
+    all_V_data = np.vstack(all_V_data)  # (total_T, head_size)
+    
+    # Compute PCA transformation from ALL V data (to apply consistently)
+    combined_V_for_pca = np.vstack([all_V_data, all_V_combinations])
+    pca_transform_V = None
+    if combined_V_for_pca.shape[1] > 2:
+        # Compute PCA transformation from all data
+        data_centered = combined_V_for_pca - combined_V_for_pca.mean(axis=0, keepdims=True)
+        U, s, Vt = np.linalg.svd(data_centered, full_matrices=False)
+        pca_transform_V = Vt[:2].T
+        # Apply PCA to all combinations
+        all_V_centered = all_V_combinations - combined_V_for_pca.mean(axis=0, keepdims=True)
+        all_V_2d_overlay = all_V_centered @ pca_transform_V
+    else:
+        all_V_2d_overlay = all_V_combinations[:, :2] if all_V_combinations.shape[1] >= 2 else pca_2d(all_V_combinations)
+    
+    # Collect all scatter data to calculate shared axis limits
     all_V_2d = []
     all_Final_Output_2d = []
     for data_dict in all_data:
         V = data_dict['V']
         Final_Output = data_dict['Final_Output']
-        V_2d = pca_2d(V)
+        # Apply consistent PCA transformation
+        if pca_transform_V is not None:
+            V_centered = V - combined_V_for_pca.mean(axis=0, keepdims=True)
+            V_2d = V_centered @ pca_transform_V
+        else:
+            V_2d = pca_2d(V)
         Final_Output_2d = pca_2d(Final_Output)
         all_V_2d.append(V_2d)
         all_Final_Output_2d.append(Final_Output_2d)
     
-    # Calculate shared axis limits from all scatter data
-    all_scatter_data = np.vstack(all_V_2d + all_Final_Output_2d)
+    # Calculate shared axis limits from all scatter data (including overlay)
+    all_scatter_data = np.vstack(all_V_2d + all_Final_Output_2d + [all_V_2d_overlay])
     x_min_shared, x_max_shared = all_scatter_data[:, 0].min(), all_scatter_data[:, 0].max()
     y_min_shared, y_max_shared = all_scatter_data[:, 1].min(), all_scatter_data[:, 1].max()
     x_range_shared = x_max_shared - x_min_shared if x_max_shared != x_min_shared else 1.0
@@ -2529,10 +2638,15 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         ax.set_xlim(xlim_shared)
         ax.set_ylim(ylim_shared)
         
-        # Annotate V points with token and position (no scatter points)
+        # Background overlay: ALL V combinations (annotated, dark visible grey)
+        for i, label in enumerate(all_V_labels):
+            ax.text(all_V_2d_overlay[i, 0], all_V_2d_overlay[i, 1], label,
+                   fontsize=9, alpha=0.6, ha='center', va='center', color='dimgray', zorder=1)
+        
+        # Foreground: Sequence-specific V points
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
             ax.text(V_2d[i, 0], V_2d[i, 1], _token_pos_label(token, pos), 
-                   fontsize=9, fontweight='bold', ha='center', va='center', color='blue')
+                   fontsize=9, fontweight='bold', ha='center', va='center', color='blue', zorder=3)
         
         # Update axis labels based on whether PCA was used
         if V.shape[1] > 2:
@@ -2723,23 +2837,23 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         Sum = data_dict['Sum']
         T = data_dict['T']
         
-        # Column 0: V Transformed heatmap
+        # Column 0: Embeddings heatmap (switched from column 1)
         ax = fig.add_subplot(gs[seq_idx, 0])
-        dim_str = f"(T×d={T}×{V_transformed.shape[1]})"
-        sns.heatmap(V_transformed, cmap="RdBu_r", center=0, 
-                   xticklabels=False, yticklabels=tokens, cbar=True, ax=ax)
-        ax.set_xlabel("Dim", fontsize=10)
-        ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
-        ax.set_title(f"V Transformed (Attention@V) {dim_str}", fontsize=11)
-        
-        # Column 1: Embeddings heatmap
-        ax = fig.add_subplot(gs[seq_idx, 1])
         dim_str = f"(T×d={T}×{embeddings.shape[1]})"
         sns.heatmap(embeddings, cmap="RdBu_r", center=0,
                    xticklabels=False, yticklabels=tokens, cbar=True, ax=ax)
         ax.set_xlabel("Dim", fontsize=10)
         ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
         ax.set_title(f"Embeddings (Token+Pos) {dim_str}", fontsize=11)
+        
+        # Column 1: V Transformed heatmap (switched from column 0)
+        ax = fig.add_subplot(gs[seq_idx, 1])
+        dim_str = f"(T×d={T}×{V_transformed.shape[1]})"
+        sns.heatmap(V_transformed, cmap="RdBu_r", center=0, 
+                   xticklabels=False, yticklabels=tokens, cbar=True, ax=ax)
+        ax.set_xlabel("Dim", fontsize=10)
+        ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
+        ax.set_title(f"V Transformed (Attention@V) {dim_str}", fontsize=11)
         
         # Column 2: Final heatmap (after residual connection)
         ax = fig.add_subplot(gs[seq_idx, 2])
@@ -2750,30 +2864,11 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
         ax.set_title(f"Final (Embed+V_transformed) {dim_str}", fontsize=11)
         
-        # Column 3: V Transformed scatter
+        # Column 3: Embeddings scatter (switched from column 4)
         ax = fig.add_subplot(gs[seq_idx, 3])
-        V_transformed_2d = pca_2d(V_transformed)
-        for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
-            color = token_pos_to_color[(token, pos)]
-            ax.text(V_transformed_2d[i, 0], V_transformed_2d[i, 1], _token_pos_label(token, pos),
-                   fontsize=9, fontweight='bold', ha='center', va='center', color=color)
-        ax.set_xlim(xlim_shared)
-        ax.set_ylim(ylim_shared)
-        used_pca = V_transformed.shape[1] > 2
-        if used_pca:
-            ax.set_xlabel("PC1", fontsize=10)
-            ax.set_ylabel("PC2", fontsize=10)
-            title_suffix = " (PCA)"
-        else:
-            ax.set_xlabel("Dim 1", fontsize=10)
-            ax.set_ylabel("Dim 2", fontsize=10)
-            title_suffix = ""
-        ax.set_title(f"V Transformed{title_suffix}", fontsize=11)
-        ax.grid(True, alpha=0.3)
-        
-        # Column 4: Embeddings scatter (points only, no arrows)
-        ax = fig.add_subplot(gs[seq_idx, 4])
         embeddings_2d = pca_2d(embeddings)
+        # Mark origin with star
+        ax.scatter([0], [0], s=200, marker='*', color='black', zorder=5, edgecolors='white', linewidths=1)
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
             color = token_pos_to_color[(token, pos)]
             ax.text(embeddings_2d[i, 0], embeddings_2d[i, 1], _token_pos_label(token, pos),
@@ -2791,11 +2886,40 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
             title_suffix = ""
         ax.set_title(f"Embed{title_suffix}", fontsize=11)
         ax.grid(True, alpha=0.3)
+        ax.axhline(y=0, color='gray', linestyle='--', alpha=0.3, linewidth=0.5)
+        ax.axvline(x=0, color='gray', linestyle='--', alpha=0.3, linewidth=0.5)
+        
+        # Column 4: V Transformed scatter (switched from column 3)
+        ax = fig.add_subplot(gs[seq_idx, 4])
+        V_transformed_2d = pca_2d(V_transformed)
+        # Mark origin with star
+        ax.scatter([0], [0], s=200, marker='*', color='black', zorder=5, edgecolors='white', linewidths=1)
+        for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
+            color = token_pos_to_color[(token, pos)]
+            ax.text(V_transformed_2d[i, 0], V_transformed_2d[i, 1], _token_pos_label(token, pos),
+                   fontsize=9, fontweight='bold', ha='center', va='center', color=color)
+        ax.set_xlim(xlim_shared)
+        ax.set_ylim(ylim_shared)
+        used_pca = V_transformed.shape[1] > 2
+        if used_pca:
+            ax.set_xlabel("PC1", fontsize=10)
+            ax.set_ylabel("PC2", fontsize=10)
+            title_suffix = " (PCA)"
+        else:
+            ax.set_xlabel("Dim 1", fontsize=10)
+            ax.set_ylabel("Dim 2", fontsize=10)
+            title_suffix = ""
+        ax.set_title(f"V Transformed{title_suffix}", fontsize=11)
+        ax.grid(True, alpha=0.3)
+        ax.axhline(y=0, color='gray', linestyle='--', alpha=0.3, linewidth=0.5)
+        ax.axvline(x=0, color='gray', linestyle='--', alpha=0.3, linewidth=0.5)
         
         # Column 5: Embeddings → Final arrows (showing how attention modifies the base representation)
         ax = fig.add_subplot(gs[seq_idx, 5])
         embeddings_2d = pca_2d(embeddings)
         Final_2d = pca_2d(Sum)
+        # Mark origin with star
+        ax.scatter([0], [0], s=200, marker='*', color='black', zorder=5, edgecolors='white', linewidths=1)
         # Draw arrows from embeddings to Final points
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
             color = token_pos_to_color[(token, pos)]
@@ -2824,10 +2948,14 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
             title_suffix = ""
         ax.set_title(f"Embed → Final (Modified by Attention){title_suffix}", fontsize=11)
         ax.grid(True, alpha=0.3)
+        ax.axhline(y=0, color='gray', linestyle='--', alpha=0.3, linewidth=0.5)
+        ax.axvline(x=0, color='gray', linestyle='--', alpha=0.3, linewidth=0.5)
         
         # Column 6: Final scatter
         ax = fig.add_subplot(gs[seq_idx, 6])
         Final_2d = pca_2d(Sum)
+        # Mark origin with star
+        ax.scatter([0], [0], s=200, marker='*', color='black', zorder=5, edgecolors='white', linewidths=1)
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
             color = token_pos_to_color[(token, pos)]
             ax.text(Final_2d[i, 0], Final_2d[i, 1], _token_pos_label(token, pos),
@@ -2845,6 +2973,8 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
             title_suffix = ""
         ax.set_title(f"Final{title_suffix}", fontsize=11)
         ax.grid(True, alpha=0.3)
+        ax.axhline(y=0, color='gray', linestyle='--', alpha=0.3, linewidth=0.5)
+        ax.axvline(x=0, color='gray', linestyle='--', alpha=0.3, linewidth=0.5)
     
     plt.tight_layout(rect=[0, 0, 1, 0.98])
     if save_path:
@@ -4394,7 +4524,9 @@ def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, ar
         probs_plot = np.exp(logits_plot - logits_plot.max(axis=1, keepdims=True))
         probs_plot /= probs_plot.sum(axis=1, keepdims=True)
 
-        fig, axes = plt.subplots(n_rows, n_cols, figsize=(2.2 * n_cols, 2.5 * n_rows), sharex=True, sharey=True)
+        # Increase figure size and resolution for better quality
+        figsize_mult = 1.5 if seq_idx == 0 else 1.0  # Larger for first demo (plot 17)
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(2.2 * n_cols * figsize_mult, 2.5 * n_rows * figsize_mult), sharex=True, sharey=True)
         if n_rows == 1 and n_cols == 1:
             axes = np.array([[axes]])
         elif n_rows == 1:
@@ -4457,11 +4589,15 @@ def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, ar
         print(f"Demo {seq_idx}  Sequence: {' '.join(str(itos[t]) for t in seq)}")
         print(f"Demo {seq_idx}  Generated (sampled): {' '.join(str(itos[generated[i]]) for i in range(T))}")
         print(f"Demo {seq_idx}  Pred next (argmax at each pos): {' '.join(str(itos[pred_next[i]]) for i in range(T))}")
-        fig.suptitle(f"Demo {seq_idx}: {seq_str}  |  Generated: {gen_str}  |  Correct: {n_correct}/{T-1} (row 2: green=correct, red=wrong)", fontsize=9, fontweight='bold', y=1.01)
+        # Only add title for seq_idx != 1 (plot 18 is seq_idx=1, remove title)
+        if seq_idx != 1:
+            fig.suptitle(f"Demo {seq_idx}: {seq_str}  |  Generated: {gen_str}  |  Correct: {n_correct}/{T-1} (row 2: green=correct, red=wrong)", fontsize=9, fontweight='bold', y=1.01)
         plt.tight_layout()
         if save_dir:
             path = os.path.join(save_dir, f"v_before_after_demo_{seq_idx}.png")
-            plt.savefig(path, bbox_inches='tight', dpi=150, facecolor='white')
+            # Higher resolution for seq_idx=0 (plot 17)
+            dpi_val = 300 if seq_idx == 0 else 150
+            plt.savefig(path, bbox_inches='tight', dpi=dpi_val, facecolor='white')
             plt.close()
             print(f"V before/after demo figure saved to {path}")
         else:

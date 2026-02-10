@@ -184,9 +184,10 @@ def visualize_from_checkpoint(
     plot_token_position_embedding_space(
         model, itos, save_path=_plot_path("token_position_embedding_space.png")
     )
-    plot_attention_matrix(
-        model, X_list, itos, save_path=_plot_path("attention_matrix.png"), num_sequences=3
-    )
+    # plot_attention_matrix moved to supplementary
+    # plot_attention_matrix(
+    #     model, X_list, itos, save_path=_plot_path("attention_matrix.png"), num_sequences=3
+    # )
     plot_qk_embedding_space(model, itos, save_path=_plot_path("qk_embedding_space.png"))
     plot_qk_embedding_space_focused_query(
         model, itos, token_str="+", position=5,
@@ -205,8 +206,8 @@ def visualize_from_checkpoint(
     plot_probability_heatmap_with_embeddings(
         model, itos, save_path=_plot_path("probability_heatmap_with_embeddings.png")
     )
-    # Use the same consistent sequence for demo sequences
-    demo_sequences = [consistent_sequence] if consistent_sequence else []
+    # Use the same consistent sequence for demo sequences (generate 3 for plots 15, 16, 17)
+    demo_sequences = [consistent_sequence] * 3 if consistent_sequence else []
     if demo_sequences:
         plot_v_before_after_demo_sequences(
             model, itos, demo_sequences, save_dir=plots_dir,

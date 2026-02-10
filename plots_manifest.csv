@@ -12,12 +12,10 @@ plus_last_even,10,qk_embedding_space_plus5_focus.png,10_qk_space_focus.png
 plus_last_even,11,sequence_embeddings.png,11_sequence_embeddings.png
 plus_last_even,12,qkv_query_key_attention.png,12_qk_attention.png
 plus_last_even,13,qkv_value_output.png,13_value_output.png
-plus_last_even,14,attention_matrix.png,14_attention_matrix.png
-plus_last_even,15,residuals.png,15_residuals.png
-plus_last_even,16,v_before_after_arrows.png,16_value_arrows.png
-plus_last_even,17,v_before_after_demo_0.png,17_value_demo0.png
-plus_last_even,18,v_before_after_demo_1.png,18_value_demo1.png
-plus_last_even,19,v_before_after_demo_2.png,19_value_demo2.png
+plus_last_even,14,residuals.png,14_residuals.png
+plus_last_even,15,v_before_after_demo_0.png,15_value_demo0.png
+plus_last_even,16,v_before_after_demo_1.png,16_value_demo1.png
+plus_last_even,17,v_before_after_demo_2.png,17_value_demo2.png
 lucky7,01,architecture.png,01_architecture_overview.png
 lucky7,02,learning_curve.png,02_learning_curve.png
 lucky7,03,embeddings.png,03_token_embeddings.png
