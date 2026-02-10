@@ -1554,6 +1554,261 @@ def plot_tokenpos_qkv_simple(model, itos, save_path=None, fixed_limits=None, ste
 
 
 @torch.no_grad()
+def plot_sequence_embeddings(model, X, itos, save_path=None):
+    """
+    Plot embeddings for a specific sequence showing token embeddings, position embeddings,
+    and their combined embeddings in 2D space.
+    
+    Args:
+        model: The model
+        X: Input sequence tensor of shape (B, T) - will use first sequence if batch
+        itos: Index to string mapping
+        save_path: Path to save figure
+    """
+    model.eval()
+    
+    # Extract first sequence if batch
+    if X.dim() == 2 and X.shape[0] > 1:
+        X = X[0:1]  # Take first sequence
+    elif X.dim() == 1:
+        X = X.unsqueeze(0)  # Add batch dimension
+    
+    B, T = X.shape
+    tokens = [itos[i.item()] for i in X[0]]
+    seq_str = " ".join(tokens)
+    
+    # Get embeddings
+    token_emb = model.token_embedding(X)  # (B, T, n_embd)
+    positions = torch.arange(T, device=X.device) % model.block_size
+    pos_emb = model.position_embedding_table(positions)  # (T, n_embd)
+    combined_emb = token_emb + pos_emb  # (B, T, n_embd)
+    
+    # Convert to numpy
+    token_emb_np = token_emb[0].cpu().numpy()  # (T, n_embd)
+    pos_emb_np = pos_emb.cpu().numpy()  # (T, n_embd)
+    combined_emb_np = combined_emb[0].cpu().numpy()  # (T, n_embd)
+    
+    n_embd = token_emb_np.shape[1]
+    
+    # Get all possible embeddings for overlay
+    vocab_size = model.token_embedding.weight.shape[0]
+    block_size = model.block_size
+    all_token_emb = model.token_embedding.weight.detach().cpu().numpy()  # (vocab_size, n_embd)
+    all_pos_emb = model.position_embedding_table.weight.detach().cpu().numpy()  # (block_size, n_embd)
+    
+    # Create all token-position combinations
+    all_combined_emb = np.zeros((vocab_size * block_size, n_embd))
+    for token_idx in range(vocab_size):
+        for pos_idx in range(block_size):
+            idx = token_idx * block_size + pos_idx
+            all_combined_emb[idx] = all_token_emb[token_idx] + all_pos_emb[pos_idx]
+    
+    # Create figure: 2 rows, 3 columns with equal row heights
+    fig = plt.figure(figsize=(18, 12))
+    gs = GridSpec(2, 3, figure=fig, hspace=0.3, wspace=0.3, height_ratios=[1, 1])
+    
+    if n_embd >= 2:
+        # Row 1: Heatmaps
+        # Column 1: Token embeddings heatmap
+        ax1 = fig.add_subplot(gs[0, 0])
+        sns.heatmap(token_emb_np, cmap="viridis", xticklabels=list(range(n_embd)),
+                    yticklabels=tokens, cbar=True, ax=ax1)
+        ax1.set_title("Token Embeddings", fontsize=14, fontweight='bold')
+        ax1.set_xlabel("Embedding Dim", fontsize=12)
+        ax1.set_ylabel("Token", fontsize=12)
+        
+        # Column 2: Position embeddings heatmap
+        ax2 = fig.add_subplot(gs[0, 1])
+        pos_labels = [f"p{i}" for i in range(T)]
+        sns.heatmap(pos_emb_np, cmap="viridis", xticklabels=list(range(n_embd)),
+                    yticklabels=pos_labels, cbar=True, ax=ax2)
+        ax2.set_title("Position Embeddings", fontsize=14, fontweight='bold')
+        ax2.set_xlabel("Embedding Dim", fontsize=12)
+        ax2.set_ylabel("Position", fontsize=12)
+        
+        # Column 3: Combined embeddings heatmap
+        ax3 = fig.add_subplot(gs[0, 2])
+        labels = [_token_pos_label(tokens[i], i) for i in range(T)]
+        sns.heatmap(combined_emb_np, cmap="viridis", xticklabels=list(range(n_embd)),
+                    yticklabels=labels, cbar=True, ax=ax3)
+        ax3.set_title("Token+Position Embeddings", fontsize=14, fontweight='bold')
+        ax3.set_xlabel("Embedding Dim", fontsize=12)
+        ax3.set_ylabel("Token+Position", fontsize=12)
+        
+        # Row 2: Scatter plots
+        # Calculate consistent axis limits across all three plots for uniform sizing.
+        # IMPORTANT: include ALL embeddings (background + sequence) so nothing gets clipped.
+        all_x = np.concatenate(
+            [
+                all_token_emb[:, 0],
+                all_pos_emb[:, 0],
+                all_combined_emb[:, 0],
+                token_emb_np[:, 0],
+                pos_emb_np[:, 0],
+                combined_emb_np[:, 0],
+            ]
+        )
+        all_y = np.concatenate(
+            [
+                all_token_emb[:, 1],
+                all_pos_emb[:, 1],
+                all_combined_emb[:, 1],
+                token_emb_np[:, 1],
+                pos_emb_np[:, 1],
+                combined_emb_np[:, 1],
+            ]
+        )
+        
+        x_min, x_max = all_x.min(), all_x.max()
+        y_min, y_max = all_y.min(), all_y.max()
+        
+        # Add padding
+        x_range = x_max - x_min
+        y_range = y_max - y_min
+        x_pad = x_range * 0.1 if x_range > 0 else 0.1
+        y_pad = y_range * 0.1 if y_range > 0 else 0.1
+        
+        x_lim = (x_min - x_pad, x_max + x_pad)
+        y_lim = (y_min - y_pad, y_max + y_pad)
+        
+        # Column 1: Token embeddings scatter
+        ax4 = fig.add_subplot(gs[1, 0])
+        # Background: ALL token embeddings (annotated, shaded out)
+        for token_idx in range(vocab_size):
+            token_str = str(itos[token_idx])
+            ax4.text(
+                all_token_emb[token_idx, 0],
+                all_token_emb[token_idx, 1],
+                token_str,
+                fontsize=14,
+                alpha=0.5,
+                ha="center",
+                va="center",
+                color="dimgray",
+                zorder=1,
+            )
+        # Foreground: tokens from THIS sequence (unchanged labels)
+        ax4.scatter(token_emb_np[:, 0], token_emb_np[:, 1], s=0, alpha=0, zorder=2)
+        for i, token in enumerate(tokens):
+            ax4.text(
+                token_emb_np[i, 0],
+                token_emb_np[i, 1],
+                token,
+                fontsize=14,
+                fontweight="bold",
+                ha="center",
+                va="center",
+                color="blue",
+                zorder=3,
+            )
+        ax4.set_title("Token Embeddings (2D)", fontsize=14, fontweight='bold')
+        ax4.set_xlabel("Dim 0", fontsize=12)
+        ax4.set_ylabel("Dim 1", fontsize=12)
+        ax4.set_xlim(x_lim)
+        ax4.set_ylim(y_lim)
+        ax4.grid(True, alpha=0.3)
+        # Remove aspect='equal' to allow plots to fill width like heatmaps above
+        
+        # Column 2: Position embeddings scatter
+        ax5 = fig.add_subplot(gs[1, 1])
+        # Background: ALL position embeddings (annotated, shaded out)
+        for pos_idx in range(block_size):
+            ax5.text(
+                all_pos_emb[pos_idx, 0],
+                all_pos_emb[pos_idx, 1],
+                _pos_only_label(pos_idx),
+                fontsize=14,
+                alpha=0.55,
+                ha="center",
+                va="center",
+                color="dimgray",
+                zorder=1,
+            )
+        # Foreground: positions used in THIS sequence
+        ax5.scatter(pos_emb_np[:, 0], pos_emb_np[:, 1], s=0, alpha=0, zorder=2)
+        for i in range(T):
+            ax5.text(
+                pos_emb_np[i, 0],
+                pos_emb_np[i, 1],
+                f"p{i}",
+                fontsize=14,
+                fontweight="bold",
+                ha="center",
+                va="center",
+                color="green",
+                zorder=3,
+            )
+        ax5.set_title("Position Embeddings (2D)", fontsize=14, fontweight='bold')
+        ax5.set_xlabel("Dim 0", fontsize=12)
+        ax5.set_ylabel("Dim 1", fontsize=12)
+        ax5.set_xlim(x_lim)
+        ax5.set_ylim(y_lim)
+        ax5.grid(True, alpha=0.3)
+        # Remove aspect='equal' to allow plots to fill width like heatmaps above
+        
+        # Column 3: Combined embeddings scatter
+        ax6 = fig.add_subplot(gs[1, 2])
+        # Background: ALL token+position combinations (annotated, shaded out)
+        for token_idx in range(vocab_size):
+            token_str = str(itos[token_idx])
+            for pos_idx in range(block_size):
+                idx = token_idx * block_size + pos_idx
+                label = _token_pos_label(token_str, pos_idx)
+                ax6.text(
+                    all_combined_emb[idx, 0],
+                    all_combined_emb[idx, 1],
+                    label,
+                    fontsize=14,
+                    alpha=0.4,
+                    ha="center",
+                    va="center",
+                    color="dimgray",
+                    zorder=1,
+                )
+        # Foreground: (token, position) pairs from THIS sequence
+        ax6.scatter(combined_emb_np[:, 0], combined_emb_np[:, 1], s=0, alpha=0, zorder=2)
+        for i in range(T):
+            ax6.text(
+                combined_emb_np[i, 0],
+                combined_emb_np[i, 1],
+                labels[i],
+                fontsize=14,
+                fontweight="bold",
+                ha="center",
+                va="center",
+                color="purple",
+                zorder=3,
+            )
+        ax6.set_title("Token+Position Embeddings (2D)", fontsize=14, fontweight='bold')
+        ax6.set_xlabel("Dim 0", fontsize=12)
+        ax6.set_ylabel("Dim 1", fontsize=12)
+        ax6.set_xlim(x_lim)
+        ax6.set_ylim(y_lim)
+        ax6.grid(True, alpha=0.3)
+        # Remove aspect='equal' to allow plots to fill width like heatmaps above
+        
+        # Add sequence as supertitle
+        fig.suptitle(f"Sequence Embeddings: {seq_str}", fontsize=16, fontweight='bold', y=0.98)
+    else:
+        # 1D case - simpler visualization
+        fig.suptitle(f"Sequence Embeddings (1D): {seq_str}", fontsize=16, fontweight='bold')
+        ax = fig.add_subplot(gs[:, :])
+        ax.scatter(combined_emb_np[:, 0], np.zeros(T), s=100)
+        for i in range(T):
+            ax.text(combined_emb_np[i, 0], 0, labels[i], fontsize=12, ha='center', va='center')
+        ax.set_xlabel("Embedding Dim 0", fontsize=12)
+        ax.set_yticks([])
+        ax.grid(True, alpha=0.3)
+    
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')
+        plt.close()
+        print(f"Sequence embeddings plot saved to {save_path}")
+    else:
+        plt.show()
+    model.train()
+
 def plot_token_position_embedding_space(model, itos, save_path=None):
     """
     BIG figure showing all token-position combinations in original embedding space and PCA space.
@@ -3918,20 +4173,26 @@ def plot_qk_embedding_space_focused_query(model, itos, token_str="+", position=5
     fig, ax = plt.subplots(figsize=(14, 12))
     label_fontsize = 12
     title_fontsize = 18
-    axis_fontsize = 14
-    tick_fontsize = 12
+    axis_fontsize = 20
+    tick_fontsize = 18
+    legend_fontsize = 14
 
     # Background heatmap (dot product with focus query)
-    im = ax.pcolormesh(xx, yy, dot_grid, cmap='RdBu_r', shading='auto')
+    im = ax.pcolormesh(xx, yy, dot_grid, cmap='Greens', shading='auto')
+    
+    # Add colorbar
+    cbar = plt.colorbar(im, ax=ax, shrink=0.6)
+    cbar.set_label('Dot product with query', fontsize=10)
+    cbar.ax.tick_params(labelsize=10)
 
-    # Key points: red if position < position_focus, gray otherwise
+    # Key points: red if position < position_focus, dark gray otherwise
     for i in range(num_combinations):
         p = i % block_size
-        color = 'red' if p < position else 'gray'
+        color = 'red' if p < position else '#666666'  # Medium-dark gray for better visibility
         ax.text(K_2d[i, 0], K_2d[i, 1], labels[i], fontsize=label_fontsize, ha='center', va='center', color=color)
 
     # Single query point (focus)
-    ax.text(Q_2d[idx_focus, 0], Q_2d[idx_focus, 1], labels[idx_focus], fontsize=label_fontsize + 2, ha='center', va='center', color='blue', fontweight='bold')
+    ax.text(Q_2d[idx_focus, 0], Q_2d[idx_focus, 1], labels[idx_focus], fontsize=label_fontsize + 4, ha='center', va='center', color='blue', fontweight='bold')
 
     ax.set_xlim(x_min, x_max)
     ax.set_ylim(y_min, y_max)
@@ -3945,9 +4206,9 @@ def plot_qk_embedding_space_focused_query(model, itos, token_str="+", position=5
     legend_handles = [
         Patch(facecolor='blue', edgecolor='black', label=f'Query {_token_pos_label(token_str, position)}'),
         Patch(facecolor='red', edgecolor='black', label=f'Key (position < {position})'),
-        Patch(facecolor='gray', edgecolor='black', label=f'Key (position ≥ {position})'),
+        Patch(facecolor='#666666', edgecolor='black', label=f'Key (position ≥ {position})'),
     ]
-    ax.legend(handles=legend_handles, loc='upper left', fontsize=axis_fontsize)
+    ax.legend(handles=legend_handles, loc='upper left', fontsize=legend_fontsize, framealpha=0.9)
 
     plt.tight_layout()
     if save_path:

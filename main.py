@@ -59,7 +59,11 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
         visualize_all: If True, visualize all available checkpoints
     """
     print(f"Starting with config: {config_name}")
-    torch.manual_seed(0)
+    # Set seeds for reproducibility
+    seed = 42  # Fixed seed for all random operations
+    torch.manual_seed(seed)
+    random.seed(seed)
+    np.random.seed(seed)
 
     # Load configuration
     config = load_config(config_name)

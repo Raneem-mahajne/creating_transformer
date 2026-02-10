@@ -27,6 +27,7 @@ from plotting import (
     plot_attention_matrix,
     plot_qk_embedding_space,
     plot_qk_embedding_space_focused_query,
+    plot_sequence_embeddings,
     plot_qk_full_attention_heatmap,
     plot_lm_head_probability_heatmaps,
     plot_v_before_after_demo_sequences,
@@ -78,14 +79,6 @@ def visualize_from_checkpoint(
         for seq in decoded_train_sequences:
             f.write(" ".join(str(i) for i in seq) + "\n")
 
-    _train_acc, _train_correct, _train_incorrect = plot_training_data_heatmap(
-        decoded_train_sequences,
-        generator,
-        save_path=_plot_path("training_data_heatmap.png"),
-        num_sequences=len(decoded_train_sequences),
-        max_length=50,
-    )
-
     num_sequences_to_generate = 5
     generated_sequences = []
     for _ in range(num_sequences_to_generate):
@@ -116,6 +109,14 @@ def visualize_from_checkpoint(
         eval_interval=eval_interval,
     )
 
+    _train_acc, _train_correct, _train_incorrect = plot_training_data_heatmap(
+        decoded_train_sequences,
+        generator,
+        save_path=_plot_path("training_data_heatmap.png"),
+        num_sequences=len(decoded_train_sequences),
+        max_length=50,
+    )
+
     if generated_sequences_e0:
         (acc0, c0, i0), (accf, cf, inf) = plot_generated_sequences_heatmap_before_after(
             generated_sequences_e0,
@@ -137,10 +138,33 @@ def visualize_from_checkpoint(
         )
         print(f"Generated sequences heatmap: {correct_count} correct, {incorrect_count} incorrect positions ({heatmap_accuracy:.1%} accuracy)")
 
-    X1, _ = get_batch_from_sequences(train_sequences, block_size, 1)
-    X2, _ = get_batch_from_sequences(train_sequences, block_size, 1)
-    X3, _ = get_batch_from_sequences(train_sequences, block_size, 1)
-    X_list = [X1, X2, X3]
+    # Select a single consistent sequence for all sequence-dependent plots
+    # Use a fixed index to always select the same sequence for reproducibility
+    random.seed(42)  # Fixed seed for any random operations (though we use fixed index)
+    
+    # Find sequences that are long enough (at least 2 tokens)
+    valid_sequences = [seq for seq in train_sequences if len(seq) >= 2]
+    
+    if valid_sequences:
+        # Use a fixed index (0) to always get the same sequence
+        consistent_sequence = valid_sequences[0]
+    elif train_sequences:
+        # Fallback: use first sequence even if short
+        consistent_sequence = train_sequences[0]
+    else:
+        consistent_sequence = []
+    
+    # Print which sequence is being used for consistency
+    decoded_consistent = decode(consistent_sequence)
+    print(f"Using consistent sequence for all sequence-dependent plots: {' '.join(str(t) for t in decoded_consistent)}")
+    
+    # Convert to tensor format for model input
+    # Pad or truncate to block_size
+    seq_tensor = torch.tensor(consistent_sequence[:block_size], dtype=torch.long).unsqueeze(0)
+    
+    # Use the same sequence for all sequence-dependent plots
+    X_consistent = seq_tensor
+    X_list = [X_consistent, X_consistent, X_consistent]  # Use same sequence 3 times for multi-sequence plots
 
     base_plots_dir = str(get_plots_dir(config_name_actual))
     arch_path = _plot_path("architecture.png", base_dir=base_plots_dir)
@@ -168,6 +192,10 @@ def visualize_from_checkpoint(
         model, itos, token_str="+", position=5,
         save_path=_plot_path("qk_embedding_space_plus5_focus.png"),
     )
+    # Plot embeddings for a specific sequence (using consistent sequence)
+    plot_sequence_embeddings(
+        model, X_consistent, itos, save_path=_plot_path("sequence_embeddings.png")
+    )
     plot_qk_full_attention_heatmap(
         model, itos, save_path=_plot_path("qk_full_attention_heatmap.png")
     )
@@ -177,7 +205,8 @@ def visualize_from_checkpoint(
     plot_probability_heatmap_with_embeddings(
         model, itos, save_path=_plot_path("probability_heatmap_with_embeddings.png")
     )
-    demo_sequences = [s for s in train_sequences[:3] if len(s) >= 2]
+    # Use the same consistent sequence for demo sequences
+    demo_sequences = [consistent_sequence] if consistent_sequence else []
     if demo_sequences:
         plot_v_before_after_demo_sequences(
             model, itos, demo_sequences, save_dir=plots_dir,
