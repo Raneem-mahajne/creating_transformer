@@ -33,6 +33,7 @@ from plotting import (
     plot_v_before_after_demo_sequences,
     plot_residuals,
     plot_probability_heatmap_with_embeddings,
+    plot_probability_heatmap_with_values,
 )
 
 
@@ -140,14 +141,14 @@ def visualize_from_checkpoint(
 
     # Select a single consistent sequence for all sequence-dependent plots
     # Use a fixed index to always select the same sequence for reproducibility
-    random.seed(42)  # Fixed seed for any random operations (though we use fixed index)
+    random.seed(43)  # Changed seed to get a different sequence
     
     # Find sequences that are long enough (at least 2 tokens)
     valid_sequences = [seq for seq in train_sequences if len(seq) >= 2]
     
     if valid_sequences:
-        # Use a fixed index (0) to always get the same sequence
-        consistent_sequence = valid_sequences[0]
+        # Use a different index (1) to get a different sequence
+        consistent_sequence = valid_sequences[1] if len(valid_sequences) > 1 else valid_sequences[0]
     elif train_sequences:
         # Fallback: use first sequence even if short
         consistent_sequence = train_sequences[0]
@@ -206,7 +207,10 @@ def visualize_from_checkpoint(
     plot_probability_heatmap_with_embeddings(
         model, itos, save_path=_plot_path("probability_heatmap_with_embeddings.png")
     )
-    # Use the same consistent sequence for demo sequences (generate 3 for plots 15, 16, 17)
+    plot_probability_heatmap_with_values(
+        model, itos, save_path=_plot_path("probability_heatmap_with_values.png")
+    )
+    # Use the same consistent sequence for demo sequences (generate 3 for plots 16, 17, 18)
     demo_sequences = [consistent_sequence] * 3 if consistent_sequence else []
     if demo_sequences:
         plot_v_before_after_demo_sequences(

@@ -2486,11 +2486,11 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
     
     plt.tight_layout(rect=[0, 0, 1, 0.98])
     if save_path:
-        # Save directly to the numbered filename (12_qk_attention.png)
+        # Save directly to the numbered filename (13_qk_attention.png)
         # Extract directory and base name, then construct numbered filename
         import os
         save_dir = os.path.dirname(save_path)
-        save_path_part1 = os.path.join(save_dir, "12_qk_attention.png")
+        save_path_part1 = os.path.join(save_dir, "13_qk_attention.png")
         plt.savefig(save_path_part1, bbox_inches='tight', dpi=150)
         plt.close()
     else:
@@ -2664,11 +2664,11 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
     
     plt.tight_layout(rect=[0, 0, 1, 0.98])
     if save_path:
-        # Save directly to the numbered filename (13_value_output.png)
+        # Save directly to the numbered filename (14_value_output.png)
         # Extract directory and base name, then construct numbered filename
         import os
         save_dir = os.path.dirname(save_path)
-        save_path_part2 = os.path.join(save_dir, "13_value_output.png")
+        save_path_part2 = os.path.join(save_dir, "14_value_output.png")
         plt.savefig(save_path_part2, bbox_inches='tight', dpi=150)
         plt.close()
     else:
@@ -2848,8 +2848,9 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         # Column 3: Embeddings scatter (switched from column 4)
         ax = fig.add_subplot(gs[seq_idx, 3])
         embeddings_2d = pca_2d(embeddings)
-        # Mark origin with star
-        ax.scatter([0], [0], s=200, marker='*', color='black', zorder=5, edgecolors='white', linewidths=1)
+        # Mark origin with faint dashed lines
+        ax.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
+        ax.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
             color = token_pos_to_color[(token, pos)]
             ax.text(embeddings_2d[i, 0], embeddings_2d[i, 1], _token_pos_label(token, pos),
@@ -2867,14 +2868,13 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
             title_suffix = ""
         ax.set_title(f"Embed{title_suffix}", fontsize=11)
         ax.grid(True, alpha=0.3)
-        ax.axhline(y=0, color='gray', linestyle='--', alpha=0.3, linewidth=0.5)
-        ax.axvline(x=0, color='gray', linestyle='--', alpha=0.3, linewidth=0.5)
         
         # Column 4: V Transformed scatter (switched from column 3)
         ax = fig.add_subplot(gs[seq_idx, 4])
         V_transformed_2d = pca_2d(V_transformed)
-        # Mark origin with star
-        ax.scatter([0], [0], s=200, marker='*', color='black', zorder=5, edgecolors='white', linewidths=1)
+        # Mark origin with faint dashed lines
+        ax.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
+        ax.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
             color = token_pos_to_color[(token, pos)]
             ax.text(V_transformed_2d[i, 0], V_transformed_2d[i, 1], _token_pos_label(token, pos),
@@ -2892,15 +2892,14 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
             title_suffix = ""
         ax.set_title(f"V Transformed{title_suffix}", fontsize=11)
         ax.grid(True, alpha=0.3)
-        ax.axhline(y=0, color='gray', linestyle='--', alpha=0.3, linewidth=0.5)
-        ax.axvline(x=0, color='gray', linestyle='--', alpha=0.3, linewidth=0.5)
         
         # Column 5: Embeddings → Final arrows (showing how attention modifies the base representation)
         ax = fig.add_subplot(gs[seq_idx, 5])
         embeddings_2d = pca_2d(embeddings)
         Final_2d = pca_2d(Sum)
-        # Mark origin with star
-        ax.scatter([0], [0], s=200, marker='*', color='black', zorder=5, edgecolors='white', linewidths=1)
+        # Mark origin with faint dashed lines
+        ax.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
+        ax.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
         # Draw arrows from embeddings to Final points
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
             color = token_pos_to_color[(token, pos)]
@@ -2929,14 +2928,13 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
             title_suffix = ""
         ax.set_title(f"Embed → Final (Modified by Attention){title_suffix}", fontsize=11)
         ax.grid(True, alpha=0.3)
-        ax.axhline(y=0, color='gray', linestyle='--', alpha=0.3, linewidth=0.5)
-        ax.axvline(x=0, color='gray', linestyle='--', alpha=0.3, linewidth=0.5)
         
         # Column 6: Final scatter
         ax = fig.add_subplot(gs[seq_idx, 6])
         Final_2d = pca_2d(Sum)
-        # Mark origin with star
-        ax.scatter([0], [0], s=200, marker='*', color='black', zorder=5, edgecolors='white', linewidths=1)
+        # Mark origin with faint dashed lines
+        ax.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
+        ax.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
             color = token_pos_to_color[(token, pos)]
             ax.text(Final_2d[i, 0], Final_2d[i, 1], _token_pos_label(token, pos),
@@ -2954,8 +2952,6 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
             title_suffix = ""
         ax.set_title(f"Final{title_suffix}", fontsize=11)
         ax.grid(True, alpha=0.3)
-        ax.axhline(y=0, color='gray', linestyle='--', alpha=0.3, linewidth=0.5)
-        ax.axvline(x=0, color='gray', linestyle='--', alpha=0.3, linewidth=0.5)
     
     plt.tight_layout(rect=[0, 0, 1, 0.98])
     if save_path:
@@ -4462,7 +4458,7 @@ def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, ar
     probs /= probs.sum(axis=1, keepdims=True)  # (N, vocab_size)
     argmax_token = logits.argmax(axis=1)  # (N,) which token has highest logit at each point
 
-    n_data_rows = 2   # Embed with arrows to Final, Final position
+    n_data_rows = 3   # V values, Embed with arrows to Final, Final position
     n_cols = vocab_size  # one column per predicted digit
     n_rows = n_data_rows
 
@@ -4488,6 +4484,7 @@ def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, ar
         land_x = x_np[:, 0] + v_after[:, 0]
         land_y = x_np[:, 1] + v_after[:, 1]
         margin = 0.6
+        # Include V values (v_before) in plot limits
         plot_x_min = min(x_min, x_np[:, 0].min(), v_before[:, 0].min(), v_after[:, 0].min(), land_x.min()) - margin
         plot_x_max = max(x_max, x_np[:, 0].max(), v_before[:, 0].max(), v_after[:, 0].max(), land_x.max()) + margin
         plot_y_min = min(y_min, x_np[:, 1].min(), v_before[:, 1].min(), v_after[:, 1].min(), land_y.min()) - margin
@@ -4528,6 +4525,9 @@ def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, ar
                 ax.set_aspect('equal')
                 Z = probs_plot[:, c].reshape(grid_resolution, grid_resolution)
                 ax.pcolormesh(xx_plot, yy_plot, Z, cmap='viridis', vmin=0, vmax=1, shading='auto')
+                # Add faint dashed lines to indicate origin (0,0)
+                ax.axhline(y=0, color='white', linestyle='--', linewidth=0.5, alpha=0.3, zorder=3)
+                ax.axvline(x=0, color='white', linestyle='--', linewidth=0.5, alpha=0.3, zorder=3)
                 if c == 0:
                     ax.set_ylabel("dim 1", fontsize=label_fs)
                 if r == 0:
@@ -4536,14 +4536,23 @@ def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, ar
                     ax.set_xlabel("dim 0", fontsize=label_fs)
                 # Increase tick label font sizes for plots 15 and 17
                 ax.tick_params(axis='both', which='major', labelsize=label_fs)
-        # Row 0: Embed with arrows to Final (x_np with arrows to x_np + v_after); Row 1: Final position (x_np + v_after)
+        
+        # Row 0: V values for the specific sequence
         for i in range(T):
             lbl = _token_pos_label(itos[seq[i]], i)
-            # Row 0: Embed with arrows to Final
+            v_pos = v_before[i]  # V value for this token-position pair
+            for c in range(n_cols):
+                ax = axes[0, c]
+                ax.text(v_pos[0], v_pos[1], lbl, fontsize=fs, fontweight='bold', ha='center', va='center', color='white', zorder=5,
+                        path_effects=[pe.withStroke(linewidth=0.8, foreground='black')])
+        
+        # Row 1: Embed with arrows to Final (x_np with arrows to x_np + v_after)
+        for i in range(T):
+            lbl = _token_pos_label(itos[seq[i]], i)
             px0, py0 = x_np[i, 0], x_np[i, 1]  # Embed position
             px_final, py_final = x_np[i, 0] + v_after[i, 0], x_np[i, 1] + v_after[i, 1]  # Final position
             for c in range(n_cols):
-                ax = axes[0, c]
+                ax = axes[1, c]
                 # Draw arrow from embed to final (skip arrows for seq_idx==1, but keep labels)
                 if seq_idx != 1:  # Only draw arrows if NOT seq_idx==1 (plot 16)
                     dx = px_final - px0
@@ -4555,16 +4564,21 @@ def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, ar
                 # Annotate at beginning (embed position) - keep this for all sequences
                 ax.text(px0, py0, lbl, fontsize=fs, fontweight='bold', ha='center', va='center', color='white', zorder=5,
                         path_effects=[pe.withStroke(linewidth=0.8, foreground='black')])
-            # Row 1: Final position; white text, stroke color = correct (green) / wrong (red) - keep this for all sequences
+        
+        # Row 2: Final position; white text, stroke color = correct (green) / wrong (red) - keep this for all sequences
+        for i in range(T):
+            lbl = _token_pos_label(itos[seq[i]], i)
+            px_final, py_final = x_np[i, 0] + v_after[i, 0], x_np[i, 1] + v_after[i, 1]  # Final position
             end_color = '#2E7D32' if correct[i] else '#C62828'
             for c in range(n_cols):
-                ax = axes[1, c]
+                ax = axes[2, c]
                 ax.text(px_final, py_final, lbl, fontsize=fs, fontweight='bold', ha='center', va='center', color='white', zorder=5,
                         path_effects=[pe.withStroke(linewidth=0.8, foreground=end_color)])
 
         # Row labels
-        axes[0, 0].set_ylabel("Embed → Final\ndim 1", fontsize=label_fs)
-        axes[1, 0].set_ylabel("Final\ndim 1", fontsize=label_fs)
+        axes[0, 0].set_ylabel("V values\ndim 1", fontsize=label_fs)
+        axes[1, 0].set_ylabel("Embed → Final\ndim 1", fontsize=label_fs)
+        axes[2, 0].set_ylabel("Final\ndim 1", fontsize=label_fs)
 
         seq_str = " ".join(str(itos[t]) for t in seq[:25])
         if len(seq) > 25:
@@ -4715,6 +4729,129 @@ def plot_probability_heatmap_with_embeddings(
     else:
         plt.show()
     
+    model.train()
+
+
+@torch.no_grad()
+def plot_probability_heatmap_with_values(
+    model, itos, save_path=None, grid_resolution=80, extent_margin=0.5, step_label: int | None = None
+):
+    """
+    Plot probability heatmaps for each token with all token+position V values
+    (W_V @ embedding) overlaid on top, analogous to plot_probability_heatmap_with_embeddings.
+    
+    Args:
+        model: Trained model (BigramLanguageModel)
+        itos: Index-to-string mapping for tokens
+        save_path: Path to save the figure
+        grid_resolution: Number of points per axis (default 80)
+        extent_margin: Extra margin around extent (default 0.5)
+    """
+    model.eval()
+    vocab_size = model.token_embedding.weight.shape[0]
+    block_size = model.position_embedding_table.weight.shape[0]
+    n_embd = model.lm_head.in_features
+    if n_embd != 2:
+        print(f"plot_probability_heatmap_with_values: n_embd={n_embd}, need 2. Skipping.")
+        return
+
+    head = model.sa_heads.heads[0]
+    W_V = head.value.weight.detach().cpu().numpy()  # (head_size, n_embd)
+
+    with torch.no_grad():
+        W = model.lm_head.weight.detach().cpu().numpy()   # (vocab_size, 2)
+        b = model.lm_head.bias.detach().cpu().numpy()     # (vocab_size,)
+        token_emb = model.token_embedding.weight.detach().cpu().numpy()
+        pos_emb = model.position_embedding_table.weight.detach().cpu().numpy()
+        combined = token_emb[:, None, :] + pos_emb[None, :, :]  # (vocab, block, 2)
+        flat = combined.reshape(-1, 2)
+        emb_x_min, emb_x_max = flat[:, 0].min(), flat[:, 0].max()
+        emb_y_min, emb_y_max = flat[:, 1].min(), flat[:, 1].max()
+
+    # Get all V values: V = W_V @ (token_emb + pos_emb) for each (token, pos)
+    all_V = []
+    labels = []
+    for token_idx in range(vocab_size):
+        for pos_idx in range(block_size):
+            emb = token_emb[token_idx] + pos_emb[pos_idx]
+            v = (W_V @ emb)  # (head_size,)
+            all_V.append(v)
+            labels.append(_token_pos_label(itos[token_idx], pos_idx))
+    all_V = np.array(all_V)  # (vocab_size * block_size, 2)
+
+    # Grid extent: union of embedding and V extents (so both are visible)
+    v_x_min, v_x_max = all_V[:, 0].min(), all_V[:, 0].max()
+    v_y_min, v_y_max = all_V[:, 1].min(), all_V[:, 1].max()
+    x_min = min(emb_x_min, v_x_min) - extent_margin
+    x_max = max(emb_x_max, v_x_max) + extent_margin
+    y_min = min(emb_y_min, v_y_min) - extent_margin
+    y_max = max(emb_y_max, v_y_max) + extent_margin
+
+    # Create probability grid
+    xs = np.linspace(x_min, x_max, grid_resolution)
+    ys = np.linspace(y_min, y_max, grid_resolution)
+    xx, yy = np.meshgrid(xs, ys)
+    points = np.stack([xx.ravel(), yy.ravel()], axis=1)  # (N, 2)
+
+    dev = next(model.parameters()).device
+    with torch.no_grad():
+        pts = torch.tensor(points, dtype=torch.float32, device=dev)
+        h = pts + model.ffwd(pts)
+        logits = model.lm_head(h).cpu().numpy()  # (N, vocab_size)
+
+    probs = np.exp(logits - logits.max(axis=1, keepdims=True))
+    probs /= probs.sum(axis=1, keepdims=True)
+
+    n_cols = min(4, vocab_size)
+    n_rows = (vocab_size + n_cols - 1) // n_cols
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
+    if step_label is not None:
+        fig.suptitle(f"Step: {step_label}", fontsize=16, fontweight="bold", y=0.98)
+    if n_rows == 1 and n_cols == 1:
+        axes = np.array([[axes]])
+    elif n_rows == 1:
+        axes = axes.reshape(1, -1)
+    elif n_cols == 1:
+        axes = axes.reshape(-1, 1)
+
+    for token_idx in range(vocab_size):
+        row = token_idx // n_cols
+        col = token_idx % n_cols
+        ax = axes[row, col]
+
+        Z = probs[:, token_idx].reshape(grid_resolution, grid_resolution)
+        ax.pcolormesh(xx, yy, Z, cmap='viridis', vmin=0, vmax=1, shading='auto')
+
+        # Overlay all token+position V values
+        for v_vec, label in zip(all_V, labels):
+            ax.scatter(v_vec[0], v_vec[1], s=20, c='white', edgecolors='black', linewidths=0.5, alpha=0.7, zorder=5)
+            if vocab_size * block_size <= 200:
+                ax.text(v_vec[0], v_vec[1], label, fontsize=7, ha='center', va='center',
+                       color='white', weight='bold', zorder=6,
+                       path_effects=[pe.withStroke(linewidth=0.5, foreground='black')])
+
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
+        ax.set_aspect('equal')
+        ax.set_title(f"P(next = {itos[token_idx]})", fontsize=10)
+        if row == n_rows - 1:
+            ax.set_xlabel("dim 0", fontsize=9)
+        if col == 0:
+            ax.set_ylabel("dim 1", fontsize=9)
+
+    for token_idx in range(vocab_size, n_rows * n_cols):
+        row = token_idx // n_cols
+        col = token_idx % n_cols
+        axes[row, col].axis('off')
+
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')
+        plt.close()
+        print(f"Probability heatmap with V values saved to {save_path}")
+    else:
+        plt.show()
+
     model.train()
 
 

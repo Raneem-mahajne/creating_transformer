@@ -38,6 +38,7 @@ from plotting.plots import (
     plot_lm_head_probability_heatmaps,
     plot_v_before_after_demo_sequences,
     plot_probability_heatmap_with_embeddings,
+    plot_probability_heatmap_with_values,
     plot_qk_space_and_attention_heatmap,
 )
 
@@ -80,5 +81,6 @@ __all__ = [
     "plot_lm_head_probability_heatmaps",
     "plot_v_before_after_demo_sequences",
     "plot_probability_heatmap_with_embeddings",
+    "plot_probability_heatmap_with_values",
     "plot_qk_space_and_attention_heatmap",
 ]
