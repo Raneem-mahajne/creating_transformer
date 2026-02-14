@@ -116,7 +116,7 @@ def visualize_from_checkpoint(
         generator,
         save_path=_plot_path("training_data_heatmap.png"),
         num_sequences=min(4, len(decoded_train_sequences)),
-        max_length=50,
+        max_length=20,
     )
 
     if generated_sequences_e0:
@@ -126,7 +126,7 @@ def visualize_from_checkpoint(
             generator,
             save_path=_plot_path("generated_sequences_heatmap.png"),
             num_sequences=3,
-            max_length=50,
+            max_length=20,
         )
         print(f"Generated sequences heatmap (E0): {c0} correct, {i0} incorrect positions ({acc0:.1%} accuracy)")
         print(f"Generated sequences heatmap (Final): {cf} correct, {inf} incorrect positions ({accf:.1%} accuracy)")
@@ -136,7 +136,7 @@ def visualize_from_checkpoint(
             generator,
             save_path=_plot_path("generated_sequences_heatmap.png"),
             num_sequences=min(3, len(generated_sequences)),
-            max_length=50,
+            max_length=20,
         )
         print(f"Generated sequences heatmap: {correct_count} correct, {incorrect_count} incorrect positions ({heatmap_accuracy:.1%} accuracy)")
 

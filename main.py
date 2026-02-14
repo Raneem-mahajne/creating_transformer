@@ -185,7 +185,7 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
             sequences, generator,  # Use original sequences (before encoding)
             save_path=os.path.join(plots_dir, "training_data_heatmap.png"),
             num_sequences=min(6, len(sequences)),  # Show up to 6 training sequences
-            max_length=50
+            max_length=20
         )
         print(f"Training data heatmap: {train_correct_count} correct, {train_incorrect_count} incorrect positions ({train_heatmap_accuracy:.1%} accuracy)")
 

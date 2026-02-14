@@ -3584,7 +3584,7 @@ def estimate_rule_error(model, generator, decode, block_size, num_samples=20, se
     return incorrect_constrained / total_constrained if total_constrained > 0 else 0.0
 
 
-def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=None, num_sequences=5, max_length=30, ax=None, title=None, show_legend=True):
+def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=None, num_sequences=5, max_length=20, ax=None, title=None, show_legend=True):
     """
     Plot generated sequences as an annotated heatmap showing correctness.
     Red = incorrect, White/Green = correct.
@@ -3643,8 +3643,8 @@ def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=N
     # Plot the heatmap
     im = ax.imshow(masked_colors, cmap=cmap, aspect='auto', vmin=0, vmax=2)
     
-    # Add text annotations (the actual numbers) — larger fixed font
-    fontsize = 12
+    # Add text annotations (the actual numbers) — large, readable font
+    fontsize = 20
     for i in range(len(sequences_to_show)):
         for j in range(max_len):
             val = data_matrix[i, j]
@@ -3653,10 +3653,10 @@ def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=N
                 ax.text(j, i, str(val), ha='center', va='center', fontsize=fontsize, color=text_color, fontweight='bold')
     
     # Set labels — larger fonts
-    ax.set_xlabel("Position in Sequence", fontsize=14)
-    ax.set_ylabel("Sequence #", fontsize=14)
-    ax.set_title(title or "Generated Sequences with Rule Correctness\n(Green = Correct, Red = Incorrect)", fontsize=15)
-    ax.tick_params(axis='both', labelsize=12)
+    ax.set_xlabel("Position in Sequence", fontsize=16)
+    ax.set_ylabel("Sequence #", fontsize=16)
+    ax.set_title(title or "Generated Sequences with Rule Correctness\n(Green = Correct, Red = Incorrect)", fontsize=17)
+    ax.tick_params(axis='both', labelsize=14)
     
     # Set ticks
     ax.set_xticks(range(0, max_len, max(1, max_len // 15)))
@@ -3689,7 +3689,7 @@ def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=N
     accuracy = total_correct / total_valid if total_valid > 0 else 0
     return accuracy, total_correct, total_incorrect
 
-def plot_generated_sequences_heatmap_before_after(generated_sequences_e0, generated_sequences_final, generator, save_path=None, num_sequences=3, max_length=50):
+def plot_generated_sequences_heatmap_before_after(generated_sequences_e0, generated_sequences_final, generator, save_path=None, num_sequences=3, max_length=20):
     """Plot before/after generated sequences heatmaps in one image."""
     if not generated_sequences_e0:
         return plot_generated_sequences_heatmap(
@@ -3722,7 +3722,7 @@ def plot_generated_sequences_heatmap_before_after(generated_sequences_e0, genera
     
     return (acc0, c0, i0), (accf, cf, inf)
 
-def plot_training_data_heatmap(training_sequences, generator, save_path=None, num_sequences=4, max_length=50):
+def plot_training_data_heatmap(training_sequences, generator, save_path=None, num_sequences=4, max_length=20):
     """
     Plot training data sequences as an annotated heatmap showing correctness.
     Red = incorrect, Green = correct.
@@ -3779,8 +3779,8 @@ def plot_training_data_heatmap(training_sequences, generator, save_path=None, nu
     # Plot the heatmap
     im = ax.imshow(masked_colors, cmap=cmap, aspect='auto', vmin=0, vmax=2)
     
-    # Add text annotations — larger fixed font
-    fontsize = 12
+    # Add text annotations — large, readable font
+    fontsize = 20
     for i in range(len(sequences_to_show)):
         for j in range(max_len):
             val = data_matrix[i, j]
@@ -3789,10 +3789,10 @@ def plot_training_data_heatmap(training_sequences, generator, save_path=None, nu
                 ax.text(j, i, str(val), ha='center', va='center', fontsize=fontsize, color=text_color, fontweight='bold')
     
     # Set labels — larger fonts
-    ax.set_xlabel("Position in Sequence", fontsize=14)
-    ax.set_ylabel("Sequence #", fontsize=14)
-    ax.set_title("Training Data Sequences with Rule Correctness\n(Green = Correct, Red = Incorrect)", fontsize=15)
-    ax.tick_params(axis='both', labelsize=12)
+    ax.set_xlabel("Position in Sequence", fontsize=16)
+    ax.set_ylabel("Sequence #", fontsize=16)
+    ax.set_title("Training Data Sequences with Rule Correctness\n(Green = Correct, Red = Incorrect)", fontsize=17)
+    ax.tick_params(axis='both', labelsize=14)
     
     # Set ticks — show all sequence labels when we have few sequences
     ax.set_xticks(range(0, max_len, max(1, max_len // 15)))
