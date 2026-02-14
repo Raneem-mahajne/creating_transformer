@@ -2830,8 +2830,18 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
     for idx, (token, pos) in enumerate(sorted(all_token_pos)):
         token_pos_to_color[(token, pos)] = colors_list[idx]
     
+    # Global vmin/vmax for heatmaps (symmetric around 0, shared colorbar)
+    all_hm_vals = []
+    for data_dict in all_data:
+        all_hm_vals.extend(data_dict['embeddings'].ravel())
+        all_hm_vals.extend(data_dict['V_transformed'].ravel())
+        all_hm_vals.extend(data_dict['Sum'].ravel())
+    hm_m = max(abs(np.min(all_hm_vals)), abs(np.max(all_hm_vals))) or 1.0
+    hm_vmin, hm_vmax = -hm_m, hm_m
+
     # First pass: collect all scatter data to calculate shared axis limits
     all_scatter_data = []
+    heatmap_axes = []
     for data_dict in all_data:
         V_transformed_2d = pca_2d(data_dict['V_transformed'])
         embeddings_2d = pca_2d(data_dict['embeddings'])  # Needed for arrows column
@@ -2874,29 +2884,41 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         # Embeddings heatmap (row 0)
         ax = fig.add_subplot(gs[r0_r, c_emb_hm])
         dim_str = f"(T×d={T}×{embeddings.shape[1]})"
-        sns.heatmap(embeddings, cmap="RdBu_r", center=0,
-                   xticklabels=False, yticklabels=tokens, cbar=True, ax=ax)
+        sns.heatmap(embeddings, cmap="RdBu_r", center=0, vmin=hm_vmin, vmax=hm_vmax,
+                   xticklabels=False, yticklabels=tokens, cbar=False, ax=ax)
+        heatmap_axes.append(ax)
         ax.set_xlabel("Dim", fontsize=10)
         ax.set_ylabel(seq_str if use_two_rows_r else f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
         ax.set_title(f"Embeddings (Token+Pos) {dim_str}", fontsize=11)
-        
+        if use_two_rows_r:
+            ref_hm_pos = ax.get_position()
         # V Transformed heatmap
         ax = fig.add_subplot(gs[r0_r, c_v_hm])
         dim_str = f"(T×d={T}×{V_transformed.shape[1]})"
-        sns.heatmap(V_transformed, cmap="RdBu_r", center=0, 
-                   xticklabels=False, yticklabels=tokens, cbar=True, ax=ax)
+        sns.heatmap(V_transformed, cmap="RdBu_r", center=0, vmin=hm_vmin, vmax=hm_vmax,
+                   xticklabels=False, yticklabels=tokens, cbar=False, ax=ax)
+        heatmap_axes.append(ax)
         ax.set_xlabel("Dim", fontsize=10)
         ax.set_ylabel(seq_str if use_two_rows_r else f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
         ax.set_title(f"V Transformed (Attention@V) {dim_str}", fontsize=11)
         
-        # Final heatmap (col 2, row 0 when single seq)
-        ax = fig.add_subplot(gs[r0_r, c_final_hm] if use_two_rows_r else gs[r0_r, c_sum_hm])
+        # Final heatmap (col 2, row 0 when single seq) — same size as other heatmaps, centered between cols 2 and 3
+        if use_two_rows_r:
+            ax = fig.add_subplot(gs[r0_r, 2:4])
+        else:
+            ax = fig.add_subplot(gs[r0_r, c_sum_hm])
         dim_str = f"(T×d={T}×{Sum.shape[1]})"
-        sns.heatmap(Sum, cmap="RdBu_r", center=0,
-                   xticklabels=False, yticklabels=tokens, cbar=True, ax=ax)
+        sns.heatmap(Sum, cmap="RdBu_r", center=0, vmin=hm_vmin, vmax=hm_vmax,
+                   xticklabels=False, yticklabels=tokens, cbar=False, ax=ax)
+        heatmap_axes.append(ax)
         ax.set_xlabel("Dim", fontsize=10)
         ax.set_ylabel(seq_str if use_two_rows_r else f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
         ax.set_title(f"Final (Embed+V_transformed) {dim_str}", fontsize=11)
+        if use_two_rows_r:
+            # Same size as Embed heatmap, centered between cols 2 and 3
+            pos = ax.get_position()
+            center_x = pos.x0 + pos.width / 2
+            ax.set_position([center_x - ref_hm_pos.width / 2, ref_hm_pos.y0, ref_hm_pos.width, ref_hm_pos.height])
         
         # Embeddings scatter (row 1, under Embed heatmap)
         ax = fig.add_subplot(gs[r1_r, c_emb_sc])
@@ -2907,7 +2929,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
             color = token_pos_to_color[(token, pos)]
             ax.text(embeddings_2d[i, 0], embeddings_2d[i, 1], _token_pos_label(token, pos),
-                   fontsize=9, fontweight='bold', ha='center', va='center', color=color)
+                   fontsize=11, fontweight='bold', ha='center', va='center', color=color)
         ax.set_xlim(xlim_shared)
         ax.set_ylim(ylim_shared)
         used_pca = embeddings.shape[1] > 2
@@ -2936,7 +2958,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
             head = max(0.12, min(0.25, arr_len * 0.12))
             ax.arrow(0, 0, x, y, head_width=head, head_length=head, fc=color, ec=color, alpha=0.8, length_includes_head=True, width=0.015, zorder=2)
             ax.text(x, y, _token_pos_label(token, pos),
-                   fontsize=9, fontweight='bold', ha='center', va='center', color=color, zorder=3)
+                   fontsize=11, fontweight='bold', ha='center', va='center', color=color, zorder=3)
         ax.set_xlim(xlim_shared)
         ax.set_ylim(ylim_shared)
         used_pca = V_transformed.shape[1] > 2
@@ -2972,7 +2994,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
                     head_width=head_size, head_length=head_size, fc=color, ec=color, alpha=0.8, length_includes_head=True, width=0.02)
             # Annotate only at beginning (embeddings point)
             ax.text(embeddings_2d[i, 0], embeddings_2d[i, 1], _token_pos_label(token, pos),
-                   fontsize=9, fontweight='bold', ha='center', va='center', color=color)
+                   fontsize=11, fontweight='bold', ha='center', va='center', color=color)
         ax.set_xlim(xlim_shared)
         ax.set_ylim(ylim_shared)
         used_pca = embeddings.shape[1] > 2
@@ -2996,7 +3018,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
             color = token_pos_to_color[(token, pos)]
             ax.text(Final_2d[i, 0], Final_2d[i, 1], _token_pos_label(token, pos),
-                   fontsize=9, fontweight='bold', ha='center', va='center', color=color)
+                   fontsize=11, fontweight='bold', ha='center', va='center', color=color)
         ax.set_xlim(xlim_shared)
         ax.set_ylim(ylim_shared)
         used_pca = Sum.shape[1] > 2
@@ -3011,7 +3033,12 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         ax.set_title(f"Final{title_suffix}", fontsize=11)
         ax.grid(True, alpha=0.3)
     
-    plt.tight_layout(rect=[0, 0, 1, 0.98])
+    plt.tight_layout(rect=[0, 0, 0.94, 0.98])
+    # Single shared colorbar in right margin (after tight_layout so heatmaps stay full size)
+    if heatmap_axes and use_two_rows_r:
+        mappable = heatmap_axes[0].collections[0]
+        ax_cbar = fig.add_axes([0.945, 0.42, 0.015, 0.35])
+        fig.colorbar(mappable, cax=ax_cbar)
     if save_path:
         plt.savefig(save_path, bbox_inches='tight', dpi=150)
         plt.close()
@@ -4726,8 +4753,8 @@ def plot_final_on_output_heatmap_grid(
         return
     seq = sequence[:block_size]
     T = len(seq)
-    # (token, position) -> color, same scheme as residuals plot (tab20)
-    token_positions = [(seq[i], i) for i in range(T)]
+    # (token_str, position) -> color, same scheme as residuals plot (tab20, sorted by (token_str, pos))
+    token_positions = [(itos[seq[i]], i) for i in range(T)]
     unique_tp = sorted(set(token_positions))
     cmap = cm.get_cmap('tab20')
     colors_list = [cmap(i % 20) for i in range(len(unique_tp))]
@@ -4783,8 +4810,8 @@ def plot_final_on_output_heatmap_grid(
         for i in range(T):
             lbl = _token_pos_label(itos[seq[i]], i)
             px, py = final_x[i, 0], final_x[i, 1]
-            color = token_pos_to_color[(seq[i], i)]
-            ax.text(px, py, lbl, fontsize=9, fontweight='bold', ha='center', va='center', color=color, zorder=5,
+            color = token_pos_to_color[(itos[seq[i]], i)]
+            ax.text(px, py, lbl, fontsize=11, fontweight='bold', ha='center', va='center', color=color, zorder=5,
                     path_effects=[pe.withStroke(linewidth=0.8, foreground='black')])
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(y_min, y_max)
