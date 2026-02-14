@@ -15,9 +15,11 @@ plus_last_even,13,qkv_query_key_attention.png,13_qk_attention.png
 plus_last_even,14,qkv_value_output.png,14_value_output.png
 plus_last_even,15,residuals.png,15_residuals.png
 plus_last_even,16,final_on_output_heatmap_grid.png,16_final_on_output_grid.png
-plus_last_even,17,v_before_after_demo_0.png,17_value_demo0.png
-plus_last_even,18,v_before_after_demo_1.png,18_value_demo1.png
-plus_last_even,19,v_before_after_demo_2.png,19_value_demo2.png
+plus_last_even,05_1,learning_dynamics/01_embeddings_scatterplots.gif,05_1_embeddings_dynamics.gif
+plus_last_even,06_1,learning_dynamics/05_output_heatmaps_with_embeddings.gif,06_1_output_heatmaps_dynamics.gif
+plus_last_even,07_1,learning_dynamics/02_embedding_qkv_comprehensive.gif,07_1_qkv_dynamics.gif
+plus_last_even,08_1,learning_dynamics/03_qk_embedding_space.gif,08_1_qk_space_dynamics.gif
+plus_last_even,10_1,learning_dynamics/04_qk_space_plus_attention.gif,10_1_qk_attention_dynamics.gif
 lucky7,01,architecture.png,01_architecture_overview.png
 lucky7,02,learning_curve.png,02_learning_curve.png
 lucky7,03,embeddings.png,03_token_embeddings.png

@@ -17,15 +17,11 @@ The goal is **mechanistic interpretability**: understanding *how* the transforme
   - [03 — Training Data](#03--training-data)
   - [04 — Generated Sequences](#04--generated-sequences)
   - [05 — Token Embeddings](#05--token-embeddings)
-  - [Learning Dynamics: Embeddings](#learning-dynamics-embeddings)
   - [06 — Output Probability Heatmaps with Embeddings](#06--output-probability-heatmaps-with-embeddings)
-  - [Learning Dynamics: Output Heatmaps](#learning-dynamics-output-heatmaps)
   - [07 — QKV Transformations](#07--qkv-transformations)
-  - [Learning Dynamics: QKV](#learning-dynamics-qkv)
   - [08 — Q/K Embedding Space](#08--qk-embedding-space)
   - [09 — Q/K Space: Focused Query](#09--qk-space-focused-query)
   - [10 — Full Attention Matrix](#10--full-attention-matrix)
-  - [Learning Dynamics: Q/K Space + Attention](#learning-dynamics-qk-space--attention)
   - [11 — Probability Heatmap with V Values](#11--probability-heatmap-with-v-values)
   - [12 — Sequence Embeddings](#12--sequence-embeddings)
   - [13 — Q/K Attention (per-sequence)](#13--qk-attention-per-sequence)
@@ -166,15 +162,9 @@ The first stage of the transformer is the embedding layer. Each input token gets
 
 Key takeaway: the embedding layer has already done meaningful work — it has organized the vocabulary so that the categories the rule cares about (even vs. odd vs. operator) occupy distinct regions of the plane.
 
----
-
-### Learning Dynamics: Embeddings
-
-How did the embedding structure in Figure 05 emerge? The following animation shows the three embedding scatter plots at every training checkpoint (every 100 steps, 200 frames total). Watch the even numbers gradually cluster, `+` drift away, and the position ladder become linear.
+**Learning dynamics:** How did this structure emerge? The animation below shows the embedding scatter plots at every training checkpoint (every 100 steps, 200 frames). At initialization the points are random. Within the first few thousand steps, `+` separates from the numbers. The even/odd split solidifies around step 5,000–10,000. Position embeddings slowly self-organize into their ladder structure.
 
 ![Embeddings over training](plus_last_even/plots/learning_dynamics/01_embeddings_scatterplots.gif)
-
-At initialization the points are random. Within the first few thousand steps, `+` separates from the numbers. The even/odd split emerges more gradually, solidifying around step 5,000–10,000. Position embeddings start noisy and slowly self-organize into their ladder structure.
 
 ---
 
@@ -195,15 +185,9 @@ Key observations:
 
 This figure directly shows how the LM head's linear decision boundaries partition the 2D plane into output-token regions. The remaining figures will explain how the model *moves* representations into the correct region using attention and the residual stream.
 
----
-
-### Learning Dynamics: Output Heatmaps
-
-The output probability landscape and the embedding positions both evolve during training. This animation shows them co-evolving: watch the decision boundaries sharpen and the token annotations settle into their final positions.
+**Learning dynamics:** The output probability landscape and embedding positions co-evolve during training. At initialization the landscape is nearly uniform. Decision boundaries appear early (the model quickly learns token frequencies) and then sharpen into the final pattern where each even number has a distinct high-probability region.
 
 ![Output heatmaps over training](plus_last_even/plots/learning_dynamics/05_output_heatmaps_with_embeddings.gif)
-
-At initialization, the probability landscape is nearly uniform (the model predicts all tokens equally). Decision boundaries appear early (the model quickly learns token frequencies) and then sharpen into the final pattern where each even number has a distinct high-probability region. The token+position annotations gradually migrate to their final locations.
 
 ---
 
@@ -222,15 +206,9 @@ We've seen where tokens start (embeddings, Figure 05) and where they need to end
 - *K-Transformed (red):* Keys — the model's "answers" to be matched against queries. The W_K matrix creates a *different* geometry from Q, so the dot product Q*K captures the desired content-based and position-based relationships.
 - *V-Transformed (green):* Values — the information that gets routed through attention. The V space has its own structure, designed so that the attention-weighted sum of V vectors lands in the correct region of the output probability landscape.
 
----
-
-### Learning Dynamics: QKV
-
-The Q, K, and V subspaces must co-evolve: Q and K need complementary structure so their dot products produce the right attention patterns, and V needs to carry information that, when weighted by attention, produces the correct output. This animation shows all four spaces (embeddings, Q, K, V) evolving simultaneously.
+**Learning dynamics:** The Q, K, and V subspaces must co-evolve. This animation shows all four spaces (embeddings in black, Q in blue, K in red, V in green) at every checkpoint. Early in training the four spaces are nearly identical. As training progresses, each develops specialized geometry — Q vectors for `+` end up pointing in directions with high dot product against K vectors for even numbers.
 
 ![QKV over training](plus_last_even/plots/learning_dynamics/02_embedding_qkv_comprehensive.gif)
-
-Embeddings are shown in black, Q in blue, K in red, V in green. Early in training the four spaces are nearly identical (random linear transforms of random embeddings). As training progresses, each space develops its own specialized geometry. Notice how Q and K develop complementary structure — Q vectors for `+` end up pointing in directions that have high dot product with K vectors for even numbers.
 
 ---
 
@@ -248,6 +226,10 @@ Key patterns:
 - **`+` queries** (bottom-right cluster) are far from all number-keys, except for even-number keys at nearby positions — this is how the model learns to attend to the last even number.
 - **Number queries** cluster together in a band, attending broadly to nearby tokens (for the unconstrained positions).
 - Keys for positions 0–7 within each token are spread in a systematic way, encoding position information that allows the causal mask + dot-product geometry to implement "attend to the most recent."
+
+**Learning dynamics:** The Q/K scatter at every checkpoint, showing how the query and key subspaces separate over training.
+
+![Q/K space over training](plus_last_even/plots/learning_dynamics/03_qk_embedding_space.gif)
 
 ---
 
@@ -278,15 +260,9 @@ Key patterns to look for:
 - **Diagonal blocks:** Same-token query-key pairs — these tend to have moderate-to-high scores, as the model also learns to attend to recent occurrences of the same token.
 - **`+` as key (rightmost column):** Number queries attending to `+` keys show mostly low scores — the model doesn't need to route information from `+` to numbers.
 
----
-
-### Learning Dynamics: Q/K Space + Attention
-
-We've seen the final Q/K structure and attention matrix. But when during training did this selective attention emerge? The following animation shows the Q/K scatter plot alongside the full attention heatmap at every checkpoint. You can watch the model gradually develop the pattern where `+` queries attend selectively to even-number keys.
+**Learning dynamics:** The Q/K scatter alongside the full attention heatmap at every checkpoint. Early on, attention is diffuse. As training progresses, the Q/K geometry separates and the `+`-row entries concentrate on even-number columns.
 
 ![Q/K + Attention over training](plus_last_even/plots/learning_dynamics/04_qk_space_plus_attention.gif)
-
-Early on, attention patterns are diffuse — every query attends to everything roughly equally. As training progresses, the Q/K geometry separates and the attention heatmap develops sharp, structured patterns. The `+`-row entries in the heatmap concentrate on even-number columns, matching the rule.
 
 ---
 
@@ -304,7 +280,7 @@ Compare this to Figure 06: the V annotations have a different spatial arrangemen
 
 ### 12 — Sequence Embeddings
 
-So far we've looked at the model's learned parameters in the abstract — all 96 possible token-position combinations. Now we ground the analysis in a **concrete input sequence**. Before we can trace a sequence through the full pipeline (Figures 13–18), we need to see where its specific tokens land in embedding space.
+So far we've looked at the model's learned parameters in the abstract — all 96 possible token-position combinations. Now we ground the analysis in a **concrete input sequence**. Before we can trace a sequence through the full pipeline (Figures 13–16), we need to see where its specific tokens land in embedding space.
 
 ![Sequence Embeddings](plus_last_even/plots/12_sequence_embeddings.png)
 
@@ -400,9 +376,6 @@ Located in `plus_last_even/plots/supplementary/` and `plus_last_even/plots/`. Th
 | `07_qkv_overview.png` | Comprehensive 3x3 view: token embeddings, position embeddings, token+position sum, Q/K/V transformed spaces, Q+K together, and attention output. An "everything at once" alternative to the separate Figures 07–08. |
 | `14_attention_matrix.png` | Per-sequence attention matrices alongside the LM head's linear input, logits, and output probabilities for three demo sequences. Connects attention weights directly to output predictions. |
 | `16_value_arrows.png` | V original, V transformed, and V+residual for three demo sequences, with each token-position in a unique color and correctness indicated by green/red. |
-| `17_value_demo0.png` | Full 12×3 grid (one column per output token, rows: V values, Embed→Final arrows, Final position) overlaid on the output probability heatmaps. The most detailed per-sequence visualization — shows exactly where each position's representation starts, moves, and lands relative to every output decision boundary. |
-| `18_value_demo1.png` | Same layout as `17_value_demo0.png` but without arrows (labels only), for a cleaner view of point positions. |
-| `19_value_demo2.png` | Same layout as `17_value_demo0.png`, third demo sequence variant. |
 
 The `extended/` folder contains `08_qkv_transforms_extended.png`, which adds per-dimension heatmaps (tokens x positions) for Q, K, and V on top of the standard Figure 07.
 

@@ -211,13 +211,6 @@ def visualize_from_checkpoint(
     plot_probability_heatmap_with_values(
         model, itos, save_path=_plot_path("probability_heatmap_with_values.png")
     )
-    # Use the same consistent sequence for demo sequences (generate 3 for plots 16, 17, 18)
-    demo_sequences = [consistent_sequence] * 3 if consistent_sequence else []
-    if demo_sequences:
-        plot_v_before_after_demo_sequences(
-            model, itos, demo_sequences, save_dir=plots_dir,
-        )
-        _rename_demo_outputs(plots_dir, manifest, config_name_actual)
     # Final-on-output heatmap grid (one figure, same sequence, output units in grid)
     if consistent_sequence:
         plot_final_on_output_heatmap_grid(
