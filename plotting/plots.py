@@ -3620,9 +3620,9 @@ def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=N
     
     created_fig = False
     if ax is None:
-        # Create figure - scale appropriately for number of sequences
-        fig_height = max(6, min(20, num_sequences * 0.6 + 2))
-        fig_width = min(24, max(12, max_len * 0.5))
+        # Fewer sequences, larger panels and fonts
+        fig_height = max(6, num_sequences * 1.4 + 2)
+        fig_width = max(14, max_len * 0.65)
         fig, ax = plt.subplots(figsize=(fig_width, fig_height))
         created_fig = True
     
@@ -3643,9 +3643,8 @@ def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=N
     # Plot the heatmap
     im = ax.imshow(masked_colors, cmap=cmap, aspect='auto', vmin=0, vmax=2)
     
-    # Add text annotations (the actual numbers)
-    # Adjust font size based on number of sequences
-    fontsize = max(7, min(10, 12 - num_sequences // 5))
+    # Add text annotations (the actual numbers) — larger fixed font
+    fontsize = 12
     for i in range(len(sequences_to_show)):
         for j in range(max_len):
             val = data_matrix[i, j]
@@ -3653,10 +3652,11 @@ def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=N
                 text_color = 'black'
                 ax.text(j, i, str(val), ha='center', va='center', fontsize=fontsize, color=text_color, fontweight='bold')
     
-    # Set labels
-    ax.set_xlabel("Position in Sequence", fontsize=11)
-    ax.set_ylabel("Sequence #", fontsize=11)
-    ax.set_title(title or "Generated Sequences with Rule Correctness\n(Green = Correct, Red = Incorrect)", fontsize=12)
+    # Set labels — larger fonts
+    ax.set_xlabel("Position in Sequence", fontsize=14)
+    ax.set_ylabel("Sequence #", fontsize=14)
+    ax.set_title(title or "Generated Sequences with Rule Correctness\n(Green = Correct, Red = Incorrect)", fontsize=15)
+    ax.tick_params(axis='both', labelsize=12)
     
     # Set ticks
     ax.set_xticks(range(0, max_len, max(1, max_len // 15)))
@@ -3689,7 +3689,7 @@ def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=N
     accuracy = total_correct / total_valid if total_valid > 0 else 0
     return accuracy, total_correct, total_incorrect
 
-def plot_generated_sequences_heatmap_before_after(generated_sequences_e0, generated_sequences_final, generator, save_path=None, num_sequences=5, max_length=50):
+def plot_generated_sequences_heatmap_before_after(generated_sequences_e0, generated_sequences_final, generator, save_path=None, num_sequences=3, max_length=50):
     """Plot before/after generated sequences heatmaps in one image."""
     if not generated_sequences_e0:
         return plot_generated_sequences_heatmap(
@@ -3697,9 +3697,9 @@ def plot_generated_sequences_heatmap_before_after(generated_sequences_e0, genera
             save_path=save_path, num_sequences=num_sequences, max_length=max_length
         )
     
-    # Create a 2-row figure (E0 on top, Final on bottom)
-    fig_height = max(9, min(24, num_sequences * 1.2 + 4))
-    fig_width = 24
+    # Fewer sequences, larger panels
+    fig_height = max(10, num_sequences * 1.6 + 5)
+    fig_width = max(16, max_length * 0.65)
     fig, axes = plt.subplots(2, 1, figsize=(fig_width, fig_height))
     
     acc0, c0, i0 = plot_generated_sequences_heatmap(
@@ -3722,11 +3722,11 @@ def plot_generated_sequences_heatmap_before_after(generated_sequences_e0, genera
     
     return (acc0, c0, i0), (accf, cf, inf)
 
-def plot_training_data_heatmap(training_sequences, generator, save_path=None, num_sequences=50, max_length=50):
+def plot_training_data_heatmap(training_sequences, generator, save_path=None, num_sequences=4, max_length=50):
     """
     Plot training data sequences as an annotated heatmap showing correctness.
     Red = incorrect, Green = correct.
-    Same style as generated sequences heatmap.
+    Same style as generated sequences heatmap. Shows fewer sequences, larger cells and fonts.
     """
     sequences_to_show = training_sequences[:num_sequences]
     
@@ -3757,9 +3757,9 @@ def plot_training_data_heatmap(training_sequences, generator, save_path=None, nu
     correctness_matrix = np.array(correctness_matrix, dtype=float)
     constrained_matrix = np.array(constrained_matrix, dtype=float)
     
-    # Create figure - scale appropriately for number of sequences
-    fig_height = max(8, min(30, num_sequences * 0.4 + 2))
-    fig_width = min(24, max(12, max_len * 0.4))
+    # Fewer sequences, larger panels and fonts
+    fig_height = max(8, num_sequences * 1.2 + 2)
+    fig_width = max(14, max_len * 0.6)
     fig, ax = plt.subplots(figsize=(fig_width, fig_height))
     
     # Create color matrix: 1 (correct) = light green, 0 (incorrect) = red, 2 (neutral/no valence) = gray
@@ -3779,9 +3779,8 @@ def plot_training_data_heatmap(training_sequences, generator, save_path=None, nu
     # Plot the heatmap
     im = ax.imshow(masked_colors, cmap=cmap, aspect='auto', vmin=0, vmax=2)
     
-    # Add text annotations (the actual numbers)
-    # Adjust font size based on number of sequences
-    fontsize = max(6, min(9, 11 - num_sequences // 10))
+    # Add text annotations — larger fixed font
+    fontsize = 12
     for i in range(len(sequences_to_show)):
         for j in range(max_len):
             val = data_matrix[i, j]
@@ -3789,15 +3788,16 @@ def plot_training_data_heatmap(training_sequences, generator, save_path=None, nu
                 text_color = 'black'
                 ax.text(j, i, str(val), ha='center', va='center', fontsize=fontsize, color=text_color, fontweight='bold')
     
-    # Set labels
-    ax.set_xlabel("Position in Sequence", fontsize=11)
-    ax.set_ylabel("Sequence #", fontsize=11)
-    ax.set_title("Training Data Sequences with Rule Correctness\n(Green = Correct, Red = Incorrect)", fontsize=12)
+    # Set labels — larger fonts
+    ax.set_xlabel("Position in Sequence", fontsize=14)
+    ax.set_ylabel("Sequence #", fontsize=14)
+    ax.set_title("Training Data Sequences with Rule Correctness\n(Green = Correct, Red = Incorrect)", fontsize=15)
+    ax.tick_params(axis='both', labelsize=12)
     
-    # Set ticks
+    # Set ticks — show all sequence labels when we have few sequences
     ax.set_xticks(range(0, max_len, max(1, max_len // 15)))
-    ax.set_yticks(range(0, num_sequences, max(1, num_sequences // 20)))
-    ax.set_yticklabels([f"Seq {i+1}" for i in range(0, num_sequences, max(1, num_sequences // 20))])
+    ax.set_yticks(range(num_sequences))
+    ax.set_yticklabels([f"Seq {i+1}" for i in range(num_sequences)])
     
     # Add colorbar/legend
     from matplotlib.patches import Patch
