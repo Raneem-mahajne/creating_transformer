@@ -2349,9 +2349,15 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
     all_K_combinations = np.array(all_K_combinations)  # (vocab_size * block_size, head_size)
     
     # ========== PLOT 1: Q, K, masked QK^T, Attention, scatter(Q vs K) ==========
-    num_cols_plot1 = 5  # Q, K, masked QK^T, Attention, scatter
-    fig1 = plt.figure(figsize=(6 * num_cols_plot1, 4 * num_sequences))
-    gs1 = GridSpec(num_sequences, num_cols_plot1, figure=fig1, hspace=0.4, wspace=0.3)
+    use_two_rows = num_sequences == 1
+    if use_two_rows:
+        n_rows_1, n_cols_plot1 = 2, 3  # Row0: Q, K, Q vs K; Row1: masked QK^T, Attention
+        fig1 = plt.figure(figsize=(6 * n_cols_plot1, 5 * n_rows_1))
+        gs1 = GridSpec(n_rows_1, n_cols_plot1, figure=fig1, hspace=0.35, wspace=0.3)
+    else:
+        num_cols_plot1 = 5
+        fig1 = plt.figure(figsize=(6 * num_cols_plot1, 4 * num_sequences))
+        gs1 = GridSpec(num_sequences, num_cols_plot1, figure=fig1, hspace=0.4, wspace=0.3)
     
     # Collect all Q and K from all sequences to compute consistent PCA
     all_Q_data = []
@@ -2389,18 +2395,23 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         Masked_QK_T = data_dict['Masked_QK_T']
         Attention = data_dict['Attention']
         T = data_dict['T']
-        
-        # Column 0: Q
-        ax = fig1.add_subplot(gs1[seq_idx, 0])
+        if use_two_rows:
+            r0, r1, c_q, c_k, c_scat, c_masked, c_att = 0, 1, 0, 1, 2, 0, 1
+        else:
+            r0 = r1 = seq_idx
+            c_q, c_k, c_scat, c_masked, c_att = 0, 1, 2, 3, 4
+
+        # Q
+        ax = fig1.add_subplot(gs1[r0, c_q])
         dim_str = f"(T×hs={Q.shape[0]}×{Q.shape[1]})"
         sns.heatmap(Q, cmap="viridis", xticklabels=list(range(Q.shape[1])), 
                    yticklabels=tokens, cbar=True, ax=ax)
         ax.set_xlabel("hs", fontsize=10)
-        ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
+        ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n" if not use_two_rows else f"{seq_str}", fontsize=9)
         ax.set_title(f"Q {dim_str}", fontsize=11)
         
-        # Column 1: K
-        ax = fig1.add_subplot(gs1[seq_idx, 1])
+        # K
+        ax = fig1.add_subplot(gs1[r0, c_k])
         dim_str = f"(T×hs={K.shape[0]}×{K.shape[1]})"
         sns.heatmap(K, cmap="viridis", xticklabels=list(range(K.shape[1])), 
                    yticklabels=tokens, cbar=True, ax=ax)
@@ -2408,8 +2419,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         ax.set_ylabel("T", fontsize=10)
         ax.set_title(f"K {dim_str}", fontsize=11)
         
-        # Column 2: Scatter plot Q vs K
-        ax = fig1.add_subplot(gs1[seq_idx, 2])
+        # Scatter plot Q vs K
+        ax = fig1.add_subplot(gs1[r0, c_scat])
         
         # Apply consistent PCA transformation to sequence-specific Q/K
         if pca_transform is not None:
@@ -2466,8 +2477,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         ax.set_title(f"Q vs K{title_suffix}", fontsize=11)
         ax.grid(True, alpha=0.3)
         
-        # Column 3: masked QK^T
-        ax = fig1.add_subplot(gs1[seq_idx, 3])
+        # masked QK^T
+        ax = fig1.add_subplot(gs1[r1, c_masked])
         dim_str = f"(T×T={T}×{T})"
         sns.heatmap(Masked_QK_T, cmap="viridis", xticklabels=tokens, 
                    yticklabels=tokens, cbar=True, ax=ax)
@@ -2475,8 +2486,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         ax.set_ylabel("T", fontsize=10)
         ax.set_title(f"masked QK^T {dim_str}", fontsize=11)
         
-        # Column 4: Attention
-        ax = fig1.add_subplot(gs1[seq_idx, 4])
+        # Attention
+        ax = fig1.add_subplot(gs1[r1, c_att])
         dim_str = f"(T×T={T}×{T})"
         sns.heatmap(Attention, cmap="magma", vmin=0.0, vmax=1.0, 
                    xticklabels=tokens, yticklabels=tokens, cbar=True, ax=ax)
@@ -2513,9 +2524,15 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
     # ========== PLOT 2: Attention, V, Final Output, scatter(V), scatter(Final Output) ==========
     # Final Output = Attention @ V: weighted sum of value vectors where attention weights determine
     # how much each position contributes. For position i: Final_Output[i] = sum_j(Attention[i,j] * V[j])
-    num_cols_plot2 = 5  # Attention, V, Final Output, V scatter, Final Output scatter
-    fig2 = plt.figure(figsize=(6 * num_cols_plot2, 4 * num_sequences))
-    gs2 = GridSpec(num_sequences, num_cols_plot2, figure=fig2, hspace=0.4, wspace=0.3)
+    use_two_rows_2 = num_sequences == 1
+    if use_two_rows_2:
+        n_rows_2, n_cols_plot2 = 2, 3  # Row0: Attention, V, Final Output; Row1: V scatter, Final scatter
+        fig2 = plt.figure(figsize=(6 * n_cols_plot2, 5 * n_rows_2))
+        gs2 = GridSpec(n_rows_2, n_cols_plot2, figure=fig2, hspace=0.35, wspace=0.3)
+    else:
+        num_cols_plot2 = 5
+        fig2 = plt.figure(figsize=(6 * num_cols_plot2, 4 * num_sequences))
+        gs2 = GridSpec(num_sequences, num_cols_plot2, figure=fig2, hspace=0.4, wspace=0.3)
     
     # First pass: collect all V data to compute consistent PCA
     all_V_data = []
@@ -2572,22 +2589,28 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         Attention = data_dict['Attention']
         Final_Output = data_dict['Final_Output']
         T = data_dict['T']
+        if use_two_rows_2:
+            r0_2, r1_2 = 0, 1
+            c_att2, c_v2, c_final2, c_vscat2, c_finalscat2 = 0, 1, 2, 0, 1
+        else:
+            r0_2 = r1_2 = seq_idx
+            c_att2, c_v2, c_final2, c_vscat2, c_finalscat2 = 0, 1, 2, 3, 4
         
         # Get pre-computed 2D projections
         V_2d = all_V_2d[idx]
         Final_Output_2d = all_Final_Output_2d[idx]
         
-        # Column 0: Attention (same as plot 1)
-        ax = fig2.add_subplot(gs2[seq_idx, 0])
+        # Attention
+        ax = fig2.add_subplot(gs2[r0_2, c_att2])
         dim_str = f"(T×T={T}×{T})"
         sns.heatmap(Attention, cmap="magma", vmin=0.0, vmax=1.0, 
                    xticklabels=tokens, yticklabels=tokens, cbar=True, ax=ax)
         ax.set_xlabel("T", fontsize=10)
-        ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
+        ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n" if not use_two_rows_2 else seq_str, fontsize=9)
         ax.set_title(f"Attention {dim_str}", fontsize=11)
         
-        # Column 1: V
-        ax = fig2.add_subplot(gs2[seq_idx, 1])
+        # V
+        ax = fig2.add_subplot(gs2[r0_2, c_v2])
         dim_str = f"(T×hs={V.shape[0]}×{V.shape[1]})"
         sns.heatmap(V, cmap="viridis", xticklabels=list(range(V.shape[1])), 
                    yticklabels=tokens, cbar=True, ax=ax)
@@ -2595,8 +2618,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         ax.set_ylabel("T", fontsize=10)
         ax.set_title(f"V {dim_str}", fontsize=11)
         
-        # Column 2: Final Output (Attention @ V)
-        ax = fig2.add_subplot(gs2[seq_idx, 2])
+        # Final Output (Attention @ V)
+        ax = fig2.add_subplot(gs2[r0_2, c_final2])
         dim_str = f"(T×hs={Final_Output.shape[0]}×{Final_Output.shape[1]})"
         sns.heatmap(Final_Output, cmap="viridis", xticklabels=list(range(Final_Output.shape[1])), 
                    yticklabels=tokens, cbar=True, ax=ax)
@@ -2604,8 +2627,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         ax.set_ylabel("T", fontsize=10)
         ax.set_title(f"Final Output (Attention@V) {dim_str}", fontsize=11)
         
-        # Column 3: Scatter plot for V
-        ax = fig2.add_subplot(gs2[seq_idx, 3])
+        # Scatter plot for V
+        ax = fig2.add_subplot(gs2[r1_2, c_vscat2])
         
         # Use shared axis limits
         ax.set_xlim(xlim_shared)
@@ -2638,8 +2661,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         ax.set_title(f"V{title_suffix}", fontsize=11)
         ax.grid(True, alpha=0.3)
         
-        # Column 4: Scatter plot for Final Output
-        ax = fig2.add_subplot(gs2[seq_idx, 4])
+        # Scatter plot for Final Output
+        ax = fig2.add_subplot(gs2[r1_2, c_finalscat2])
         
         # Use shared axis limits
         ax.set_xlim(xlim_shared)
@@ -2758,12 +2781,20 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
             'T': T
         })
     
-    # Create figure: 3 columns (heatmaps on left) + 4 columns (scatters on right) = 7 columns
-    # Left: V_transformed heatmap, Embeddings heatmap, Final heatmap
-    # Right: V_transformed scatter, Embeddings scatter, Embed→Final arrows, Final scatter
-    num_cols = 7
-    fig = plt.figure(figsize=(6 * num_cols, 4 * num_sequences))
-    gs = GridSpec(num_sequences, num_cols, figure=fig, hspace=0.4, wspace=0.3)
+    # Create figure layout.
+    # When single sequence: 2 rows x 4 cols.
+    #   Col 0: Embed hm (r0) + scatter (r1). Col 1: V_trans hm (r0) + scatter (r1).
+    #   Col 2: Final hm (r0) + Embed→Final arrows (r1).
+    #   Col 3: empty (r0), Final scatter (r1) — normal 1x1 next to arrows.
+    use_two_rows_r = num_sequences == 1
+    if use_two_rows_r:
+        n_rows_r, num_cols = 2, 4
+        fig = plt.figure(figsize=(4 * num_cols, 5 * n_rows_r))
+        gs = GridSpec(n_rows_r, num_cols, figure=fig, hspace=0.4, wspace=0.3)
+    else:
+        num_cols = 7
+        fig = plt.figure(figsize=(6 * num_cols, 4 * num_sequences))
+        gs = GridSpec(num_sequences, num_cols, figure=fig, hspace=0.4, wspace=0.3)
     
     # Create consistent color mapping for each token+position combination
     import matplotlib.cm as cm
@@ -2817,36 +2848,47 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         V_transformed = data_dict['V_transformed']
         Sum = data_dict['Sum']
         T = data_dict['T']
+        if use_two_rows_r:
+            # Col 0: Embed (hm+sc). Col 1: V_trans (hm+sc). Col 2: Final hm + arrows. Col 3: empty r0, Final sc r1.
+            r0_r, r1_r = 0, 1
+            c_emb_hm, c_v_hm, c_emb_sc, c_v_sc = 0, 1, 0, 1
+            c_final_hm = 2       # Final heatmap in col 2, row 0
+            c_final_arrow = 2    # Embed→Final arrows in col 2, row 1
+            c_final_sc = 3      # Final scatter in col 3, row 1 (next to arrows; r0 col 3 left empty)
+        else:
+            r0_r = r1_r = r2_r = seq_idx
+            c_emb_hm, c_v_hm, c_sum_hm, c_emb_sc, c_v_sc, c_arrow, c_fin_sc = 0, 1, 2, 3, 4, 5, 6
+            c_final_span = 2  # unused in multi-seq
         
-        # Column 0: Embeddings heatmap (switched from column 1)
-        ax = fig.add_subplot(gs[seq_idx, 0])
+        # Embeddings heatmap (row 0)
+        ax = fig.add_subplot(gs[r0_r, c_emb_hm])
         dim_str = f"(T×d={T}×{embeddings.shape[1]})"
         sns.heatmap(embeddings, cmap="RdBu_r", center=0,
                    xticklabels=False, yticklabels=tokens, cbar=True, ax=ax)
         ax.set_xlabel("Dim", fontsize=10)
-        ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
+        ax.set_ylabel(seq_str if use_two_rows_r else f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
         ax.set_title(f"Embeddings (Token+Pos) {dim_str}", fontsize=11)
         
-        # Column 1: V Transformed heatmap (switched from column 0)
-        ax = fig.add_subplot(gs[seq_idx, 1])
+        # V Transformed heatmap
+        ax = fig.add_subplot(gs[r0_r, c_v_hm])
         dim_str = f"(T×d={T}×{V_transformed.shape[1]})"
         sns.heatmap(V_transformed, cmap="RdBu_r", center=0, 
                    xticklabels=False, yticklabels=tokens, cbar=True, ax=ax)
         ax.set_xlabel("Dim", fontsize=10)
-        ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
+        ax.set_ylabel(seq_str if use_two_rows_r else f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
         ax.set_title(f"V Transformed (Attention@V) {dim_str}", fontsize=11)
         
-        # Column 2: Final heatmap (after residual connection)
-        ax = fig.add_subplot(gs[seq_idx, 2])
+        # Final heatmap (col 2, row 0 when single seq)
+        ax = fig.add_subplot(gs[r0_r, c_final_hm] if use_two_rows_r else gs[r0_r, c_sum_hm])
         dim_str = f"(T×d={T}×{Sum.shape[1]})"
         sns.heatmap(Sum, cmap="RdBu_r", center=0,
                    xticklabels=False, yticklabels=tokens, cbar=True, ax=ax)
         ax.set_xlabel("Dim", fontsize=10)
-        ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
+        ax.set_ylabel(seq_str if use_two_rows_r else f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
         ax.set_title(f"Final (Embed+V_transformed) {dim_str}", fontsize=11)
         
-        # Column 3: Embeddings scatter (switched from column 4)
-        ax = fig.add_subplot(gs[seq_idx, 3])
+        # Embeddings scatter (row 1, under Embed heatmap)
+        ax = fig.add_subplot(gs[r1_r, c_emb_sc])
         embeddings_2d = pca_2d(embeddings)
         # Mark origin with faint dashed lines
         ax.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
@@ -2869,16 +2911,21 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         ax.set_title(f"Embed{title_suffix}", fontsize=11)
         ax.grid(True, alpha=0.3)
         
-        # Column 4: V Transformed scatter (switched from column 3)
-        ax = fig.add_subplot(gs[seq_idx, 4])
+        # V Transformed scatter (with arrows from origin to each point)
+        ax = fig.add_subplot(gs[r1_r, c_v_sc])
         V_transformed_2d = pca_2d(V_transformed)
         # Mark origin with faint dashed lines
         ax.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
         ax.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
             color = token_pos_to_color[(token, pos)]
-            ax.text(V_transformed_2d[i, 0], V_transformed_2d[i, 1], _token_pos_label(token, pos),
-                   fontsize=9, fontweight='bold', ha='center', va='center', color=color)
+            x, y = V_transformed_2d[i, 0], V_transformed_2d[i, 1]
+            # Arrow from origin to this point
+            arr_len = np.sqrt(x**2 + y**2)
+            head = max(0.12, min(0.25, arr_len * 0.12))
+            ax.arrow(0, 0, x, y, head_width=head, head_length=head, fc=color, ec=color, alpha=0.8, length_includes_head=True, width=0.015, zorder=2)
+            ax.text(x, y, _token_pos_label(token, pos),
+                   fontsize=9, fontweight='bold', ha='center', va='center', color=color, zorder=3)
         ax.set_xlim(xlim_shared)
         ax.set_ylim(ylim_shared)
         used_pca = V_transformed.shape[1] > 2
@@ -2893,8 +2940,8 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         ax.set_title(f"V Transformed{title_suffix}", fontsize=11)
         ax.grid(True, alpha=0.3)
         
-        # Column 5: Embeddings → Final arrows (showing how attention modifies the base representation)
-        ax = fig.add_subplot(gs[seq_idx, 5])
+        # Embeddings → Final arrows (col 2, row 1 when single seq)
+        ax = fig.add_subplot(gs[r1_r, c_final_arrow] if use_two_rows_r else gs[r1_r, c_arrow])
         embeddings_2d = pca_2d(embeddings)
         Final_2d = pca_2d(Sum)
         # Mark origin with faint dashed lines
@@ -2929,8 +2976,8 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         ax.set_title(f"Embed → Final (Modified by Attention){title_suffix}", fontsize=11)
         ax.grid(True, alpha=0.3)
         
-        # Column 6: Final scatter
-        ax = fig.add_subplot(gs[seq_idx, 6])
+        # Final scatter (col 3, row 1 when single seq — next to arrows; space above left empty)
+        ax = fig.add_subplot(gs[r1_r, c_final_sc] if use_two_rows_r else gs[r2_r, c_fin_sc])
         Final_2d = pca_2d(Sum)
         # Mark origin with faint dashed lines
         ax.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
@@ -4287,33 +4334,35 @@ def plot_qk_embedding_space_focused_query(model, itos, token_str="+", position=5
     # Background heatmap (dot product with focus query)
     im = ax.pcolormesh(xx, yy, dot_grid, cmap='Greens', shading='auto')
     
-    # Add colorbar
-    cbar = plt.colorbar(im, ax=ax, shrink=0.6)
-    cbar.set_label('Dot product with query', fontsize=10)
-    cbar.ax.tick_params(labelsize=10)
+    # All other queries in very light blue (background context)
+    for i in range(num_combinations):
+        if i == idx_focus:
+            continue
+        ax.text(Q_2d[i, 0], Q_2d[i, 1], labels[i], fontsize=label_fontsize - 2, ha='center', va='center', color='#A0C4E8', alpha=0.8, zorder=2)
 
-    # Key points: red if position < position_focus, dark gray otherwise
+    # Key points: red if position < position_focus, gray otherwise (masked by causal mask)
     for i in range(num_combinations):
         p = i % block_size
-        color = 'red' if p < position else '#666666'  # Medium-dark gray for better visibility
-        ax.text(K_2d[i, 0], K_2d[i, 1], labels[i], fontsize=label_fontsize, ha='center', va='center', color=color)
+        color = 'red' if p < position else '#666666'
+        ax.text(K_2d[i, 0], K_2d[i, 1], labels[i], fontsize=label_fontsize, ha='center', va='center', color=color, zorder=3)
 
-    # Single query point (focus)
-    ax.text(Q_2d[idx_focus, 0], Q_2d[idx_focus, 1], labels[idx_focus], fontsize=label_fontsize + 4, ha='center', va='center', color='blue', fontweight='bold')
+    # Focused query point (bold blue, on top)
+    ax.text(Q_2d[idx_focus, 0], Q_2d[idx_focus, 1], labels[idx_focus], fontsize=label_fontsize + 4, ha='center', va='center', color='blue', fontweight='bold', zorder=4)
 
     ax.set_xlim(x_min, x_max)
     ax.set_ylim(y_min, y_max)
     ax.set_xlabel("Dimension 1" + (" (PCA)" if head_size != 2 else ""), fontsize=axis_fontsize)
     ax.set_ylabel("Dimension 2" + (" (PCA)" if head_size != 2 else ""), fontsize=axis_fontsize)
     ax.tick_params(axis='both', labelsize=tick_fontsize)
-    ax.set_title(f"Q/K space: focus on query {_token_pos_label(token_str, position)}\nBackground = dot product with this query; keys with position ≥ {position} grayed", fontsize=title_fontsize, fontweight='bold')
+    ax.set_title(f"Q/K space: focus on query {_token_pos_label(token_str, position)}\nBackground = dot product with this query; keys with position \u2265 {position} grayed", fontsize=title_fontsize, fontweight='bold')
     ax.grid(True, alpha=0.3)
     ax.set_aspect('equal', adjustable='box')
 
     legend_handles = [
         Patch(facecolor='blue', edgecolor='black', label=f'Query {_token_pos_label(token_str, position)}'),
+        Patch(facecolor='#A0C4E8', edgecolor='black', label='Other queries'),
         Patch(facecolor='red', edgecolor='black', label=f'Key (position < {position})'),
-        Patch(facecolor='#666666', edgecolor='black', label=f'Key (position ≥ {position})'),
+        Patch(facecolor='#666666', edgecolor='black', label=f'Key (position \u2265 {position})'),
     ]
     ax.legend(handles=legend_handles, loc='upper left', fontsize=legend_fontsize, framealpha=0.9)
 
@@ -4615,6 +4664,112 @@ def plot_v_before_after_demo_sequences(model, itos, sequences, save_dir=None, ar
         print(f"Saved {min(len(sequences), len([s for s in sequences if len(s) >= 2]))} demo sequence figures to {save_dir}")
 
 
+def plot_final_on_output_heatmap_grid(
+    model, itos, sequence, save_path=None, grid_resolution=60, extent_margin=0.5
+):
+    """
+    One figure for the given sequence: output-token probability heatmaps in a grid (not one column per token).
+    Overlay only the *final* (embed + V_transformed) positions with labels; colors by (token, position) as in residuals plot.
+    """
+    import matplotlib.cm as cm
+    model.eval()
+    vocab_size = model.token_embedding.weight.shape[0]
+    block_size = model.block_size
+    n_embd = model.lm_head.in_features
+    if n_embd != 2:
+        print("plot_final_on_output_heatmap_grid: n_embd != 2. Skipping.")
+        return
+    if len(sequence) < 2:
+        return
+    seq = sequence[:block_size]
+    T = len(seq)
+    # (token, position) -> color, same scheme as residuals plot (tab20)
+    token_positions = [(seq[i], i) for i in range(T)]
+    unique_tp = sorted(set(token_positions))
+    cmap = cm.get_cmap('tab20')
+    colors_list = [cmap(i % 20) for i in range(len(unique_tp))]
+    token_pos_to_color = {tp: colors_list[j] for j, tp in enumerate(unique_tp)}
+    dev = next(model.parameters()).device
+    idx = torch.tensor([seq], dtype=torch.long, device=dev)
+    x_np, v_before, v_after = _get_v_before_after_for_sequence(model, idx)
+    final_x = x_np + v_after  # (T, 2)
+
+    with torch.no_grad():
+        token_emb = model.token_embedding.weight.detach().cpu().numpy()
+        pos_emb = model.position_embedding_table.weight.detach().cpu().numpy()
+        combined = token_emb[:, None, :] + pos_emb[None, :, :]
+        flat = combined.reshape(-1, 2)
+        x_min = min(flat[:, 0].min(), final_x[:, 0].min()) - extent_margin
+        x_max = max(flat[:, 0].max(), final_x[:, 0].max()) + extent_margin
+        y_min = min(flat[:, 1].min(), final_x[:, 1].min()) - extent_margin
+        y_max = max(flat[:, 1].max(), final_x[:, 1].max()) + extent_margin
+    # Force square extent so heatmaps are square
+    x_c, y_c = (x_min + x_max) / 2, (y_min + y_max) / 2
+    half = max(x_max - x_min, y_max - y_min) / 2
+    x_min, x_max = x_c - half, x_c + half
+    y_min, y_max = y_c - half, y_c + half
+
+    xs = np.linspace(x_min, x_max, grid_resolution)
+    ys = np.linspace(y_min, y_max, grid_resolution)
+    xx, yy = np.meshgrid(xs, ys)
+    points = np.stack([xx.ravel(), yy.ravel()], axis=1)
+    pts = torch.tensor(points, dtype=torch.float32, device=dev)
+    with torch.no_grad():
+        h = pts + model.ffwd(pts)
+        logits = model.lm_head(h).cpu().numpy()
+    probs = np.exp(logits - logits.max(axis=1, keepdims=True))
+    probs /= probs.sum(axis=1, keepdims=True)
+
+    n_cols = min(4, vocab_size)
+    n_rows = (vocab_size + n_cols - 1) // n_cols
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
+    if n_rows == 1 and n_cols == 1:
+        axes = np.array([[axes]])
+    elif n_rows == 1:
+        axes = axes.reshape(1, -1)
+    elif n_cols == 1:
+        axes = axes.reshape(-1, 1)
+
+    for d in range(vocab_size):
+        row, col = d // n_cols, d % n_cols
+        ax = axes[row, col]
+        Z = probs[:, d].reshape(grid_resolution, grid_resolution)
+        ax.pcolormesh(xx, yy, Z, cmap='viridis', vmin=0, vmax=1, shading='auto')
+        ax.axhline(y=0, color='white', linestyle='--', linewidth=0.5, alpha=0.3, zorder=3)
+        ax.axvline(x=0, color='white', linestyle='--', linewidth=0.5, alpha=0.3, zorder=3)
+        for i in range(T):
+            lbl = _token_pos_label(itos[seq[i]], i)
+            px, py = final_x[i, 0], final_x[i, 1]
+            color = token_pos_to_color[(seq[i], i)]
+            ax.text(px, py, lbl, fontsize=9, fontweight='bold', ha='center', va='center', color=color, zorder=5,
+                    path_effects=[pe.withStroke(linewidth=0.8, foreground='black')])
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
+        ax.set_aspect('equal')
+        ax.set_title(f"P(next = {itos[d]})", fontsize=11)
+        if row == n_rows - 1:
+            ax.set_xlabel("dim 0", fontsize=9)
+        if col == 0:
+            ax.set_ylabel("dim 1", fontsize=9)
+
+    for j in range(vocab_size, n_rows * n_cols):
+        row, col = j // n_cols, j % n_cols
+        axes[row, col].axis('off')
+
+    seq_str = " ".join(str(itos[t]) for t in seq[:20])
+    if len(seq) > 20:
+        seq_str += "..."
+    fig.suptitle(f"Final (embed+V_transformed) on output heatmaps  |  {seq_str}", fontsize=11, fontweight='bold', y=1.01)
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')
+        plt.close()
+        print(f"Final-on-output heatmap grid saved to {save_path}")
+    else:
+        plt.show()
+    model.train()
+
+
 @torch.no_grad()
 def plot_probability_heatmap_with_embeddings(
     model, itos, save_path=None, grid_resolution=80, extent_margin=0.5, step_label: int | None = None
@@ -4647,6 +4802,11 @@ def plot_probability_heatmap_with_embeddings(
         flat = combined.reshape(-1, 2)
         x_min, x_max = flat[:, 0].min() - extent_margin, flat[:, 0].max() + extent_margin
         y_min, y_max = flat[:, 1].min() - extent_margin, flat[:, 1].max() + extent_margin
+    # Square extent and layout (same as fig 19 / probability_heatmap_with_values)
+    x_c, y_c = (x_min + x_max) / 2, (y_min + y_max) / 2
+    half = max(x_max - x_min, y_max - y_min) / 2
+    x_min, x_max = x_c - half, x_c + half
+    y_min, y_max = y_c - half, y_c + half
 
     # Create probability grid - need to pass through feedforward first
     xs = np.linspace(x_min, x_max, grid_resolution)
@@ -4697,14 +4857,11 @@ def plot_probability_heatmap_with_embeddings(
         Z = probs[:, token_idx].reshape(grid_resolution, grid_resolution)
         im = ax.pcolormesh(xx, yy, Z, cmap='viridis', vmin=0, vmax=1, shading='auto')
         
-        # Overlay all token+position combinations
+        # Overlay annotations only (no marker dots/circles)
         for combo_idx, (emb, label) in enumerate(zip(all_combinations, labels)):
-            ax.scatter(emb[0], emb[1], s=20, c='white', edgecolors='black', linewidths=0.5, alpha=0.7, zorder=5)
-            # Only label if there aren't too many points
             if vocab_size * block_size <= 200:
-                ax.text(emb[0], emb[1], label, fontsize=7, ha='center', va='center', 
-                       color='white', weight='bold', zorder=6,
-                       path_effects=[pe.withStroke(linewidth=0.5, foreground='black')])
+                ax.text(emb[0], emb[1], label, fontsize=7, ha='center', va='center',
+                       color='white', weight='bold', zorder=6)
         
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(y_min, y_max)
@@ -4822,13 +4979,11 @@ def plot_probability_heatmap_with_values(
         Z = probs[:, token_idx].reshape(grid_resolution, grid_resolution)
         ax.pcolormesh(xx, yy, Z, cmap='viridis', vmin=0, vmax=1, shading='auto')
 
-        # Overlay all token+position V values
+        # Overlay annotations only (no marker dots/circles)
         for v_vec, label in zip(all_V, labels):
-            ax.scatter(v_vec[0], v_vec[1], s=20, c='white', edgecolors='black', linewidths=0.5, alpha=0.7, zorder=5)
             if vocab_size * block_size <= 200:
                 ax.text(v_vec[0], v_vec[1], label, fontsize=7, ha='center', va='center',
-                       color='white', weight='bold', zorder=6,
-                       path_effects=[pe.withStroke(linewidth=0.5, foreground='black')])
+                       color='white', weight='bold', zorder=6)
 
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(y_min, y_max)

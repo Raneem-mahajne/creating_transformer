@@ -31,6 +31,7 @@ from plotting import (
     plot_qk_full_attention_heatmap,
     plot_lm_head_probability_heatmaps,
     plot_v_before_after_demo_sequences,
+    plot_final_on_output_heatmap_grid,
     plot_residuals,
     plot_probability_heatmap_with_embeddings,
     plot_probability_heatmap_with_values,
@@ -173,13 +174,13 @@ def visualize_from_checkpoint(
         plot_architecture_diagram(config, save_path=arch_path, model=model, vocab_size=vocab_size, batch_size=training_config.get('batch_size', 4))
 
     plot_weights_qkv_two_sequences(
-        model, X_list, itos, save_path=_plot_path("qkv_query_key_attention.png"), num_sequences=3
+        model, X_list, itos, save_path=_plot_path("qkv_query_key_attention.png"), num_sequences=1
     )
     plot_residuals(
-        model, X_list, itos, save_path=_plot_path("residuals.png"), num_sequences=3
+        model, X_list, itos, save_path=_plot_path("residuals.png"), num_sequences=1
     )
     plot_embeddings_pca(model, itos, save_path=_plot_path("embeddings.png"))
-    plot_embeddings_scatterplots_only(model, itos, save_path=_plot_path("embeddings_scatterplots.png"))
+    # plot_embeddings_scatterplots_only removed — redundant with bottom row of embeddings.png (Figure 05)
     plot_embedding_qkv_comprehensive(model, itos, save_path=_plot_path("embedding_qkv_comprehensive.png"))
     plot_qkv_transformations(model, itos, save_path=_plot_path("qkv_transformations.png"))
     plot_token_position_embedding_space(
@@ -217,6 +218,11 @@ def visualize_from_checkpoint(
             model, itos, demo_sequences, save_dir=plots_dir,
         )
         _rename_demo_outputs(plots_dir, manifest, config_name_actual)
+    # Final-on-output heatmap grid (one figure, same sequence, output units in grid)
+    if consistent_sequence:
+        plot_final_on_output_heatmap_grid(
+            model, itos, consistent_sequence, save_path=_plot_path("final_on_output_heatmap_grid.png")
+        )
 
     print(f"All visualizations saved to {plots_dir}")
 
