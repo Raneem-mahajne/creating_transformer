@@ -3999,40 +3999,74 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
         by = qkv_top + i * (qkv_h + qkv_gap)
         draw_box(x, by, qkv_w, qkv_h, C_ATTN, lbl, f'{n_embd}\u2192{head_size}', fs=10, sub_fs=8)
         qkv_cy_list.append(by + qkv_h / 2)
+    # Fan-out arrows from + to each W_Q/W_K/W_V — use a short horizontal
+    # trunk then individual branches so arrows don't cross through boxes
+    fan_x = x_add0_r + (x - x_add0_r) * 0.5  # midpoint of gap
+    # Trunk: horizontal line from + to the fan point
+    ax.plot([x_add0_r, fan_x], [cy, cy],
+            color=C_STROKE, lw=1.3, zorder=5, solid_capstyle='round')
+    # Branches: from fan point to each QKV box
     for yc in qkv_cy_list:
-        draw_arrow(x_add0_r, cy, x, yc)
+        ax.plot([fan_x, fan_x], [cy, yc],
+                color=C_STROKE, lw=1.3, zorder=5, solid_capstyle='round')
+        draw_arrow(fan_x, yc, x, yc, lw=1.3)
     x_qkv_r = x + qkv_w
     x += qkv_w + gap
 
     # QK^T / sqrt(dk)
-    dot_w = 74
+    dot_w = 80
+    x_dot_l = x
     draw_box(x, cy - bh/2, dot_w, bh, C_ATTN, 'QK\u1d40 / \u221Ad\u2096', fs=10)
-    draw_arrow(x_qkv_r, qkv_cy_list[0], x, cy - 10)
-    draw_arrow(x_qkv_r, qkv_cy_list[1], x, cy + 10)
+    # Q → top of QK^T, K → bottom of QK^T (short horizontal arrows)
+    draw_arrow(x_qkv_r, qkv_cy_list[0], x, cy - 12)
+    draw_arrow(x_qkv_r, qkv_cy_list[1], x, cy + 12)
     x_dot_r = x + dot_w
     x += dot_w + gap
 
     # Causal Mask + Softmax
-    mask_w = 86
+    mask_w = 90
     draw_box(x, cy - bh/2, mask_w, bh, C_ATTN, 'Causal Mask\n+ Softmax', fs=9.5)
     draw_arrow(x_dot_r, cy, x, cy)
     x_mask_r = x + mask_w
     x += mask_w + gap
 
     # Attn × V
-    av_w = 74
+    av_w = 78
+    x_av_l = x
     draw_box(x, cy - bh/2, av_w, bh, C_ATTN, 'Attn \u00d7 V', fs=10.5)
-    draw_arrow(x_mask_r, cy, x, cy - 7)
-    draw_arrow(x_qkv_r, qkv_cy_list[2], x, cy + 7)
+    # Attention weights → top of Attn×V
+    draw_arrow(x_mask_r, cy, x_av_l, cy - 8)
+    # V path: route BELOW the QK^T and Mask boxes to avoid crossing
+    # W_V right edge → down to below boxes → right → up into Attn×V bottom
+    v_route_y = cy + bh / 2 + 14  # below the main-flow boxes
+    v_start_x = x_qkv_r
+    v_start_y = qkv_cy_list[2]  # W_V center-y
+    v_end_x = x_av_l + av_w / 2  # center of Attn×V
+    v_end_y = cy + bh / 2       # bottom edge of Attn×V
+    # Draw the routed V path: right from W_V → down → across → up into Attn×V
+    ax.plot([v_start_x, v_start_x + 10], [v_start_y, v_start_y],
+            color=C_STROKE, lw=1.3, zorder=5, solid_capstyle='round')
+    ax.plot([v_start_x + 10, v_start_x + 10], [v_start_y, v_route_y],
+            color=C_STROKE, lw=1.3, zorder=5, solid_capstyle='round')
+    ax.plot([v_start_x + 10, v_end_x], [v_route_y, v_route_y],
+            color=C_STROKE, lw=1.3, zorder=5, solid_capstyle='round')
+    draw_arrow(v_end_x, v_route_y, v_end_x, v_end_y, lw=1.3)
+    # Label the V path
+    ax.text((v_start_x + 10 + v_end_x) / 2, v_route_y + 10, 'V',
+            ha='center', va='center', fontsize=9, fontweight='bold',
+            color=C_STROKE, fontfamily='sans-serif', zorder=6)
+
     x_av_r = x + av_w
     x += av_w + gap + 6
 
     attn_x1 = x
 
-    # Attention block outline (dashed)
+    # Attention block outline (dashed) — must enclose V routing path
     attn_pad = 14
+    attn_bottom = v_route_y + 22
+    attn_rect_top = qkv_top - 30
     attn_rect = FancyBboxPatch(
-        (attn_x0 - attn_pad, qkv_top - 30), attn_x1 - attn_x0 + 2 * attn_pad, total_qkv + 64,
+        (attn_x0 - attn_pad, attn_rect_top), attn_x1 - attn_x0 + 2 * attn_pad, attn_bottom - attn_rect_top,
         boxstyle="round,pad=0,rounding_size=10",
         facecolor=C_ATTN_BG, edgecolor=C_ATTN_BD,
         linewidth=1.4, linestyle='--', zorder=1)
