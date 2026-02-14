@@ -181,11 +181,13 @@ def visualize_from_checkpoint(
     )
     plot_embeddings_pca(model, itos, save_path=_plot_path("embeddings.png"))
     # plot_embeddings_scatterplots_only removed — redundant with bottom row of embeddings.png (Figure 05)
-    plot_embedding_qkv_comprehensive(model, itos, save_path=_plot_path("embedding_qkv_comprehensive.png"))
+    path_qkv_comp = _plot_path_if_in_manifest("embedding_qkv_comprehensive.png", manifest, config_name_actual, plots_dir)
+    if path_qkv_comp:
+        plot_embedding_qkv_comprehensive(model, itos, save_path=path_qkv_comp)
     plot_qkv_transformations(model, itos, save_path=_plot_path("qkv_transformations.png"))
-    plot_token_position_embedding_space(
-        model, itos, save_path=_plot_path("token_position_embedding_space.png")
-    )
+    path_tp_space = _plot_path_if_in_manifest("token_position_embedding_space.png", manifest, config_name_actual, plots_dir)
+    if path_tp_space:
+        plot_token_position_embedding_space(model, itos, save_path=path_tp_space)
     # plot_attention_matrix moved to supplementary
     # plot_attention_matrix(
     #     model, X_list, itos, save_path=_plot_path("attention_matrix.png"), num_sequences=3
@@ -202,9 +204,9 @@ def visualize_from_checkpoint(
     plot_qk_full_attention_heatmap(
         model, itos, save_path=_plot_path("qk_full_attention_heatmap.png")
     )
-    plot_lm_head_probability_heatmaps(
-        model, itos, save_path=_plot_path("lm_head_probability_heatmaps.png")
-    )
+    path_lm_head = _plot_path_if_in_manifest("lm_head_probability_heatmaps.png", manifest, config_name_actual, plots_dir)
+    if path_lm_head:
+        plot_lm_head_probability_heatmaps(model, itos, save_path=path_lm_head)
     plot_probability_heatmap_with_embeddings(
         model, itos, save_path=_plot_path("probability_heatmap_with_embeddings.png")
     )
@@ -250,6 +252,16 @@ def _lookup_manifest_filename(manifest: list[dict], config_name: str, default_na
         if row["config"] == config_name and row["default_name"] == default_name:
             return row["filename"]
     return default_name
+
+
+def _plot_path_if_in_manifest(
+    default_name: str, manifest: list[dict], config_name: str, base_dir: str
+) -> str | None:
+    """Return save path only if this config has a manifest entry for default_name (so we get a numbered filename)."""
+    mapped = _lookup_manifest_filename(manifest, config_name, default_name)
+    if mapped == default_name:
+        return None
+    return os.path.join(base_dir, mapped)
 
 
 def _rename_demo_outputs(plots_dir: str, manifest: list[dict], config_name: str) -> None:

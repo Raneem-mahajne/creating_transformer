@@ -639,22 +639,19 @@ def plot_embeddings_pca(model, itos, save_path=None):
         pc = np.array(mcolors.to_rgb(pos_color))
         return tuple(token_weight * tc + (1 - token_weight) * pc)
     
-    # Create figure: 2 rows, 3 columns
-    # Row 0: First column as a row — Token raw, Position raw, Token+Position dim 0
-    # Row 1: Third column as a row — Token PCA, Position PCA, Token+Position PCA
-    # Middle column (clustered) is deleted
-    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
-    
-    # Row 0, Col 0: Token embeddings raw (was column 0, row 0)
-    ax1 = axes[0, 0]
+    # Create figure: 2 rows, 4 columns; row 1 last cell spans 2 cols. Equal width_ratios so T+P scatter is same panel size as others.
+    from matplotlib.gridspec import GridSpec
+    fig = plt.figure(figsize=(19, 9))
+    gs = GridSpec(2, 4, figure=fig, width_ratios=[1, 1, 1, 1], hspace=0.3, wspace=0.28)
+    ax1 = fig.add_subplot(gs[0, 0])
     x_labels = list(range(embeddings.shape[1]))
     sns.heatmap(embeddings, yticklabels=y_labels, xticklabels=x_labels, cmap="RdBu_r", center=0, ax=ax1)
     ax1.set_title(f"Token Embeddings (vocab×embd={vocab_size}×{n_embd})", fontsize=11)
     ax1.set_xlabel("Embedding dim")
     ax1.set_ylabel("Token")
     
-    # Row 1, Col 0: Token embeddings PCA (was column 2, row 0)
-    ax3 = axes[1, 0]
+    # Row 1, Col 0: Token embeddings scatter
+    ax3 = fig.add_subplot(gs[1, 0])
     if n_embd > 2:
         # Do PCA for dimensions > 2
         _, _, Vt = np.linalg.svd(X_emb, full_matrices=False)
@@ -702,8 +699,8 @@ def plot_embeddings_pca(model, itos, save_path=None):
                         ha='center', va='center', color=token_colors[i])
         ax3.set_yticks([])
     
-    # Row 0, Col 1: Position embeddings raw (was column 0, row 1)
-    ax4 = axes[0, 1]
+    # Row 0, Col 1: Position embeddings raw
+    ax4 = fig.add_subplot(gs[0, 1])
     pos_y_labels = [f"pos {i}" for i in range(block_size)]
     x_labels = list(range(pos_emb_all.shape[1]))
     sns.heatmap(pos_emb_all, yticklabels=pos_y_labels, xticklabels=x_labels, cmap="RdBu_r", center=0, ax=ax4)
@@ -711,8 +708,8 @@ def plot_embeddings_pca(model, itos, save_path=None):
     ax4.set_xlabel("Embedding dim")
     ax4.set_ylabel("Position")
     
-    # Row 1, Col 1: Position embeddings PCA (was column 2, row 1)
-    ax6 = axes[1, 1]
+    # Row 1, Col 1: Position embeddings scatter
+    ax6 = fig.add_subplot(gs[1, 1])
     if n_embd > 2:
         # Do PCA for dimensions > 2
         _, _, Vt_pos = np.linalg.svd(X_pos, full_matrices=False)
@@ -759,34 +756,48 @@ def plot_embeddings_pca(model, itos, save_path=None):
                 ax6.text(X1_pos[i], i, _pos_only_label(i), fontsize=pos_fontsize, fontweight='bold',
                         ha='center', va='center', color=pos_colors[i])
     
-    # Row 2: Token+Position dim 0 heatmap (was column 0, row 2)
     # Create all token-position combinations (ALL tokens including special characters)
-    max_token_idx = vocab_size  # Show all tokens including special characters
+    max_token_idx = vocab_size
     num_combinations = max_token_idx * block_size
     all_combinations = np.zeros((num_combinations, n_embd))
-    
     for token_idx in range(max_token_idx):
         for pos_idx in range(block_size):
             idx = token_idx * block_size + pos_idx
             all_combinations[idx] = embeddings[token_idx] + pos_emb_all[pos_idx]
     
-    # Row 0, Col 2: Token+Position dim 0 heatmap (was column 0, row 2)
-    ax10 = axes[0, 2]
+    token_labels = [itos[i] for i in range(max_token_idx)]
+    pos_labels = [_pos_only_label(i) for i in range(block_size)]
+    
+    # Row 0, Col 2: Token+Position Dim 0 heatmap
+    ax10 = fig.add_subplot(gs[0, 2])
     dim0_heatmap = np.zeros((max_token_idx, block_size))
     for token_idx in range(max_token_idx):
         for pos_idx in range(block_size):
             idx = token_idx * block_size + pos_idx
             dim0_heatmap[token_idx, pos_idx] = all_combinations[idx, 0]
-    
-    token_labels = [itos[i] for i in range(max_token_idx)]
-    pos_labels = [_pos_only_label(i) for i in range(block_size)]
     sns.heatmap(dim0_heatmap, yticklabels=token_labels, xticklabels=pos_labels, cmap="RdBu_r", center=0, ax=ax10)
     ax10.set_title(f"Token+Position: Dim 0 (tokens×positions)", fontsize=11)
     ax10.set_xlabel("Position")
     ax10.set_ylabel("Token")
     
-    # Row 1, Col 2: Token+Position PCA (was column 2, row 2)
-    ax12 = axes[1, 2]
+    # Row 0, Col 3: Token+Position Dim 1 heatmap (only when n_embd >= 2)
+    if n_embd >= 2:
+        ax10b = fig.add_subplot(gs[0, 3])
+        dim1_heatmap = np.zeros((max_token_idx, block_size))
+        for token_idx in range(max_token_idx):
+            for pos_idx in range(block_size):
+                idx = token_idx * block_size + pos_idx
+                dim1_heatmap[token_idx, pos_idx] = all_combinations[idx, 1]
+        sns.heatmap(dim1_heatmap, yticklabels=token_labels, xticklabels=pos_labels, cmap="RdBu_r", center=0, ax=ax10b)
+        ax10b.set_title(f"Token+Position: Dim 1 (tokens×positions)", fontsize=11)
+        ax10b.set_xlabel("Position")
+        ax10b.set_ylabel("Token")
+    
+    # Row 1: Token+Position scatter — single-panel size, centered between columns 2 and 3
+    ax12 = fig.add_subplot(gs[1, 2:4])
+    pos = ax12.get_position()
+    one_col = pos.width / 2
+    ax12.set_position([pos.x0 + pos.width / 4, pos.y0, one_col, pos.height])
     # Dynamic font size for token+position (usually more items)
     combo_fontsize = get_fontsize(num_combinations)
     
