@@ -4675,8 +4675,8 @@ def plot_probability_heatmap_with_embeddings(
             labels.append(_token_pos_label(itos[token_idx], pos_idx))
     all_combinations = np.array(all_combinations)  # (vocab_size * block_size, 2)
 
-    # Create figure with one subplot per token
-    n_cols = min(4, vocab_size)
+    # Create figure with one subplot per token (2 rows x 6 cols for rectangular layout)
+    n_cols = min(6, vocab_size)
     n_rows = (vocab_size + n_cols - 1) // n_cols
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
     if step_label is not None:
@@ -4802,7 +4802,8 @@ def plot_probability_heatmap_with_values(
     probs = np.exp(logits - logits.max(axis=1, keepdims=True))
     probs /= probs.sum(axis=1, keepdims=True)
 
-    n_cols = min(4, vocab_size)
+    # 2 rows x 6 cols for rectangular layout (same as probability_heatmap_with_embeddings)
+    n_cols = min(6, vocab_size)
     n_rows = (vocab_size + n_cols - 1) // n_cols
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
     if step_label is not None:

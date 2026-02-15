@@ -1,13 +1,23 @@
-inputs a token string of length block_size N
+// input data
+inputs a token string of length block_size (N)
 convert string to token and position embedding matrices (block_size*embedding_size) 
-output_matrix: adding the position embedding matrix to the token embedding matrix 
 
+// embed
+x = token_embedding + position_embedding
 
-self attention: 
-Q = output_matrix * W_Q
-K = output_matrix * W_K
-V = output_matrix * W_V
+// projection
+Q = x * W_Q
+K = x * W_K
+V = x * W_V
 
-attention matrix: Q * K^T / sqrt (of smth)
-apply masking
-final_output = softmax(attention matrix * V)
+// attention score
+attention_matrix = (Q * K.transpose() / sqrt(head_size))
+
+// apply mask - to learn only from previous tokens
+attention_matrix = mask(attention_matrix)
+
+// Softmax - get probabilities
+attention_weights = softmax(attention_matrix)
+
+// gather values 
+output = attention_weights * V
