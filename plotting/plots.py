@@ -2362,8 +2362,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
     # ========== PLOT 1: Q, K, masked QK^T, Attention, scatter(Q vs K) ==========
     use_two_rows = num_sequences == 1
     if use_two_rows:
-        n_rows_1, n_cols_plot1 = 2, 3  # Row0: Q, K, Q vs K; Row1: masked QK^T, Attention
-        fig1 = plt.figure(figsize=(6 * n_cols_plot1, 5 * n_rows_1))
+        n_rows_1, n_cols_plot1 = 1, 5  # One row: Q, K, Q vs K, masked QK^T, Attention
+        fig1 = plt.figure(figsize=(5 * n_cols_plot1, 5))
         gs1 = GridSpec(n_rows_1, n_cols_plot1, figure=fig1, hspace=0.35, wspace=0.3)
     else:
         num_cols_plot1 = 5
@@ -2407,7 +2407,7 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         Attention = data_dict['Attention']
         T = data_dict['T']
         if use_two_rows:
-            r0, r1, c_q, c_k, c_scat, c_masked, c_att = 0, 1, 0, 1, 2, 0, 1
+            r0, r1, c_q, c_k, c_scat, c_masked, c_att = 0, 0, 0, 1, 2, 3, 4  # all on row 0
         else:
             r0 = r1 = seq_idx
             c_q, c_k, c_scat, c_masked, c_att = 0, 1, 2, 3, 4
@@ -2419,7 +2419,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
                    yticklabels=tokens, cbar=True, ax=ax)
         ax.set_xlabel("hs", fontsize=10)
         ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n" if not use_two_rows else f"{seq_str}", fontsize=9)
-        ax.set_title(f"Q {dim_str}", fontsize=11)
+        ax.text(0.5, 1.02, "Q", transform=ax.transAxes, ha='right', va='bottom', color='blue', fontsize=11)
+        ax.text(0.5, 1.02, " " + dim_str, transform=ax.transAxes, ha='left', va='bottom', fontsize=11)
         
         # K
         ax = fig1.add_subplot(gs1[r0, c_k])
@@ -2428,7 +2429,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
                    yticklabels=tokens, cbar=True, ax=ax)
         ax.set_xlabel("hs", fontsize=10)
         ax.set_ylabel("T", fontsize=10)
-        ax.set_title(f"K {dim_str}", fontsize=11)
+        ax.text(0.5, 1.02, "K", transform=ax.transAxes, ha='right', va='bottom', color='red', fontsize=11)
+        ax.text(0.5, 1.02, " " + dim_str, transform=ax.transAxes, ha='left', va='bottom', fontsize=11)
         
         # Scatter plot Q vs K
         ax = fig1.add_subplot(gs1[r0, c_scat])
@@ -2485,35 +2487,61 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
             ax.set_xlabel("Dim 1", fontsize=10)
             ax.set_ylabel("Dim 2", fontsize=10)
             title_suffix = " (raw)"
-        ax.set_title(f"Q vs K{title_suffix}", fontsize=11)
+        ax.text(0.46, 1.02, "Q", transform=ax.transAxes, ha='right', va='bottom', color='blue', fontsize=11)
+        ax.text(0.5, 1.02, " vs ", transform=ax.transAxes, ha='center', va='bottom', fontsize=11)
+        ax.text(0.54, 1.02, "K", transform=ax.transAxes, ha='left', va='bottom', color='red', fontsize=11)
+        ax.text(0.56, 1.02, title_suffix, transform=ax.transAxes, ha='left', va='bottom', fontsize=11)
         ax.grid(True, alpha=0.3)
         
-        # masked QK^T
+        # masked Q K^T (clear spacing so it reads "Q K" not "QK")
         ax = fig1.add_subplot(gs1[r1, c_masked])
         dim_str = f"(T×T={T}×{T})"
-        sns.heatmap(Masked_QK_T, cmap="viridis", xticklabels=tokens, 
-                   yticklabels=tokens, cbar=True, ax=ax)
+        # Annotate cells: show values in lower triangle, "—" for masked (upper triangle)
+        annot_mask = np.empty((T, T), dtype=object)
+        for i in range(T):
+            for j in range(T):
+                if np.isfinite(Masked_QK_T[i, j]):
+                    annot_mask[i, j] = f"{Masked_QK_T[i, j]:.3g}"
+                else:
+                    annot_mask[i, j] = "—"
+        # Color scale: diverging (red/blue) so differences are apparent; symmetric about 0
+        finite_vals = Masked_QK_T[np.isfinite(Masked_QK_T)]
+        if len(finite_vals):
+            lim = np.abs(finite_vals).max()
+            vmin_m, vmax_m = -lim, lim
+        else:
+            vmin_m, vmax_m = -1, 1
+        sns.heatmap(Masked_QK_T, cmap="RdBu_r", center=0, xticklabels=tokens,
+                   yticklabels=tokens, cbar=True, ax=ax, annot=annot_mask, fmt="",
+                   vmin=vmin_m, vmax=vmax_m, annot_kws={"fontsize": 6})
         ax.set_xlabel("T", fontsize=10)
         ax.set_ylabel("T", fontsize=10)
-        ax.set_title(f"masked QK^T {dim_str}", fontsize=11)
+        ax.text(0.18, 1.04, "masked", transform=ax.transAxes, ha='right', va='bottom', color='black', fontsize=11)
+        ax.text(0.24, 1.04, "Q", transform=ax.transAxes, ha='left', va='bottom', color='blue', fontsize=11)
+        ax.text(0.30, 1.04, "K", transform=ax.transAxes, ha='left', va='bottom', color='red', fontsize=11)
+        ax.text(0.36, 1.04, "^T " + dim_str, transform=ax.transAxes, ha='left', va='bottom', fontsize=11)
         
-        # Attention
+        # Attention: red/blue diverging so differences are more apparent (no annotations)
         ax = fig1.add_subplot(gs1[r1, c_att])
         dim_str = f"(T×T={T}×{T})"
-        sns.heatmap(Attention, cmap="magma", vmin=0.0, vmax=1.0, 
+        sns.heatmap(Attention, cmap="jet", vmin=0.0, vmax=1.0,
                    xticklabels=tokens, yticklabels=tokens, cbar=True, ax=ax)
         ax.set_xlabel("T", fontsize=10)
         ax.set_ylabel("T", fontsize=10)
         ax.set_title(f"Attention {dim_str}", fontsize=11)
     
-    plt.tight_layout(rect=[0, 0, 1, 0.98])
+    # Subtitle with sequence (single-row figure)
+    if use_two_rows and all_data:
+        seq_str_sub = all_data[0]['seq_str']
+        fig1.suptitle(f"Sequence: {seq_str_sub}", fontsize=10, y=1.02)
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
     if save_path:
         # Save directly to the numbered filename (13_qk_attention.png)
         # Extract directory and base name, then construct numbered filename
         import os
         save_dir = os.path.dirname(save_path)
         save_path_part1 = os.path.join(save_dir, "13_qk_attention.png")
-        plt.savefig(save_path_part1, bbox_inches='tight', dpi=150)
+        plt.savefig(save_path_part1, bbox_inches='tight', dpi=300, facecolor='white')
         plt.close()
     else:
         plt.show()
@@ -2537,8 +2565,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
     # how much each position contributes. For position i: Final_Output[i] = sum_j(Attention[i,j] * V[j])
     use_two_rows_2 = num_sequences == 1
     if use_two_rows_2:
-        n_rows_2, n_cols_plot2 = 2, 3  # Row0: Attention, V, Final Output; Row1: V scatter, Final scatter
-        fig2 = plt.figure(figsize=(6 * n_cols_plot2, 5 * n_rows_2))
+        n_rows_2, n_cols_plot2 = 1, 5  # One row: Attention, V, Final Output, V scatter, Final scatter
+        fig2 = plt.figure(figsize=(5 * n_cols_plot2, 5))
         gs2 = GridSpec(n_rows_2, n_cols_plot2, figure=fig2, hspace=0.35, wspace=0.3)
     else:
         num_cols_plot2 = 5
@@ -2601,8 +2629,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         Final_Output = data_dict['Final_Output']
         T = data_dict['T']
         if use_two_rows_2:
-            r0_2, r1_2 = 0, 1
-            c_att2, c_v2, c_final2, c_vscat2, c_finalscat2 = 0, 1, 2, 0, 1
+            r0_2 = r1_2 = 0  # all on row 0
+            c_att2, c_v2, c_final2, c_vscat2, c_finalscat2 = 0, 1, 2, 3, 4
         else:
             r0_2 = r1_2 = seq_idx
             c_att2, c_v2, c_final2, c_vscat2, c_finalscat2 = 0, 1, 2, 3, 4
@@ -2611,28 +2639,29 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         V_2d = all_V_2d[idx]
         Final_Output_2d = all_Final_Output_2d[idx]
         
-        # Attention
+        # Attention: RdBu_r so differences are more apparent (same as 13_qk_attention)
         ax = fig2.add_subplot(gs2[r0_2, c_att2])
         dim_str = f"(T×T={T}×{T})"
-        sns.heatmap(Attention, cmap="magma", vmin=0.0, vmax=1.0, 
+        sns.heatmap(Attention, cmap="jet", vmin=0.0, vmax=1.0,
                    xticklabels=tokens, yticklabels=tokens, cbar=True, ax=ax)
         ax.set_xlabel("T", fontsize=10)
         ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n" if not use_two_rows_2 else seq_str, fontsize=9)
         ax.set_title(f"Attention {dim_str}", fontsize=11)
         
-        # V
+        # V: same color scheme as Q/K (viridis)
         ax = fig2.add_subplot(gs2[r0_2, c_v2])
         dim_str = f"(T×hs={V.shape[0]}×{V.shape[1]})"
-        sns.heatmap(V, cmap="viridis", xticklabels=list(range(V.shape[1])), 
+        sns.heatmap(V, cmap="viridis", xticklabels=list(range(V.shape[1])),
                    yticklabels=tokens, cbar=True, ax=ax)
         ax.set_xlabel("hs", fontsize=10)
         ax.set_ylabel("T", fontsize=10)
-        ax.set_title(f"V {dim_str}", fontsize=11)
+        ax.text(0.5, 1.02, "V", transform=ax.transAxes, ha='right', va='bottom', color='green', fontsize=11)
+        ax.text(0.5, 1.02, " " + dim_str, transform=ax.transAxes, ha='left', va='bottom', fontsize=11)
         
-        # Final Output (Attention @ V)
+        # Final Output (Attention @ V): same color scheme as Q/K (viridis)
         ax = fig2.add_subplot(gs2[r0_2, c_final2])
         dim_str = f"(T×hs={Final_Output.shape[0]}×{Final_Output.shape[1]})"
-        sns.heatmap(Final_Output, cmap="viridis", xticklabels=list(range(Final_Output.shape[1])), 
+        sns.heatmap(Final_Output, cmap="viridis", xticklabels=list(range(Final_Output.shape[1])),
                    yticklabels=tokens, cbar=True, ax=ax)
         ax.set_xlabel("hs", fontsize=10)
         ax.set_ylabel("T", fontsize=10)
@@ -2645,20 +2674,17 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         ax.set_xlim(xlim_shared)
         ax.set_ylim(ylim_shared)
         
-        # Background overlay: ALL V combinations (annotated, lighter grey)
-        # Draw overlay FIRST so it's underneath
+        # Background overlay: ALL V combinations (annotated, lighter grey, small so sequence points stand out)
         for i, label in enumerate(all_V_labels):
-            # Check if point is within axis limits before drawing
             x, y = all_V_2d_overlay[i, 0], all_V_2d_overlay[i, 1]
             if xlim_shared[0] <= x <= xlim_shared[1] and ylim_shared[0] <= y <= ylim_shared[1]:
                 ax.text(x, y, label,
-                       fontsize=7, alpha=0.7, ha='center', va='center', 
-                       color='#808080', zorder=1)  # Lighter grey
-        
-        # Foreground: Sequence-specific V points
+                       fontsize=5, alpha=0.6, ha='center', va='center',
+                       color='#808080', zorder=1)
+        # Foreground: Sequence-specific V points (green); larger font so readable
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
-            ax.text(V_2d[i, 0], V_2d[i, 1], _token_pos_label(token, pos), 
-                   fontsize=9, fontweight='bold', ha='center', va='center', color='blue', zorder=3)
+            ax.text(V_2d[i, 0], V_2d[i, 1], _token_pos_label(token, pos),
+                   fontsize=10, fontweight='bold', ha='center', va='center', color='green', zorder=3)
         
         # Update axis labels based on whether PCA was used
         if V.shape[1] > 2:
@@ -2669,7 +2695,12 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
             ax.set_xlabel("Dim 1", fontsize=10)
             ax.set_ylabel("Dim 2", fontsize=10)
             title_suffix = " (raw)"
-        ax.set_title(f"V{title_suffix}", fontsize=11)
+        if title_suffix == " (raw)":
+            ax.text(0.5, 1.02, "V", transform=ax.transAxes, ha='right', va='bottom', color='green', fontsize=11)
+            ax.text(0.5, 1.02, " (raw)", transform=ax.transAxes, ha='left', va='bottom', fontsize=11)
+        else:
+            ax.text(0.5, 1.02, "V", transform=ax.transAxes, ha='right', va='bottom', color='green', fontsize=11)
+            ax.text(0.5, 1.02, title_suffix, transform=ax.transAxes, ha='left', va='bottom', fontsize=11)
         ax.grid(True, alpha=0.3)
         
         # Scatter plot for Final Output
@@ -2681,8 +2712,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         
         # Annotate Final Output points with token and position (no scatter points)
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
-            ax.text(Final_Output_2d[i, 0], Final_Output_2d[i, 1], _token_pos_label(token, pos), 
-                   fontsize=9, fontweight='bold', ha='center', va='center', color='red')
+            ax.text(Final_Output_2d[i, 0], Final_Output_2d[i, 1], _token_pos_label(token, pos),
+                   fontsize=10, fontweight='bold', ha='center', va='center', color='black')
         
         # Update axis labels based on whether PCA was used
         if Final_Output.shape[1] > 2:
@@ -2696,14 +2727,18 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         ax.set_title(f"Final Output (Attention@V){title_suffix}", fontsize=11)
         ax.grid(True, alpha=0.3)
     
-    plt.tight_layout(rect=[0, 0, 1, 0.98])
+    # Subtitle with sequence (single-row figure)
+    if use_two_rows_2 and all_data:
+        seq_str_sub = all_data[0]['seq_str']
+        fig2.suptitle(f"Sequence: {seq_str_sub}", fontsize=10, y=1.02)
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
     if save_path:
         # Save directly to the numbered filename (14_value_output.png)
         # Extract directory and base name, then construct numbered filename
         import os
         save_dir = os.path.dirname(save_path)
         save_path_part2 = os.path.join(save_dir, "14_value_output.png")
-        plt.savefig(save_path_part2, bbox_inches='tight', dpi=150)
+        plt.savefig(save_path_part2, bbox_inches='tight', dpi=300, facecolor='white')
         plt.close()
     else:
         plt.show()
@@ -3033,7 +3068,11 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         ax.set_title(f"Final{title_suffix}", fontsize=11)
         ax.grid(True, alpha=0.3)
     
-    plt.tight_layout(rect=[0, 0, 0.94, 0.98])
+    # Subtitle with sequence (single-sequence figure)
+    if use_two_rows_r and all_data:
+        seq_str_sub = all_data[0]['seq_str']
+        fig.suptitle(f"Sequence: {seq_str_sub}", fontsize=10, y=1.02)
+    plt.tight_layout(rect=[0, 0, 0.94, 0.95])
     # Single shared colorbar in right margin (after tight_layout so heatmaps stay full size)
     if heatmap_axes and use_two_rows_r:
         mappable = heatmap_axes[0].collections[0]
@@ -4790,7 +4829,8 @@ def plot_final_on_output_heatmap_grid(
     probs = np.exp(logits - logits.max(axis=1, keepdims=True))
     probs /= probs.sum(axis=1, keepdims=True)
 
-    n_cols = min(4, vocab_size)
+    # 2 rows x 6 cols for rectangular layout (same as other heatmap grids)
+    n_cols = min(6, vocab_size)
     n_rows = (vocab_size + n_cols - 1) // n_cols
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
     if n_rows == 1 and n_cols == 1:

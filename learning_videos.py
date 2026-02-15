@@ -104,7 +104,11 @@ def create_qk_space_video(config_name_actual: str, config: dict, fps: int = 20, 
 
     try:
         for i, step in enumerate(steps):
-            checkpoint_data = load_checkpoint(config_name_actual, step=step)
+            try:
+                checkpoint_data = load_checkpoint(config_name_actual, step=step)
+            except (FileNotFoundError, OSError) as e:
+                print(f"Warning: Could not load checkpoint for step {step}, skipping... ({e})", flush=True)
+                continue
             if not checkpoint_data:
                 print(f"Warning: Could not load checkpoint for step {step}, skipping...", flush=True)
                 continue
@@ -175,7 +179,11 @@ def create_qk_space_and_attention_video(
 
     try:
         for i, step in enumerate(steps):
-            checkpoint_data = load_checkpoint(config_name_actual, step=step)
+            try:
+                checkpoint_data = load_checkpoint(config_name_actual, step=step)
+            except (FileNotFoundError, OSError) as e:
+                print(f"Warning: Could not load checkpoint for step {step}, skipping... ({e})", flush=True)
+                continue
             if not checkpoint_data:
                 print(f"Warning: Could not load checkpoint for step {step}, skipping...", flush=True)
                 continue
@@ -246,7 +254,11 @@ def create_output_heatmaps_video(
 
     try:
         for i, step in enumerate(steps):
-            checkpoint_data = load_checkpoint(config_name_actual, step=step)
+            try:
+                checkpoint_data = load_checkpoint(config_name_actual, step=step)
+            except (FileNotFoundError, OSError) as e:
+                print(f"Warning: Could not load checkpoint for step {step}, skipping... ({e})", flush=True)
+                continue
             if not checkpoint_data:
                 print(f"Warning: Could not load checkpoint for step {step}, skipping...", flush=True)
                 continue

@@ -97,9 +97,10 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
             # Backwards-compatible: only the embeddings/QKV video
             create_embedding_qkv_video(config_name_actual, config, fps=fps, max_steps=None)
         else:
-            # Full learning-dynamics suite (no standalone QK-only video)
+            # Full learning-dynamics suite (01–05)
             create_embeddings_scatterplots_video(config_name_actual, config, fps=fps, max_steps=None)
             create_embedding_qkv_video(config_name_actual, config, fps=fps, max_steps=None)
+            create_qk_space_video(config_name_actual, config, fps=fps, max_steps=None)
             create_qk_space_and_attention_video(config_name_actual, config, fps=fps, max_steps=None)
             create_output_heatmaps_video(config_name_actual, config, fps=fps, max_steps=None)
         return

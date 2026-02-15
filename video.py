@@ -87,13 +87,16 @@ def create_embeddings_scatterplots_video(config_name_actual: str, config: dict, 
     all_comb_ylims = []
     
     for step in steps:
-        checkpoint_data = load_checkpoint(config_name_actual, step=step)
+        try:
+            checkpoint_data = load_checkpoint(config_name_actual, step=step)
+        except Exception:
+            checkpoint_data = None
         if not checkpoint_data:
             continue
-        
+
         model = checkpoint_data["model"]
         itos = checkpoint_data["itos"]
-        
+
         # Get embeddings
         embeddings = model.token_embedding.weight.detach().cpu().numpy()
         vocab_size, n_embd = embeddings.shape
@@ -177,7 +180,11 @@ def create_embeddings_scatterplots_video(config_name_actual: str, config: dict, 
     frame_data = []
     
     for step in steps:
-        checkpoint_data = load_checkpoint(config_name_actual, step=step)
+        try:
+            checkpoint_data = load_checkpoint(config_name_actual, step=step)
+        except (FileNotFoundError, OSError) as e:
+            print(f"Warning: Could not load checkpoint for step {step}, skipping... ({e})")
+            continue
         if not checkpoint_data:
             print(f"Warning: Could not load checkpoint for step {step}, skipping...")
             continue
