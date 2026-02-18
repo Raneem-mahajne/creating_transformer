@@ -41,10 +41,22 @@ from plotting import (
 )
 
 
+def _has_odd_number(decoded_tokens: list) -> bool:
+    """True if decoded token list contains at least one odd integer."""
+    return any(isinstance(t, int) and t % 2 == 1 for t in decoded_tokens)
+
+
 def visualize_from_checkpoint(
-    config_name_actual: str, checkpoint_data: dict, config: dict, step: int = None
+    config_name_actual: str, checkpoint_data: dict, config: dict, step: int = None,
+    plots_subfolder: str | None = None, sequence_seed: int | None = None, sequence_index: int | None = None,
+    fixed_sequence_decoded: list | None = None, require_odd_in_sequence: bool = False,
 ):
-    """Generate all visualizations from checkpoint data."""
+    """Generate all visualizations from checkpoint data.
+    If plots_subfolder is set, save plots to that subfolder (do not overwrite main plots).
+    If sequence_seed or sequence_index are set, use a different sequence for sequence-dependent plots.
+    If fixed_sequence_decoded is set (and reseed params are not), use this sequence for plots (decoded form, e.g. [10, '+', 10, 6, '+', 6, 4, 8]).
+    If require_odd_in_sequence is True and selecting by seed/index, keep trying indices until the chosen sequence contains an odd number.
+    """
     model = checkpoint_data["model"]
     train_sequences = checkpoint_data["train_sequences"]
     itos = checkpoint_data["itos"]
@@ -60,14 +72,17 @@ def visualize_from_checkpoint(
         decode = checkpoint_data["decode"]
     else:
         decode = create_decode_from_itos(itos)
+    stoi = checkpoint_data.get("stoi")  # for encoding fixed_sequence_decoded to token ids
 
     block_size = model_config["block_size"]
     data_config = config["data"]
     training_config = config.get("training", {})
 
-    plots_dir = get_plots_dir(config_name_actual, step)
+    plots_dir = get_plots_dir(config_name_actual, step, subfolder=plots_subfolder)
     plots_dir.mkdir(parents=True, exist_ok=True)
     plots_dir = str(plots_dir)
+    if plots_subfolder:
+        print(f"Plots will be saved to subfolder: {plots_subfolder}")
 
     generator = get_generator_from_config(config)
 
@@ -85,6 +100,8 @@ def visualize_from_checkpoint(
             f.write(" ".join(str(i) for i in seq) + "\n")
 
     num_sequences_to_generate = 5
+    if sequence_seed is not None:
+        random.seed(sequence_seed)
     generated_sequences = []
     for _ in range(num_sequences_to_generate):
         seq_length = random.randint(data_config["min_length"], data_config["max_length"])
@@ -144,20 +161,42 @@ def visualize_from_checkpoint(
         print(f"Generated sequences heatmap: {correct_count} correct, {incorrect_count} incorrect positions ({heatmap_accuracy:.1%} accuracy)")
 
     # Select a single consistent sequence for all sequence-dependent plots
-    # Use a fixed index to always select the same sequence for reproducibility
-    random.seed(43)  # Changed seed to get a different sequence
-    
-    # Find sequences that are long enough (at least 2 tokens)
-    valid_sequences = [seq for seq in train_sequences if len(seq) >= 2]
-    
-    if valid_sequences:
-        # Use a different index (1) to get a different sequence
-        consistent_sequence = valid_sequences[1] if len(valid_sequences) > 1 else valid_sequences[0]
-    elif train_sequences:
-        # Fallback: use first sequence even if short
-        consistent_sequence = train_sequences[0]
+    if fixed_sequence_decoded is not None and sequence_seed is None and sequence_index is None and stoi is not None:
+        # Use the explicitly requested sequence (e.g. "10 + 10 6 + 6 4 8") as token ids
+        try:
+            consistent_sequence = [stoi[str(t)] for t in fixed_sequence_decoded]
+        except KeyError as e:
+            print(f"Warning: fixed_sequence_decoded token not in vocab: {e}; falling back to seed/index selection")
+            consistent_sequence = None
     else:
-        consistent_sequence = []
+        consistent_sequence = None
+    if consistent_sequence is None:
+        # Seed for picking which train sequence to use (can be overridden by sequence_seed/sequence_index)
+        seed_for_seq = 43 if sequence_seed is None else sequence_seed
+        random.seed(seed_for_seq)
+        valid_sequences = [seq for seq in train_sequences if len(seq) >= 2]
+        if valid_sequences:
+            if require_odd_in_sequence:
+                # Try indices until we find a sequence that contains an odd number
+                start_idx = (sequence_index if sequence_index is not None else 0) % len(valid_sequences)
+                for k in range(len(valid_sequences)):
+                    idx = (start_idx + k) % len(valid_sequences)
+                    cand = valid_sequences[idx]
+                    if _has_odd_number(decode(cand)):
+                        consistent_sequence = cand
+                        if k > 0:
+                            print(f"Reseed: using sequence index {idx} (first with an odd number)")
+                        break
+                else:
+                    consistent_sequence = valid_sequences[start_idx]
+                    print("Warning: no training sequence contains an odd number; using default index")
+            else:
+                idx = (sequence_index if sequence_index is not None else 1) % len(valid_sequences)
+                consistent_sequence = valid_sequences[idx]
+        elif train_sequences:
+            consistent_sequence = train_sequences[0]
+        else:
+            consistent_sequence = []
     
     # Print which sequence is being used for consistency
     decoded_consistent = decode(consistent_sequence)
@@ -171,7 +210,8 @@ def visualize_from_checkpoint(
     X_consistent = seq_tensor
     X_list = [X_consistent, X_consistent, X_consistent]  # Use same sequence 3 times for multi-sequence plots
 
-    base_plots_dir = str(get_plots_dir(config_name_actual))
+    # When using a subfolder, write architecture there too so the folder is self-contained
+    base_plots_dir = str(get_plots_dir(config_name_actual, step, subfolder=plots_subfolder))
     arch_path = _plot_path("architecture.png", base_dir=base_plots_dir)
     if not os.path.exists(arch_path):
         plot_architecture_diagram(config, save_path=arch_path, model=model, vocab_size=vocab_size, batch_size=training_config.get('batch_size', 4))

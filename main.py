@@ -114,7 +114,24 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
             if checkpoint_data is None:
                 print(f"Error: No checkpoint found for {config_name_actual}" + (f" at step {step}" if step else ""))
                 return
-            visualize_from_checkpoint(config_name_actual, checkpoint_data, config, step=step)
+            # Optional: run with a different sequence into a subfolder (overwrites seq_1)
+            reseed = "--reseed" in sys.argv
+            if reseed:
+                subfolder = "seq_1"
+                seed = 123
+                seq_idx = 0  # start index; will search for first sequence with an odd number
+                print(f"Reseed run: different sequence (seed={seed}), saving to {subfolder}/ (will pick sequence with an odd)")
+                visualize_from_checkpoint(
+                    config_name_actual, checkpoint_data, config, step=step,
+                    plots_subfolder=subfolder, sequence_seed=seed, sequence_index=seq_idx,
+                    require_odd_in_sequence=True,
+                )
+            else:
+                # Default run: use fixed sequence "10 + 10 6 + 6 4 8" for main plots
+                visualize_from_checkpoint(
+                    config_name_actual, checkpoint_data, config, step=step,
+                    fixed_sequence_decoded=[10, "+", 10, 6, "+", 6, 4, 8],
+                )
         return
     
     # Check for existing checkpoint

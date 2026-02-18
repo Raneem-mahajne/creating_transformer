@@ -15,9 +15,13 @@ def get_checkpoint_dir(config_name_actual: str, step: int | None = None) -> Path
     return base / f"step_{step:06d}" if step is not None else base
 
 
-def get_plots_dir(config_name_actual: str, step: int | None = None) -> Path:
+def get_plots_dir(config_name_actual: str, step: int | None = None, subfolder: str | None = None) -> Path:
     base = Path(config_name_actual) / "plots"
-    return base / f"step_{step:06d}" if step is not None else base
+    if step is not None:
+        base = base / f"step_{step:06d}"
+    if subfolder is not None:
+        base = base / subfolder
+    return base
 
 
 def _to_python(obj):
