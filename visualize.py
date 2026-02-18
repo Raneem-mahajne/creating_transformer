@@ -19,6 +19,7 @@ from plotting import (
     plot_generated_sequences_heatmap,
     plot_architecture_diagram,
     plot_weights_qkv_two_sequences,
+    plot_q_dot_product_gradients,
     plot_embeddings_pca,
     plot_embeddings_scatterplots_only,
     plot_embedding_qkv_comprehensive,
@@ -29,10 +30,12 @@ from plotting import (
     plot_qk_embedding_space_focused_query,
     plot_sequence_embeddings,
     plot_qk_full_attention_heatmap,
+    plot_qk_full_attention_heatmap_last_row,
     plot_lm_head_probability_heatmaps,
     plot_v_before_after_demo_sequences,
     plot_final_on_output_heatmap_grid,
     plot_residuals,
+    plot_probability_heatmap,
     plot_probability_heatmap_with_embeddings,
     plot_probability_heatmap_with_values,
 )
@@ -176,6 +179,9 @@ def visualize_from_checkpoint(
     plot_weights_qkv_two_sequences(
         model, X_list, itos, save_path=_plot_path("qkv_query_key_attention.png"), num_sequences=1
     )
+    plot_q_dot_product_gradients(
+        model, X_list, itos, save_path=_plot_path("q_dot_product_gradients.png"), num_sequences=1
+    )
     plot_residuals(
         model, X_list, itos, save_path=_plot_path("residuals.png"), num_sequences=1
     )
@@ -204,9 +210,15 @@ def visualize_from_checkpoint(
     plot_qk_full_attention_heatmap(
         model, itos, save_path=_plot_path("qk_full_attention_heatmap.png")
     )
+    plot_qk_full_attention_heatmap_last_row(
+        model, itos, save_path=_plot_path("qk_full_attention_heatmap_last_row.png")
+    )
     path_lm_head = _plot_path_if_in_manifest("lm_head_probability_heatmaps.png", manifest, config_name_actual, plots_dir)
     if path_lm_head:
         plot_lm_head_probability_heatmaps(model, itos, save_path=path_lm_head)
+    plot_probability_heatmap(
+        model, itos, save_path=_plot_path("probability_heatmap.png")
+    )
     plot_probability_heatmap_with_embeddings(
         model, itos, save_path=_plot_path("probability_heatmap_with_embeddings.png")
     )

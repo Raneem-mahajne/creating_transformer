@@ -662,6 +662,8 @@ def plot_embeddings_pca(model, itos, save_path=None):
         ax3.set_title(f"Token Embeddings PCA 2D (vocab={vocab_size})", fontsize=11, fontweight='bold')
         ax3.set_xlabel("PC1")
         ax3.set_ylabel("PC2")
+        ax3.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
+        ax3.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
         ax3.grid(True, alpha=0.3)
         token_fontsize = get_fontsize(vocab_size)
         if vocab_size <= 80:
@@ -676,6 +678,8 @@ def plot_embeddings_pca(model, itos, save_path=None):
         ax3.set_title(f"Token Embeddings (vocab={vocab_size})", fontsize=11, fontweight='bold')
         ax3.set_xlabel("Dim 0")
         ax3.set_ylabel("Dim 1")
+        ax3.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
+        ax3.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
         ax3.grid(True, alpha=0.3)
         token_fontsize = get_fontsize(vocab_size)
         if vocab_size <= 80:
@@ -720,6 +724,8 @@ def plot_embeddings_pca(model, itos, save_path=None):
         ax6.set_title(f"Position Embeddings PCA 2D (block_size={block_size})", fontsize=11, fontweight='bold')
         ax6.set_xlabel("PC1")
         ax6.set_ylabel("PC2")
+        ax6.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
+        ax6.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
         ax6.grid(True, alpha=0.3)
         pos_fontsize = get_fontsize(block_size)
         if block_size <= 80:
@@ -734,6 +740,8 @@ def plot_embeddings_pca(model, itos, save_path=None):
         ax6.set_title(f"Position Embeddings (block_size={block_size})", fontsize=11, fontweight='bold')
         ax6.set_xlabel("Dim 0")
         ax6.set_ylabel("Dim 1")
+        ax6.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
+        ax6.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
         ax6.grid(True, alpha=0.3)
         pos_fontsize = get_fontsize(block_size)
         if block_size <= 80:
@@ -824,6 +832,8 @@ def plot_embeddings_pca(model, itos, save_path=None):
         ax12.set_title(f"Token+Position: PCA (all tokens)", fontsize=11, fontweight='bold')
         ax12.set_xlabel("PC1")
         ax12.set_ylabel("PC2")
+        ax12.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
+        ax12.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
         ax12.grid(True, alpha=0.3)
     elif n_embd == 2:
         # For 2D embeddings, show raw data
@@ -845,6 +855,8 @@ def plot_embeddings_pca(model, itos, save_path=None):
         ax12.set_title(f"Token+Position: Raw (all tokens)", fontsize=11, fontweight='bold')
         ax12.set_xlabel("Dim 0")
         ax12.set_ylabel("Dim 1")
+        ax12.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
+        ax12.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
         ax12.grid(True, alpha=0.3)
     else:
         # For 1D embeddings
@@ -997,6 +1009,10 @@ def plot_embeddings_scatterplots_only(model, itos, save_path=None, fixed_limits=
                 ax1.text(X1[i], 0, itos[i], fontsize=token_fontsize, fontweight='bold',
                         ha='center', va='center', color=token_colors[i])
         ax1.set_yticks([])
+    # Add origin lines for 2D plots
+    if n_embd > 2 or n_embd == 2:
+        ax1.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
+        ax1.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
     ax1.grid(True, alpha=0.3)
     
     # Column 2: Position Embeddings scatterplot
@@ -1153,6 +1169,10 @@ def plot_embeddings_scatterplots_only(model, itos, save_path=None, fixed_limits=
         ax3.set_xlabel("Embedding value", fontsize=12)
         ax3.set_ylabel("")
         ax3.set_yticks([])
+    # Add origin lines for 2D plots
+    if n_embd > 2 or n_embd == 2:
+        ax3.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
+        ax3.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
     ax3.grid(True, alpha=0.3)
     
     plt.tight_layout()
@@ -1315,6 +1335,8 @@ def plot_embedding_qkv_comprehensive(model, itos, save_path=None, fixed_limits=N
     ax2.set_title("Position Embeddings", fontsize=14, fontweight='bold')
     ax2.set_xlabel("Dim 0")
     ax2.set_ylabel("Dim 1")
+    ax2.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
+    ax2.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
     ax2.grid(True, alpha=0.3)
     
     # Token+Position
@@ -1328,6 +1350,8 @@ def plot_embedding_qkv_comprehensive(model, itos, save_path=None, fixed_limits=N
     ax3.set_title("Token+Position (Sum)", fontsize=14, fontweight='bold')
     ax3.set_xlabel("Dim 0")
     ax3.set_ylabel("Dim 1")
+    ax3.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
+    ax3.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
     ax3.grid(True, alpha=0.3)
     
     # Row 2: Q, K, V transformed
@@ -1341,6 +1365,8 @@ def plot_embedding_qkv_comprehensive(model, itos, save_path=None, fixed_limits=N
     ax4.set_title("Q-Transformed", fontsize=14, fontweight='bold')
     ax4.set_xlabel("Head Dim 0")
     ax4.set_ylabel("Head Dim 1")
+    ax4.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
+    ax4.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
     ax4.grid(True, alpha=0.3)
     
     # K-transformed
@@ -1353,6 +1379,8 @@ def plot_embedding_qkv_comprehensive(model, itos, save_path=None, fixed_limits=N
     ax5.set_title("K-Transformed", fontsize=14, fontweight='bold')
     ax5.set_xlabel("Head Dim 0")
     ax5.set_ylabel("Head Dim 1")
+    ax5.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
+    ax5.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
     ax5.grid(True, alpha=0.3)
     
     # V-transformed
@@ -1367,6 +1395,8 @@ def plot_embedding_qkv_comprehensive(model, itos, save_path=None, fixed_limits=N
     ax6.set_title("V-Transformed", fontsize=14, fontweight='bold')
     ax6.set_xlabel("Head Dim 0")
     ax6.set_ylabel("Head Dim 1")
+    ax6.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
+    ax6.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
     ax6.grid(True, alpha=0.3)
     
     # Row 3: Q+K combined, Attention output
@@ -1387,6 +1417,8 @@ def plot_embedding_qkv_comprehensive(model, itos, save_path=None, fixed_limits=N
     ax7.set_title("Q (blue) and K (red) Together", fontsize=14, fontweight='bold')
     ax7.set_xlabel("Head Dim 0")
     ax7.set_ylabel("Head Dim 1")
+    ax7.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
+    ax7.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
     ax7.grid(True, alpha=0.3)
     # Add legend
     ax7.plot([], [], 'o', color='blue', label='Q', markersize=8)
@@ -1405,6 +1437,8 @@ def plot_embedding_qkv_comprehensive(model, itos, save_path=None, fixed_limits=N
     ax8.set_title("Attention Output (causal mask: p→0..p)", fontsize=14, fontweight='bold')
     ax8.set_xlabel("Head Dim 0")
     ax8.set_ylabel("Head Dim 1")
+    ax8.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
+    ax8.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
     ax8.grid(True, alpha=0.3)
     
     # Hide unused subplot
@@ -1681,6 +1715,8 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
         ax4.set_ylabel("Dim 1", fontsize=12)
         ax4.set_xlim(x_lim)
         ax4.set_ylim(y_lim)
+        ax4.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
+        ax4.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
         ax4.grid(True, alpha=0.3)
         # Remove aspect='equal' to allow plots to fill width like heatmaps above
         
@@ -1718,6 +1754,8 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
         ax5.set_ylabel("Dim 1", fontsize=12)
         ax5.set_xlim(x_lim)
         ax5.set_ylim(y_lim)
+        ax5.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
+        ax5.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
         ax5.grid(True, alpha=0.3)
         # Remove aspect='equal' to allow plots to fill width like heatmaps above
         
@@ -1759,6 +1797,8 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
         ax6.set_ylabel("Dim 1", fontsize=12)
         ax6.set_xlim(x_lim)
         ax6.set_ylim(y_lim)
+        ax6.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
+        ax6.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
         ax6.grid(True, alpha=0.3)
         # Remove aspect='equal' to allow plots to fill width like heatmaps above
         
@@ -2099,6 +2139,9 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax0.set_title(f"Original Token+Position Embeddings: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=12)
         ax0.set_xlabel("Embedding Dim 0")
         ax0.set_ylabel("Embedding Dim 1")
+        # Add origin lines (dashed, faded)
+        ax0.axhline(y=0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6, zorder=10)
+        ax0.axvline(x=0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6, zorder=10)
         ax0.grid(True, alpha=0.3)
         ax0.set_aspect('equal', adjustable='box')
         ax0.set_xlim(left=-5)
@@ -2152,6 +2195,9 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax4.set_title(f"Q-Transformed: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=12)
         ax4.set_xlabel("Head Dim 0")
         ax4.set_ylabel("Head Dim 1")
+        # Add origin lines (dashed, faded)
+        ax4.axhline(y=0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6, zorder=10)
+        ax4.axvline(x=0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6, zorder=10)
         ax4.grid(True, alpha=0.3)
         ax4.axis('equal')
     else:
@@ -2176,6 +2222,9 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax5.set_title(f"K-Transformed: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=12)
         ax5.set_xlabel("Head Dim 0")
         ax5.set_ylabel("Head Dim 1")
+        # Add origin lines (dashed, faded)
+        ax5.axhline(y=0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6, zorder=10)
+        ax5.axvline(x=0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6, zorder=10)
         ax5.grid(True, alpha=0.3)
         ax5.axis('equal')
     else:
@@ -2206,6 +2255,9 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax6.set_title(f"V-Transformed: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=12, fontweight='bold')
         ax6.set_xlabel("Head Dim 0")
         ax6.set_ylabel("Head Dim 1")
+        # Add origin lines (dashed, faded)
+        ax6.axhline(y=0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6, zorder=10)
+        ax6.axvline(x=0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6, zorder=10)
         ax6.grid(True, alpha=0.3)
     else:
         V_1d = V_transformed[:, 0]
@@ -2491,6 +2543,9 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         ax.text(0.5, 1.02, " vs ", transform=ax.transAxes, ha='center', va='bottom', fontsize=11)
         ax.text(0.54, 1.02, "K", transform=ax.transAxes, ha='left', va='bottom', color='red', fontsize=11)
         ax.text(0.56, 1.02, title_suffix, transform=ax.transAxes, ha='left', va='bottom', fontsize=11)
+        # Add origin lines (dashed, faded)
+        ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
+        ax.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
         ax.grid(True, alpha=0.3)
         
         # masked Q K^T (clear spacing so it reads "Q K" not "QK")
@@ -2536,12 +2591,7 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         fig1.suptitle(f"Sequence: {seq_str_sub}", fontsize=10, y=1.02)
     plt.tight_layout(rect=[0, 0, 1, 0.95])
     if save_path:
-        # Save directly to the numbered filename (13_qk_attention.png)
-        # Extract directory and base name, then construct numbered filename
-        import os
-        save_dir = os.path.dirname(save_path)
-        save_path_part1 = os.path.join(save_dir, "13_qk_attention.png")
-        plt.savefig(save_path_part1, bbox_inches='tight', dpi=300, facecolor='white')
+        plt.savefig(save_path, bbox_inches='tight', dpi=300, facecolor='white')
         plt.close()
     else:
         plt.show()
@@ -2701,6 +2751,9 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         else:
             ax.text(0.5, 1.02, "V", transform=ax.transAxes, ha='right', va='bottom', color='green', fontsize=11)
             ax.text(0.5, 1.02, title_suffix, transform=ax.transAxes, ha='left', va='bottom', fontsize=11)
+        # Add origin lines (dashed, faded)
+        ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
+        ax.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
         ax.grid(True, alpha=0.3)
         
         # Scatter plot for Final Output
@@ -2725,6 +2778,9 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
             ax.set_ylabel("Dim 2", fontsize=10)
             title_suffix = " (raw)"
         ax.set_title(f"Final Output (Attention@V){title_suffix}", fontsize=11)
+        # Add origin lines (dashed, faded)
+        ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
+        ax.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
         ax.grid(True, alpha=0.3)
     
     # Subtitle with sequence (single-row figure)
@@ -2733,13 +2789,165 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         fig2.suptitle(f"Sequence: {seq_str_sub}", fontsize=10, y=1.02)
     plt.tight_layout(rect=[0, 0, 1, 0.95])
     if save_path:
-        # Save directly to the numbered filename (14_value_output.png)
-        # Extract directory and base name, then construct numbered filename
+        # Save fig2 to a different path (value_output instead of query_key_attention)
         import os
         save_dir = os.path.dirname(save_path)
-        save_path_part2 = os.path.join(save_dir, "14_value_output.png")
-        plt.savefig(save_path_part2, bbox_inches='tight', dpi=300, facecolor='white')
+        # Replace the filename to get the value_output path
+        save_path_value = os.path.join(save_dir, "15_value_output.png")
+        plt.savefig(save_path_value, bbox_inches='tight', dpi=300, facecolor='white')
         plt.close()
+    else:
+        plt.show()
+    
+    model.train()
+
+@torch.no_grad()
+def plot_q_dot_product_gradients(model, X_list, itos, save_path=None, num_sequences=1):
+    """
+    Plot dot product gradients for each query in a 2x4 grid.
+    Each subplot shows one Q point with its dot product gradient background.
+    
+    Args:
+        model: The model
+        X_list: List of input sequences, or single sequence (will be converted to list)
+        itos: Index to string mapping
+        save_path: Path to save figure
+        num_sequences: Number of sequences (should be 1 for this plot)
+    """
+    model.eval()
+    
+    # Handle single sequence input
+    if not isinstance(X_list, list):
+        X_list = [X_list]
+    
+    # Use first sequence
+    X = X_list[0]
+    tokens = [itos[i.item()] for i in X[0]]
+    seq_str = " ".join(tokens)
+    B, T = X.shape
+    
+    # Get Q and K from the sequence
+    token_emb = model.token_embedding(X)
+    pos = torch.arange(T, device=X.device) % model.block_size
+    pos_emb = model.position_embedding_table(pos)
+    x = token_emb + pos_emb
+    
+    # Get Q and K from first head (or average across heads)
+    head = model.sa_heads.heads[0]
+    Q = head.query(x)[0].cpu().numpy()  # (T, hs)
+    K = head.key(x)[0].cpu().numpy()    # (T, hs)
+    
+    # Helper function for PCA
+    def pca_2d(data):
+        if data.shape[1] <= 2:
+            if data.shape[1] == 2:
+                return data
+            elif data.shape[1] == 1:
+                result = np.zeros((data.shape[0], 2))
+                result[:, 0] = data[:, 0]
+                return result
+            else:
+                return data[:, :2]
+        data_centered = data - data.mean(axis=0, keepdims=True)
+        U, s, Vt = np.linalg.svd(data_centered, full_matrices=False)
+        return data_centered @ Vt[:2].T
+    
+    # Apply PCA to Q and K
+    combined_QK = np.vstack([Q, K])
+    if combined_QK.shape[1] > 2:
+        combined_centered = combined_QK - combined_QK.mean(axis=0, keepdims=True)
+        U, s, Vt = np.linalg.svd(combined_centered, full_matrices=False)
+        pca_transform = Vt[:2].T
+        Q_centered = Q - combined_QK.mean(axis=0, keepdims=True)
+        K_centered = K - combined_QK.mean(axis=0, keepdims=True)
+        Q_2d = Q_centered @ pca_transform
+        K_2d = K_centered @ pca_transform
+    else:
+        Q_2d = pca_2d(Q)
+        K_2d = pca_2d(K)
+    
+    # Determine extent with margin
+    all_points = np.vstack([Q_2d, K_2d])
+    x_min, x_max = all_points[:, 0].min(), all_points[:, 0].max()
+    y_min, y_max = all_points[:, 1].min(), all_points[:, 1].max()
+    margin_x = max(0.5, (x_max - x_min) * 0.15)
+    margin_y = max(0.5, (y_max - y_min) * 0.15)
+    x_min -= margin_x
+    x_max += margin_x
+    y_min -= margin_y
+    y_max += margin_y
+    
+    # Create 2x4 grid figure with tighter spacing
+    n_rows, n_cols = 2, 4
+    fig = plt.figure(figsize=(4 * n_cols, 2.8 * n_rows))
+    gs = GridSpec(n_rows, n_cols, figure=fig, hspace=0.02, wspace=0.2, 
+                  left=0.05, right=0.98, top=0.96, bottom=0.04)
+    
+    # Number of queries to show (up to 8)
+    num_queries_to_show = min(8, T)
+    grid_resolution = 150
+    
+    # Create grid for background heatmap
+    x_grid = np.linspace(x_min, x_max, grid_resolution)
+    y_grid = np.linspace(y_min, y_max, grid_resolution)
+    X_grid, Y_grid = np.meshgrid(x_grid, y_grid)
+    
+    for idx in range(num_queries_to_show):
+        row = idx // n_cols
+        col = idx % n_cols
+        ax = fig.add_subplot(gs[row, col])
+        
+        # Get the Q vector for this query
+        q_focus_2d = Q_2d[idx]  # (2,)
+        
+        # Compute dot product grid: for each (x,y), dot product with q_focus
+        dot_grid = X_grid * q_focus_2d[0] + Y_grid * q_focus_2d[1]
+        
+        # Display background heatmap
+        im = ax.pcolormesh(x_grid, y_grid, dot_grid, cmap='Greens', shading='auto', zorder=0)
+        
+        # Add origin lines (dashed, faded)
+        ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
+        ax.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
+        
+        # Plot all K points with larger, more readable labels
+        for k_idx in range(len(K_2d)):
+            ax.text(K_2d[k_idx, 0], K_2d[k_idx, 1], 
+                   _token_pos_label(tokens[k_idx], k_idx),
+                   fontsize=11, ha='center', va='center', 
+                   color='red', fontweight='bold', zorder=2)
+        
+        # Highlight the focus Q point
+        ax.text(Q_2d[idx, 0], Q_2d[idx, 1],
+               _token_pos_label(tokens[idx], idx),
+               fontsize=16, fontweight='bold', ha='center', va='center',
+               color='blue', zorder=3)
+        
+        # Plot other Q points (lighter, but still readable)
+        for q_idx in range(len(Q_2d)):
+            if q_idx != idx:
+                ax.text(Q_2d[q_idx, 0], Q_2d[q_idx, 1],
+                       _token_pos_label(tokens[q_idx], q_idx),
+                       fontsize=10, ha='center', va='center',
+                       color='#A0C4E8', alpha=0.8, zorder=1)
+        
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
+        ax.set_xlabel("Dim 1" + (" (PCA)" if Q.shape[1] > 2 else ""), fontsize=10)
+        ax.set_ylabel("Dim 2" + (" (PCA)" if Q.shape[1] > 2 else ""), fontsize=10)
+        ax.set_title(f"Q: {_token_pos_label(tokens[idx], idx)}", fontsize=12, fontweight='bold', pad=5)
+        ax.grid(True, alpha=0.3)
+        ax.set_aspect('equal', adjustable='box')
+    
+    # Add overall title with better positioning
+    fig.suptitle(f"Dot Product Gradients for Each Query\nSequence: {seq_str}", 
+                 fontsize=13, fontweight='bold', y=0.99)
+    
+    plt.tight_layout(rect=[0, 0, 1, 0.97])
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=300, facecolor='white')
+        plt.close()
+        print(f"Q dot product gradients plot saved to {save_path}")
     else:
         plt.show()
     
@@ -4346,6 +4554,9 @@ def plot_qk_embedding_space(model, itos, save_path: str = None, step_label: int 
     ax.set_ylabel("Dimension 2" + (" (PCA)" if head_size != 2 else ""), fontsize=axis_fontsize)
     ax.tick_params(axis='both', labelsize=tick_fontsize)
     ax.set_title(f"Q and K Embedding Space\n{num_combinations} Q (blue) + {num_combinations} K (red) = {2*num_combinations} total\n({vocab_size} tokens × {block_size} positions)", fontsize=title_fontsize, fontweight='bold')
+    # Add origin lines (dashed, faded)
+    ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
+    ax.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
     ax.grid(True, alpha=0.3)
 
     # Legend with actual colored patches
@@ -4441,7 +4652,7 @@ def plot_qk_embedding_space_focused_query(model, itos, token_str="+", position=5
     legend_fontsize = 14
 
     # Background heatmap (dot product with focus query)
-    im = ax.pcolormesh(xx, yy, dot_grid, cmap='Greens', shading='auto')
+    im = ax.pcolormesh(xx, yy, dot_grid, cmap='Greens', shading='auto', zorder=0)
     
     # All other queries in very light blue (background context)
     for i in range(num_combinations):
@@ -4464,6 +4675,9 @@ def plot_qk_embedding_space_focused_query(model, itos, token_str="+", position=5
     ax.set_ylabel("Dimension 2" + (" (PCA)" if head_size != 2 else ""), fontsize=axis_fontsize)
     ax.tick_params(axis='both', labelsize=tick_fontsize)
     ax.set_title(f"Q/K space: focus on query {_token_pos_label(token_str, position)}\nBackground = dot product with this query; keys with position \u2265 {position} grayed", fontsize=title_fontsize, fontweight='bold')
+    # Add origin lines (dashed, faded) - make them more visible
+    ax.axhline(y=0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6, zorder=10)
+    ax.axvline(x=0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6, zorder=10)
     ax.grid(True, alpha=0.3)
     ax.set_aspect('equal', adjustable='box')
 
@@ -4844,18 +5058,19 @@ def plot_final_on_output_heatmap_grid(
         row, col = d // n_cols, d % n_cols
         ax = axes[row, col]
         Z = probs[:, d].reshape(grid_resolution, grid_resolution)
-        ax.pcolormesh(xx, yy, Z, cmap='viridis', vmin=0, vmax=1, shading='auto')
-        ax.axhline(y=0, color='white', linestyle='--', linewidth=0.5, alpha=0.3, zorder=3)
-        ax.axvline(x=0, color='white', linestyle='--', linewidth=0.5, alpha=0.3, zorder=3)
+        ax.pcolormesh(xx, yy, Z, cmap='viridis', vmin=0, vmax=1, shading='auto', zorder=0)
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
+        ax.set_aspect('equal')
+        # Origin lines: dashed, faded white (like other plots)
+        ax.axhline(y=0, color='white', linestyle='--', linewidth=1, alpha=0.5, zorder=15)
+        ax.axvline(x=0, color='white', linestyle='--', linewidth=1, alpha=0.5, zorder=15)
         for i in range(T):
             lbl = _token_pos_label(itos[seq[i]], i)
             px, py = final_x[i, 0], final_x[i, 1]
             color = token_pos_to_color[(itos[seq[i]], i)]
             ax.text(px, py, lbl, fontsize=11, fontweight='bold', ha='center', va='center', color=color, zorder=5,
                     path_effects=[pe.withStroke(linewidth=0.8, foreground='black')])
-        ax.set_xlim(x_min, x_max)
-        ax.set_ylim(y_min, y_max)
-        ax.set_aspect('equal')
         ax.set_title(f"P(next = {itos[d]})", fontsize=11)
         if row == n_rows - 1:
             ax.set_xlabel("dim 0", fontsize=9)
@@ -4917,6 +5132,15 @@ def plot_probability_heatmap_with_embeddings(
     half = max(x_max - x_min, y_max - y_min) / 2
     x_min, x_max = x_c - half, x_c + half
     y_min, y_max = y_c - half, y_c + half
+    # Ensure origin (0,0) is inside the plot so origin lines are visible
+    if x_min > 0 or x_max < 0:
+        pad = max(0.5, (x_max - x_min) * 0.05)
+        x_min = min(x_min, -pad)
+        x_max = max(x_max, pad)
+    if y_min > 0 or y_max < 0:
+        pad = max(0.5, (y_max - y_min) * 0.05)
+        y_min = min(y_min, -pad)
+        y_max = max(y_max, pad)
 
     # Create probability grid - need to pass through feedforward first
     xs = np.linspace(x_min, x_max, grid_resolution)
@@ -4965,13 +5189,126 @@ def plot_probability_heatmap_with_embeddings(
         
         # Plot probability heatmap
         Z = probs[:, token_idx].reshape(grid_resolution, grid_resolution)
-        im = ax.pcolormesh(xx, yy, Z, cmap='viridis', vmin=0, vmax=1, shading='auto')
+        im = ax.pcolormesh(xx, yy, Z, cmap='viridis', vmin=0, vmax=1, shading='auto', zorder=0)
+        
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
+        ax.set_aspect('equal')
+        # Origin lines: dashed, faded white (like other plots)
+        ax.axhline(y=0, color='white', linestyle='--', linewidth=1, alpha=0.5, zorder=15)
+        ax.axvline(x=0, color='white', linestyle='--', linewidth=1, alpha=0.5, zorder=15)
         
         # Overlay annotations only (no marker dots/circles)
         for combo_idx, (emb, label) in enumerate(zip(all_combinations, labels)):
             if vocab_size * block_size <= 200:
                 ax.text(emb[0], emb[1], label, fontsize=7, ha='center', va='center',
                        color='white', weight='bold', zorder=6)
+        
+        ax.set_title(f"P(next = {itos[token_idx]})", fontsize=10)
+        if row == n_rows - 1:
+            ax.set_xlabel("dim 0", fontsize=9)
+        if col == 0:
+            ax.set_ylabel("dim 1", fontsize=9)
+
+    # Hide unused subplots
+    for token_idx in range(vocab_size, n_rows * n_cols):
+        row = token_idx // n_cols
+        col = token_idx % n_cols
+        axes[row, col].axis('off')
+
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')
+        plt.close()
+        print(f"Probability heatmap with embeddings saved to {save_path}")
+    else:
+        plt.show()
+    
+    model.train()
+
+
+@torch.no_grad()
+def plot_probability_heatmap(
+    model, itos, save_path=None, grid_resolution=80, extent_margin=0.5, step_label: int | None = None
+):
+    """
+    Plot probability heatmaps for each token WITHOUT token overlays.
+    Shows only the probability distributions P(next = token) over the 2D space.
+    
+    Args:
+        model: Trained model (BigramLanguageModel)
+        itos: Index-to-string mapping for tokens
+        save_path: Path to save the figure
+        grid_resolution: Number of points per axis (default 80)
+        extent_margin: Extra margin around embedding extent (default 0.5)
+    """
+    model.eval()
+    vocab_size = model.token_embedding.weight.shape[0]
+    block_size = model.position_embedding_table.weight.shape[0]
+    n_embd = model.lm_head.in_features
+    if n_embd != 2:
+        print(f"plot_probability_heatmap: n_embd={n_embd}, need 2. Skipping.")
+        return
+
+    with torch.no_grad():
+        W = model.lm_head.weight.detach().cpu().numpy()   # (vocab_size, 2)
+        b = model.lm_head.bias.detach().cpu().numpy()     # (vocab_size,)
+        token_emb = model.token_embedding.weight.detach().cpu().numpy()
+        pos_emb = model.position_embedding_table.weight.detach().cpu().numpy()
+        combined = token_emb[:, None, :] + pos_emb[None, :, :]  # (vocab, block, 2)
+        flat = combined.reshape(-1, 2)
+        x_min, x_max = flat[:, 0].min() - extent_margin, flat[:, 0].max() + extent_margin
+        y_min, y_max = flat[:, 1].min() - extent_margin, flat[:, 1].max() + extent_margin
+    # Square extent and layout (same as fig 19 / probability_heatmap_with_values)
+    x_c, y_c = (x_min + x_max) / 2, (y_min + y_max) / 2
+    half = max(x_max - x_min, y_max - y_min) / 2
+    x_min, x_max = x_c - half, x_c + half
+    y_min, y_max = y_c - half, y_c + half
+
+    # Create probability grid - need to pass through feedforward first
+    xs = np.linspace(x_min, x_max, grid_resolution)
+    ys = np.linspace(y_min, y_max, grid_resolution)
+    xx, yy = np.meshgrid(xs, ys)
+    points = np.stack([xx.ravel(), yy.ravel()], axis=1)  # (N, 2)
+    
+    # Pass through feedforward + residual, then lm_head (same as v_before_after_demo)
+    dev = next(model.parameters()).device
+    with torch.no_grad():
+        pts = torch.tensor(points, dtype=torch.float32, device=dev)
+        h = pts + model.ffwd(pts)  # Feedforward + residual
+        logits = model.lm_head(h).cpu().numpy()  # (N, vocab_size)
+    
+    # Compute probabilities from logits
+    probs = np.exp(logits - logits.max(axis=1, keepdims=True))
+    probs /= probs.sum(axis=1, keepdims=True)             # (N, vocab_size)
+
+    # Create figure with one subplot per token (2 rows x 6 cols for rectangular layout)
+    n_cols = min(6, vocab_size)
+    n_rows = (vocab_size + n_cols - 1) // n_cols
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
+    if step_label is not None:
+        fig.suptitle(f"Step: {step_label}", fontsize=16, fontweight="bold", y=0.98)
+    if n_rows == 1 and n_cols == 1:
+        axes = np.array([[axes]])
+    elif n_rows == 1:
+        axes = axes.reshape(1, -1)
+    elif n_cols == 1:
+        axes = axes.reshape(-1, 1)
+
+    for token_idx in range(vocab_size):
+        row = token_idx // n_cols
+        col = token_idx % n_cols
+        ax = axes[row, col]
+        
+        # Plot probability heatmap only (NO token overlays)
+        Z = probs[:, token_idx].reshape(grid_resolution, grid_resolution)
+        im = ax.pcolormesh(xx, yy, Z, cmap='viridis', vmin=0, vmax=1, shading='auto', zorder=0)
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
+        ax.set_aspect('equal')
+        # Origin lines: dashed, faded white (like other plots)
+        ax.axhline(y=0, color='white', linestyle='--', linewidth=1, alpha=0.5, zorder=15)
+        ax.axvline(x=0, color='white', linestyle='--', linewidth=1, alpha=0.5, zorder=15)
         
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(y_min, y_max)
@@ -4992,7 +5329,7 @@ def plot_probability_heatmap_with_embeddings(
     if save_path:
         plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')
         plt.close()
-        print(f"Probability heatmap with embeddings saved to {save_path}")
+        print(f"Probability heatmap (without tokens) saved to {save_path}")
     else:
         plt.show()
     
@@ -5088,7 +5425,13 @@ def plot_probability_heatmap_with_values(
         ax = axes[row, col]
 
         Z = probs[:, token_idx].reshape(grid_resolution, grid_resolution)
-        ax.pcolormesh(xx, yy, Z, cmap='viridis', vmin=0, vmax=1, shading='auto')
+        ax.pcolormesh(xx, yy, Z, cmap='viridis', vmin=0, vmax=1, shading='auto', zorder=0)
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
+        ax.set_aspect('equal')
+        # Origin lines: dashed, faded white (like other plots)
+        ax.axhline(y=0, color='white', linestyle='--', linewidth=1, alpha=0.5, zorder=15)
+        ax.axvline(x=0, color='white', linestyle='--', linewidth=1, alpha=0.5, zorder=15)
 
         # Overlay annotations only (no marker dots/circles)
         for v_vec, label in zip(all_V, labels):
@@ -5096,9 +5439,6 @@ def plot_probability_heatmap_with_values(
                 ax.text(v_vec[0], v_vec[1], label, fontsize=7, ha='center', va='center',
                        color='white', weight='bold', zorder=6)
 
-        ax.set_xlim(x_min, x_max)
-        ax.set_ylim(y_min, y_max)
-        ax.set_aspect('equal')
         ax.set_title(f"P(next = {itos[token_idx]})", fontsize=10)
         if row == n_rows - 1:
             ax.set_xlabel("dim 0", fontsize=9)
@@ -5221,6 +5561,154 @@ def plot_qk_full_attention_heatmap(model, itos, save_path: str = None):
         print(f"Full Q/K attention heatmap saved to {save_path}")
     else:
         plt.show()
+
+
+@torch.no_grad()
+def plot_qk_full_attention_heatmap_last_row(model, itos, save_path: str = None):
+    """
+    Create a zoomed-in view of the last row (Query Token '+') from the full attention matrix.
+    Shows each cell as a larger 8x8 sub-heatmap for better clarity.
+    
+    Args:
+        model: Trained TransformerLM
+        itos: Index-to-string mapping for tokens
+        save_path: Path to save the figure
+    """
+    model.eval()
+    
+    # Get model parameters
+    vocab_size = model.token_embedding.weight.shape[0]
+    block_size = model.position_embedding_table.weight.shape[0]
+    
+    # Get the first attention head's Q, K weights
+    head = model.sa_heads.heads[0]
+    W_Q = head.query.weight.detach().cpu().numpy()
+    W_K = head.key.weight.detach().cpu().numpy()
+    head_size = W_Q.shape[0]
+    
+    # Get embeddings
+    token_emb = model.token_embedding.weight.detach().cpu().numpy()
+    pos_emb = model.position_embedding_table.weight.detach().cpu().numpy()
+    
+    # Find the '+' token index
+    plus_token_idx = None
+    for t in range(vocab_size):
+        if str(itos[t]) == '+':
+            plus_token_idx = t
+            break
+    
+    if plus_token_idx is None:
+        print("plot_qk_full_attention_heatmap_last_row: '+' token not found. Skipping.")
+        return
+    
+    # Compute Q and K for all token-position combinations
+    num_combinations = vocab_size * block_size
+    Q_all = np.zeros((num_combinations, head_size))
+    K_all = np.zeros((num_combinations, head_size))
+    labels = []
+    
+    idx = 0
+    for t in range(vocab_size):
+        for p in range(block_size):
+            combined_emb = token_emb[t] + pos_emb[p]
+            Q_all[idx] = W_Q @ combined_emb
+            K_all[idx] = W_K @ combined_emb
+            labels.append(_token_pos_label(itos[t], p))
+            idx += 1
+    
+    # Compute full attention matrix: Q_all @ K_all.T / sqrt(d)
+    attention_matrix = (Q_all @ K_all.T) / np.sqrt(head_size)
+    
+    # Apply CAUSAL MASKING: query at position p can only attend to keys at position <= p
+    query_positions = np.array([p for t in range(vocab_size) for p in range(block_size)])
+    key_positions = np.array([p for t in range(vocab_size) for p in range(block_size)])
+    
+    # Create causal mask: mask[i,j] = True if query_pos[i] >= key_pos[j] (can attend)
+    causal_mask = query_positions[:, None] >= key_positions[None, :]
+    
+    # Apply mask: set invalid positions to NaN
+    masked_attention = np.where(causal_mask, attention_matrix, np.nan)
+    
+    # Extract the last row: Query Token '+' (all positions)
+    # The '+' token rows are: plus_token_idx * block_size to (plus_token_idx + 1) * block_size - 1
+    plus_query_start = plus_token_idx * block_size
+    plus_query_end = (plus_token_idx + 1) * block_size
+    last_row_attention = masked_attention[plus_query_start:plus_query_end, :]  # (block_size, num_combinations)
+    
+    # Create figure: 2 rows x 6 columns so subplots are larger and clearer
+    n_cols = 6
+    n_rows = 2
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 4.5 * n_rows), sharey=True)
+    
+    if n_rows == 1 and n_cols == 1:
+        axes = np.array([[axes]])
+    else:
+        axes = np.atleast_2d(axes)
+    
+    # Get global min/max for consistent color scale
+    valid_values = masked_attention[np.isfinite(masked_attention)]
+    vmin = valid_values.min()
+    vmax = valid_values.max()
+    
+    for key_token_idx in range(vocab_size):
+        row = key_token_idx // n_cols
+        col = key_token_idx % n_cols
+        ax = axes[row, col]
+        
+        # Extract the 8x8 sub-matrix for Query '+' vs Key token
+        key_start = key_token_idx * block_size
+        key_end = (key_token_idx + 1) * block_size
+        sub_matrix = last_row_attention[:, key_start:key_end]  # (block_size, block_size)
+        
+        # Plot the 8x8 heatmap
+        im = ax.imshow(sub_matrix, cmap='nipy_spectral', aspect='auto', vmin=vmin, vmax=vmax)
+        
+        # Add grid lines to separate positions
+        for i in range(block_size + 1):
+            ax.axhline(y=i - 0.5, color='white', linewidth=1, alpha=0.6)
+            ax.axvline(x=i - 0.5, color='white', linewidth=1, alpha=0.6)
+        
+        # Set ticks to show positions - make them larger and clearer
+        ax.set_xticks(range(block_size))
+        ax.set_xticklabels([f"p{i}" for i in range(block_size)], fontsize=10)
+        ax.set_yticks(range(block_size))
+        ax.set_yticklabels([f"p{i}" for i in range(block_size)], fontsize=10)
+        
+        # Title shows the Key Token - make it larger
+        ax.set_title(f"Key: {itos[key_token_idx]}", fontsize=13, fontweight='bold', pad=10)
+        
+        # Y-label only on first column
+        if col == 0:
+            ax.set_ylabel("Query '+' Position", fontsize=12, fontweight='bold')
+        
+        # X-label only on bottom row
+        if row == n_rows - 1:
+            ax.set_xlabel("Key Position", fontsize=11)
+    
+    # Hide any unused subplots (if vocab_size < n_rows * n_cols)
+    for idx in range(vocab_size, n_rows * n_cols):
+        row, col = idx // n_cols, idx % n_cols
+        axes[row, col].axis('off')
+    
+    # Add overall title - emphasize that each subplot is itself a matrix
+    fig.suptitle(f"Query Token '+' Attention to All Key Tokens\n(Each subplot is an {block_size}×{block_size} attention matrix: Query '+' positions (rows) vs Key positions (columns))", 
+                 fontsize=14, fontweight='bold', y=0.97)
+    
+    # Colorbar: anchor to the last subplot only so it sits on the right, not in the middle
+    plt.tight_layout(rect=[0, 0, 0.92, 0.94])
+    cbar_ax = fig.add_axes([0.93, 0.15, 0.015, 0.7])  # [left, bottom, width, height] in figure coords
+    cbar = fig.colorbar(im, cax=cbar_ax)
+    cbar.set_label("Attention Score (pre-softmax)", fontsize=11)
+    cbar.ax.tick_params(labelsize=10)
+    
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=200, facecolor='white')
+        plt.close()
+        print(f"Full Q/K attention heatmap (last row zoom) saved to {save_path}")
+    else:
+        plt.show()
+    
+    model.train()
 
 
 def plot_qk_softmax_attention_heatmap(model, itos, save_path: str = None):
