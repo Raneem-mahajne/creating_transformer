@@ -1,130 +1,5 @@
 # Interpretable Minimal Transformers: Geometry as Algorithm
 
-This repository trains **tiny, fully-interpretable transformer language models** on synthetic integer-sequence tasks and produces an exhaustive suite of visualizations that expose every learned parameter and computation in the network. Because the models are deliberately minimal — 2-dimensional embeddings, a single attention head, 12-token vocabulary — every weight matrix, embedding vector, attention pattern, and output probability can be plotted directly on the 2D plane. No dimensionality reduction required.
-
-The goal is **mechanistic interpretability from scratch**: not just *that* the transformer solves a rule, but *how* — traced through every stage of the pipeline, with the geometry of the learned representations readable as an algorithm.
-
-> **See [Paper.md](Paper.md) for the full writeup.**
-
----
-
-## Quick Start
-
-**Requirements:** Python 3.8+, PyTorch, NumPy, Matplotlib, Pillow, imageio
-
-```bash
-pip install torch numpy matplotlib pillow imageio
-```
-
-**Train a model and generate all visualizations:**
-```bash
-python main.py plus_last_even
-```
-
-**Visualize from an existing checkpoint (skip training):**
-```bash
-python main.py plus_last_even --visualize
-```
-
-**Visualize a specific training step:**
-```bash
-python main.py plus_last_even --visualize --step 5000
-```
-
-**Generate learning-dynamics videos / GIFs:**
-```bash
-python main.py plus_last_even --video
-python main.py plus_last_even --video-qkv
-```
-
-**Force retrain (overwrite existing checkpoint):**
-```bash
-python main.py plus_last_even --force
-```
-
-Output figures go to `<rule_name>/plots/`, checkpoints to `<rule_name>/checkpoints/`.
-
----
-
-## Repository Structure
-
-```
-├── main.py                  # Entry point: train, visualize, generate videos
-├── model.py                 # BigramLanguageModel (the minimal transformer)
-├── training.py              # Training loop, loss estimation, rule-error evaluation
-├── data.py                  # Sequence generation, encoding, batching
-├── visualize.py             # Orchestrates all visualization from a checkpoint
-├── plotting/
-│   └── plots.py             # All plotting functions (embeddings, QKV, heatmaps, etc.)
-├── video.py                 # Embedding & QKV evolution video generation
-├── learning_videos.py       # Q/K space, attention heatmap, output landscape videos
-├── checkpoint.py            # Save/load checkpoints
-├── config_loader.py         # YAML config loading
-├── IntegerStringGenerator.py # Sequence rule definitions (all rules live here)
-├── BigramLanguageModel.py   # Legacy model file
-├── configs/                 # One YAML config per task
-│   ├── plus_last_even.yaml
-│   ├── lucky7.yaml
-│   ├── step_back.yaml
-│   ├── copy_modulo.yaml
-│   ├── plus_max_of_two.yaml
-│   ├── plus_means_even.yaml
-│   ├── successor.yaml
-│   ├── parity_based.yaml
-│   └── ...                  # 17 configs total
-├── plus_last_even/          # Output for plus_last_even task
-│   ├── plots/               # All static figures + learning_dynamics/ GIFs
-│   └── checkpoints/         # Model checkpoints (every 100 steps)
-├── lucky7/                  # Output for lucky7 task
-├── step_back/               # Output for step_back task
-├── Paper.md                 # Full paper writeup
-└── README.md                # This file
-```
-
----
-
-## Available Tasks
-
-Each task is defined by a YAML config in `configs/` and a procedural rule in `IntegerStringGenerator.py`. To run any task, pass its config name to `main.py`:
-
-```bash
-python main.py <config_name>
-```
-
-| Config | Rule | Description |
-|--------|------|-------------|
-| `plus_last_even` | PlusLastEvenRule | After `+`, output the most recent even number |
-| `lucky7` | Lucky7Rule | After `7`, output the token that appeared before the `7` |
-| `step_back` | StepBackRule | Each token is one less than the previous |
-| `copy_modulo` | CopyModuloRule | Copy with modular arithmetic |
-| `plus_max_of_two` | PlusMaxOfTwoRule | After `+`, output the max of the two preceding numbers |
-| `plus_means_even` | PlusMeansEvenRule | After `+`, output any even number |
-| `successor` | SuccessorRule | Each token is one more than the previous |
-| `parity_based` | ParityBasedRule | Next token parity depends on previous parities |
-| `lucky7_no_resid` | Lucky7Rule (no residual) | Lucky7 without residual connections |
-| `even_abs_diff` | EvenAbsDiffRule | Absolute difference of consecutive even numbers |
-| `conditional_transform` | ConditionalTransformRule | Transform conditioned on context |
-| `lookup_permutation` | LookupPermutationRule | Permutation-based lookup |
-| And more... | | See `configs/` for the full list |
-
-Each task produces its own output folder with plots and checkpoints. The visualization pipeline is identical across all tasks — the same 16+ figures are generated for each, enabling direct comparison of the learned algorithms.
-
----
-
-## Adding a New Task
-
-1. Define a new rule class in `IntegerStringGenerator.py` with `generate_sequence`, `verify_sequence`, and `valence_mask` methods.
-2. Create a YAML config in `configs/` (copy `plus_last_even.yaml` as a template).
-3. Run `python main.py <your_config_name>`.
-
----
-
-## Paper
-
-The sections below present the full analysis for the `plus_last_even` task — from task definition through model architecture, training, and a detailed walkthrough of every learned representation. This content also appears in [Paper.md](Paper.md).
-
----
-
 > **Abstract.**
 > We present a framework for building and interpreting minimal transformer language models trained on procedurally generated integer sequences. By constraining the embedding dimension to n<sub>embd</sub> = 2 and the head size to d<sub>k</sub> = 2, we enable full two-dimensional visualization of every internal representation — embeddings, query/key/value transforms, attention outputs, residual streams, and the language-model head's decision boundaries. Our central claim is that **the learned geometry implies an algorithm**: the arrangement of points and boundaries in ℝ² can be read as a step-by-step procedure. For the *plus-last-even* task, the model encodes the `+` operator at a query position, attends to keys of the most recent even number, retrieves its value, and maps the resulting state into the correct output region via the residual connection and LM head. We introduce a suite of interpretability visualizations that make this algorithmic reading explicit, and provide training-evolution animations showing how the algorithmic geometry emerges during learning. The framework offers a pedagogical and experimental testbed where *seeing the geometry is seeing the algorithm*.
 
@@ -252,10 +127,7 @@ The position embeddings (bottom-center) form a near-linear vertical ladder, with
 ![Token Embeddings](plus_last_even/plots/05_token_embeddings.png)
 ***Figure 5.** Learned embeddings. Bottom row: 2D scatter of token (left), position (center), and combined (right) embeddings.*
 
-This structure does not exist at initialization. The training-dynamics animation (Figure 5a) shows the embedding space at every checkpoint. At step 0, all points are randomly scattered. Within the first few thousand steps, the `+` token rapidly migrates away from the number tokens. The even/odd split solidifies between steps 5,000 and 10,000, and the position ladder organizes gradually throughout training. The embedding geometry is not hand-designed; it is the structure that gradient descent discovers in service of the rule.
-
-![Embeddings over training](plus_last_even/plots/learning_dynamics/01_embeddings_scatterplots.gif)
-***Figure 5a.** Evolution of embedding scatter plots over training (200 frames, one per checkpoint).*
+This structure does not exist at initialization. Movie 1 shows the embedding space at every checkpoint across training. At step 0, all points are randomly scattered. Within the first few thousand steps, the `+` token rapidly migrates away from the number tokens. The even/odd split solidifies between steps 5,000 and 10,000, and the position ladder organizes gradually throughout training. The embedding geometry is not hand-designed; it is the structure that gradient descent discovers in service of the rule.
 
 ### 5.3 The Output Landscape: Where Representations Need to Land
 
@@ -268,22 +140,16 @@ The critical implication is this: for the model to correctly output, say, token 
 ![Output Probability Heatmaps](plus_last_even/plots/07_output_probs_embed.png)
 ***Figure 6.** Output probability landscape. Each subplot shows P(next = token) over the 2D plane, with all token+position embeddings annotated.*
 
-The output landscape and the embedding positions co-evolve during training (Figure 6a). At initialization, the probability landscape is nearly uniform — no decision boundaries exist. As the model first learns token frequencies, broad regions form. These sharpen progressively into the final configuration where each even number has a well-defined, non-overlapping high-probability region in exactly the part of the plane that the attention mechanism will target.
-
-![Output heatmaps over training](plus_last_even/plots/learning_dynamics/05_output_heatmaps_with_embeddings.gif)
-***Figure 6a.** Co-evolution of output probability landscape and embedding positions over training.*
+The output landscape and the embedding positions co-evolve during training (Movie 2). At initialization, the probability landscape is nearly uniform — no decision boundaries exist. As the model first learns token frequencies, broad regions form. These sharpen progressively into the final configuration where each even number has a well-defined, non-overlapping high-probability region in exactly the part of the plane that the attention mechanism will target.
 
 ### 5.4 The Attention Mechanism: Query, Key, and Value Projections
 
 The bridge between the starting embeddings and the output landscape is self-attention. The model applies three learned 2×2 linear transformations — W<sub>Q</sub>, W<sub>K</sub>, W<sub>V</sub> — to every token+position embedding, producing query, key, and value vectors respectively. Figure 7 shows these transformations and their effect. The original embedding space (top-left) is transformed into three distinct spaces: the query space (blue), the key space (red), and the value space (green). Each transformation stretches, rotates, and rearranges the points differently, reflecting the different roles these vectors play.
 
-The query and key transformations jointly determine *who attends to whom*: the dot product between a query and a key controls the attention weight. The value transformation determines *what information gets routed*: the attention-weighted sum of value vectors is what actually gets added to the residual stream. These three spaces must be coordinated — the Q/K geometry must select the right positions, and the V geometry must carry the right information to those positions. The training-dynamics animation (Figure 7a) shows that early in training, all three projections produce nearly identical spaces, but they progressively specialize as the model learns to implement the rule.
+The query and key transformations jointly determine *who attends to whom*: the dot product between a query and a key controls the attention weight. The value transformation determines *what information gets routed*: the attention-weighted sum of value vectors is what actually gets added to the residual stream. These three spaces must be coordinated — the Q/K geometry must select the right positions, and the V geometry must carry the right information to those positions. Movie 3 shows that early in training, all three projections produce nearly identical spaces, but they progressively specialize as the model learns to implement the rule.
 
 ![QKV Transformations](plus_last_even/plots/08_qkv_transforms.png)
 ***Figure 7.** QKV projections. Top: weight matrices as heatmaps. Bottom: all 96 token+position embeddings after each projection.*
-
-![QKV over training](plus_last_even/plots/learning_dynamics/02_embedding_qkv_comprehensive.gif)
-***Figure 7a.** Specialization of Q, K, and V subspaces over training.*
 
 ### 5.5 Who Attends to Whom: The Query–Key Geometry
 
@@ -296,23 +162,17 @@ But the rule demands more than just "attend to even numbers" — it requires att
 ![Q/K Embedding Space](plus_last_even/plots/09_qk_space.png)
 ***Figure 8.** Joint query–key space. Blue: queries. Red: keys. Labels show token and position.*
 
-The training-dynamics animation (Figure 8a) reveals how this structure develops. At initialization, queries and keys are intermingled with no meaningful separation. Over the first several thousand steps, the `+` queries begin migrating away from the number queries. Simultaneously, even-number keys separate from odd-number keys along the axis that aligns with the `+` query direction. By the end of training, the geometry has converged to the configuration described above: a clear `+` query cluster aligned with even-number keys and orthogonal to odd-number keys.
-
-![Q/K space over training](plus_last_even/plots/learning_dynamics/03_qk_embedding_space.gif)
-***Figure 8a.** Separation of query and key subspaces over training.*
+Movie 4 reveals how this structure develops over the course of training. At initialization, queries and keys are intermingled with no meaningful separation. Over the first several thousand steps, the `+` queries begin migrating away from the number queries. Simultaneously, even-number keys separate from odd-number keys along the axis that aligns with the `+` query direction. By the end of training, the geometry has converged to the configuration described above: a clear `+` query cluster aligned with even-number keys and orthogonal to odd-number keys.
 
 To make the attention pattern even more concrete, Figure 9 isolates a single query — `+` at position 5 — and colors the entire Q/K plane by its dot product with that query. The resulting gradient shows high values (green) concentrated at the locations of even-number keys at positions 0–4, and low values (white) at odd-number key locations. Keys at positions ≥ 5 are irrelevant due to the causal mask. This is the retrieval mechanism laid bare: the `+` query acts as a selective filter that picks out even-number keys from the past context, with recency biasing the selection toward the most recent one.
 
 ![Q/K Space Focus](plus_last_even/plots/10_qk_space_focus.png)
 ***Figure 9.** Dot-product gradient for the query `+` at position 5. Green = high attention.*
 
-The full 96×96 attention score matrix (Figure 10) confirms that this pattern generalizes across all token–position combinations. The matrix is organized as a 12×12 grid of blocks, where each block represents one query-token versus one key-token, with the 8 positions arranged within each block. The bottom row — corresponding to `+` as the query token — is the most informative: even-number key columns (0, 2, 4, 6, 8, 10) show warm colors (high attention scores), while odd-number key columns show cool colors (low scores). The `+` operator attends selectively and strongly to even numbers, regardless of position. The training-dynamics animation (Figure 10a) shows this row sharpening from a diffuse pattern at initialization to the clean even/odd dichotomy observed in the final model.
+The full 96×96 attention score matrix (Figure 10) confirms that this pattern generalizes across all token–position combinations. The matrix is organized as a 12×12 grid of blocks, where each block represents one query-token versus one key-token, with the 8 positions arranged within each block. The bottom row — corresponding to `+` as the query token — is the most informative: even-number key columns (0, 2, 4, 6, 8, 10) show warm colors (high attention scores), while odd-number key columns show cool colors (low scores). The `+` operator attends selectively and strongly to even numbers, regardless of position. Movie 5 shows this row sharpening from a diffuse pattern at initialization to the clean even/odd dichotomy observed in the final model.
 
 ![Full Attention Matrix](plus_last_even/plots/11_qk_full_heatmap.png)
 ***Figure 10.** Full 96×96 attention score matrix, organized as a 12×12 grid of token–token blocks.*
-
-![Q/K + Attention over training](plus_last_even/plots/learning_dynamics/04_qk_space_plus_attention.gif)
-***Figure 10a.** Evolution of the attention matrix over training.*
 
 ### 5.6 What Gets Retrieved: The Value Space
 
@@ -380,9 +240,21 @@ The geometry *is* the algorithm. There is no separate procedure hidden in the we
 
 ---
 
-## 8. Supplementary Figures
+## 8. Movies
 
-Additional figures in `plus_last_even/plots/supplementary/` and `plus_last_even/plots/extended/`:
+The following animations show the evolution of the model's learned geometry over the course of training (one frame per checkpoint, 200 frames total). These are available as GIF/MP4 files in `plus_last_even/plots/learning_dynamics/`.
+
+| Movie | File | Description |
+|----------------------|------|-------------|
+| Movie 1 | `01_embeddings_scatterplots.gif` | Evolution of token, position, and combined embedding scatter plots. The `+` token separates from numbers first; the even/odd split solidifies by step 5,000–10,000. |
+| Movie 2 | `05_output_heatmaps_with_embeddings.gif` | Co-evolution of the LM head's output probability landscape and embedding positions. Decision boundaries sharpen progressively from a uniform initialization. |
+| Movie 3 | `02_embedding_qkv_comprehensive.gif` | Specialization of the Q, K, and V subspaces. All three projections are initially identical and develop distinct geometry as training progresses. |
+| Movie 4 | `03_qk_embedding_space.gif` | Separation of query and key subspaces. `+` queries migrate away from number queries; even-number keys align with the `+` query direction. |
+| Movie 5 | `04_qk_space_plus_attention.gif` | Evolution of the full attention matrix alongside the Q/K scatter. The `+`-row entries concentrate on even-number columns over training. |
+
+### Supplementary Figures
+
+Additional static figures in `plus_last_even/plots/supplementary/` and `plus_last_even/plots/extended/`:
 
 | File | Description |
 |------|-------------|
@@ -395,16 +267,28 @@ Additional figures in `plus_last_even/plots/supplementary/` and `plus_last_even/
 
 ## 9. Reproducing the Results
 
-See **[Quick Start](#quick-start)** above for installation and all available commands. In brief:
-
+**Train and visualize:**
 ```bash
-pip install torch numpy matplotlib pillow imageio
-python main.py plus_last_even              # train + visualize
-python main.py plus_last_even --visualize  # visualize only (from checkpoint)
-python main.py plus_last_even --video      # generate learning-dynamics GIFs
+python main.py plus_last_even
 ```
 
-All figures are saved to `plus_last_even/plots/`. Checkpoints are saved every 100 training steps to `plus_last_even/checkpoints/`, enabling visualization at any point during training.
+**Visualize from an existing checkpoint:**
+```bash
+python main.py plus_last_even --visualize
+```
+
+**Visualize a specific training step:**
+```bash
+python main.py plus_last_even --visualize --step 5000
+```
+
+**Generate learning-dynamics videos:**
+```bash
+python main.py plus_last_even --video
+python main.py plus_last_even --video-qkv
+```
+
+**Dependencies:** PyTorch, NumPy, Matplotlib, Pillow, imageio.
 
 ---
 
