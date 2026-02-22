@@ -1,0 +1,82 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\bibstyle{unsrtnat}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Geometry implies an algorithm.}{1}{section*.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}Task Definition}{2}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}The Plus-Last-Even Rule}{2}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Rule.}{2}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Additional Rules}{2}{subsection.2.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Available sequence rules.}}{2}{table.caption.3}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{tab:rules}{{1}{2}{Available sequence rules}{table.caption.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Model Architecture}{2}{section.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Model hyperparameters.}}{2}{table.caption.4}\protected@file@percent }
+\newlabel{tab:arch}{{2}{2}{Model hyperparameters}{table.caption.4}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Training}{3}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Results}{3}{section.5}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Architecture of the minimal transformer.}}{3}{figure.caption.5}\protected@file@percent }
+\newlabel{fig:architecture}{{1}{3}{Architecture of the minimal transformer}{figure.caption.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}The Model Learns the Rule}{3}{subsection.5.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Training loss and rule error over 20{,}000 steps.}}{4}{figure.caption.6}\protected@file@percent }
+\newlabel{fig:learning_curve}{{2}{4}{Training loss and rule error over 20{,}000 steps}{figure.caption.6}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Sample training sequences. Green = correct at constrained positions.}}{4}{figure.caption.7}\protected@file@percent }
+\newlabel{fig:training_data}{{3}{4}{Sample training sequences. Green = correct at constrained positions}{figure.caption.7}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Model-generated sequences at initialization (top) vs.\ after training (bottom).}}{5}{figure.caption.8}\protected@file@percent }
+\newlabel{fig:generated}{{4}{5}{Model-generated sequences at initialization (top) vs.\ after training (bottom)}{figure.caption.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}The Embedding Space: How the Model Encodes Its Vocabulary}{5}{subsection.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}The Output Landscape: Where Representations Need to Land}{5}{subsection.5.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Learned embeddings. Bottom row: 2D scatter of token (left), position (center), and combined (right) embeddings.}}{6}{figure.caption.9}\protected@file@percent }
+\newlabel{fig:embeddings}{{5}{6}{Learned embeddings. Bottom row: 2D scatter of token (left), position (center), and combined (right) embeddings}{figure.caption.9}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Output probability landscape. Each subplot shows $P(\text  {next} = \text  {token})$ over the 2D plane, with all token+position embeddings annotated.}}{6}{figure.caption.10}\protected@file@percent }
+\newlabel{fig:output_landscape}{{6}{6}{Output probability landscape. Each subplot shows $P(\text {next} = \text {token})$ over the 2D plane, with all token+position embeddings annotated}{figure.caption.10}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}The Attention Mechanism: Query, Key, and Value Projections}{7}{subsection.5.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces QKV projections. Top: weight matrices as heatmaps. Bottom: all 96 token+position embeddings after each projection.}}{7}{figure.caption.11}\protected@file@percent }
+\newlabel{fig:qkv}{{7}{7}{QKV projections. Top: weight matrices as heatmaps. Bottom: all 96 token+position embeddings after each projection}{figure.caption.11}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Who Attends to Whom: The Query--Key Geometry}{7}{subsection.5.5}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Joint query--key space. Blue: queries. Red: keys. Labels show token and position.}}{8}{figure.caption.12}\protected@file@percent }
+\newlabel{fig:qk_space}{{8}{8}{Joint query--key space. Blue: queries. Red: keys. Labels show token and position}{figure.caption.12}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Dot-product gradient for the query \texttt  {+} at position~5. Green = high attention.}}{9}{figure.caption.13}\protected@file@percent }
+\newlabel{fig:qk_focus}{{9}{9}{Dot-product gradient for the query \texttt {+} at position~5. Green = high attention}{figure.caption.13}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}What Gets Retrieved: The Value Space}{9}{subsection.5.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.7}Tracing a Sequence Through the Pipeline}{9}{subsection.5.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Embedding.}{9}{section*.16}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Attention.}{9}{section*.18}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Full $96 \times 96$ attention score matrix, organized as a $12 \times 12$ grid of token--token blocks.}}{10}{figure.caption.14}\protected@file@percent }
+\newlabel{fig:attention_matrix}{{10}{10}{Full $96 \times 96$ attention score matrix, organized as a $12 \times 12$ grid of token--token blocks}{figure.caption.14}{}}
+\@writefile{toc}{\contentsline {paragraph}{Value routing.}{10}{section*.20}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Residual stream.}{10}{section*.22}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Output probability landscape with value-transformed vectors overlaid (cf.\ Figure~\ref {fig:output_landscape}, which shows raw embeddings).}}{11}{figure.caption.15}\protected@file@percent }
+\newlabel{fig:value_landscape}{{11}{11}{Output probability landscape with value-transformed vectors overlaid (cf.\ Figure~\ref {fig:output_landscape}, which shows raw embeddings)}{figure.caption.15}{}}
+\@writefile{toc}{\contentsline {paragraph}{Output verification.}{11}{section*.24}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Geometry as Algorithm: Summary}{11}{section.6}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces Embeddings for the demo sequence \texttt  {10 + 10 6 + 6 4 8}, shown as heatmaps (top) and 2D scatter (bottom).}}{12}{figure.caption.17}\protected@file@percent }
+\newlabel{fig:seq_embed}{{12}{12}{Embeddings for the demo sequence \texttt {10 + 10 6 + 6 4 8}, shown as heatmaps (top) and 2D scatter (bottom)}{figure.caption.17}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Discussion}{12}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Why two dimensions?}{12}{section*.26}\protected@file@percent }
+\bibcite{bhattamishra2020}{{1}{}{{}}{{}}}
+\bibcite{clark2019}{{2}{}{{}}{{}}}
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces Attention computation for the demo sequence. Panels: Q heatmap, K heatmap, Q/K scatter, raw scores, attention weights.}}{13}{figure.caption.19}\protected@file@percent }
+\newlabel{fig:seq_attention}{{13}{13}{Attention computation for the demo sequence. Panels: Q heatmap, K heatmap, Q/K scatter, raw scores, attention weights}{figure.caption.19}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Value pathway for the demo sequence. Panels: attention weights, V vectors, attention output, V scatter, output scatter.}}{13}{figure.caption.21}\protected@file@percent }
+\newlabel{fig:seq_value}{{14}{13}{Value pathway for the demo sequence. Panels: attention weights, V vectors, attention output, V scatter, output scatter}{figure.caption.21}{}}
+\@writefile{toc}{\contentsline {paragraph}{Limitations.}{13}{section*.27}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Future directions.}{13}{section*.28}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}Movies}{13}{section.8}\protected@file@percent }
+\bibcite{hewitt2019}{{3}{}{{}}{{}}}
+\bibcite{mikolov2013}{{4}{}{{}}{{}}}
+\bibcite{olsson2022}{{5}{}{{}}{{}}}
+\bibcite{vandermaaten2008}{{6}{}{{}}{{}}}
+\bibcite{vig2019}{{7}{}{{}}{{}}}
+\bibcite{wang2022}{{8}{}{{}}{{}}}
+\bibcite{weiss2018}{{9}{}{{}}{{}}}
+\providecommand\NAT@force@numbers{}\NAT@force@numbers
+\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces Residual stream for the demo sequence. Bottom row: embeddings~(a), attention output arrows~(b), residual shift arrows~(c), and final representations~(d).}}{14}{figure.caption.23}\protected@file@percent }
+\newlabel{fig:residuals}{{15}{14}{Residual stream for the demo sequence. Bottom row: embeddings~(a), attention output arrows~(b), residual shift arrows~(c), and final representations~(d)}{figure.caption.23}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces Final post-residual representations overlaid on the output probability landscape. Each \texttt  {+} position lands in the high-probability region for the correct even number.}}{15}{figure.caption.25}\protected@file@percent }
+\newlabel{fig:final_grid}{{16}{15}{Final post-residual representations overlaid on the output probability landscape. Each \texttt {+} position lands in the high-probability region for the correct even number}{figure.caption.25}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Training-dynamics animations (supplementary).}}{15}{table.caption.29}\protected@file@percent }
+\newlabel{tab:movies}{{3}{15}{Training-dynamics animations (supplementary)}{table.caption.29}{}}
+\gdef \@abspage@last{15}
