@@ -61,7 +61,7 @@ This is a non-trivial attention task: it requires the model to route information
 
 | Parameter | Value |
 |-----------|-------|
-| `n_embd` | 2 |
+| n<sub>embd</sub> | 2 |
 | `block_size` | 8 |
 | `num_heads` | 1 |
 | `head_size` | 2 |
@@ -76,7 +76,7 @@ Input -> Token Embedding + Position Embedding -> Self-Attention -> + residual ->
 Feed-Forward -> + residual -> LM Head -> Softmax -> P(next token)
 ```
 
-With `n_embd = 2`, every internal representation lives in **2D** and can be plotted as a point on a plane. This is the key design choice that makes the model fully interpretable without PCA or other projection.
+With n<sub>embd</sub> = 2, every internal representation lives in **2D** and can be plotted as a point on a plane. This is the key design choice that makes the model fully interpretable without PCA or other projection.
 
 ---
 
@@ -100,7 +100,7 @@ Before examining any learned parameters, we need a map of the territory. What ar
 
 ![Architecture Overview](plus_last_even/plots/01_architecture_overview.png)
 
-A schematic of the model's computation graph with exact tensor shapes. Every component is shown: input tokens, token/position embeddings, the single-head attention block (W_Q, W_K, W_V, causal mask, softmax), the residual connection, the feed-forward network (Linear -> ReLU -> Linear), a second residual connection, and the final LM head that produces logits over 12 tokens. Notation in the upper-right maps symbols to actual dimensions (B=8, T=12, C=2, head_size=2, vocab=11).
+A schematic of the model's computation graph with exact tensor shapes. Every component is shown: input tokens, token/position embeddings, the single-head attention block (W<sub>Q</sub>, W<sub>K</sub>, W<sub>V</sub>, causal mask, softmax), the residual connection, the feed-forward network (Linear -> ReLU -> Linear), a second residual connection, and the final LM head that produces logits over 12 tokens. Notation in the upper-right maps symbols to actual dimensions (B=8, T=12, C=2, head_size=2, vocab=11).
 
 This is the blueprint. Every subsequent figure zooms into one or more boxes in this diagram.
 
@@ -172,7 +172,7 @@ Key takeaway: the embedding layer has already done meaningful work — it has or
 
 We've seen the input side (embeddings). Now let's jump to the *output* side: given a point in 2D space, what token does the model predict? This figure connects the geometry of the embedding space to the model's actual predictions. It answers: "if a representation ends up at coordinates (x, y) after all processing, what next token will the model output?"
 
-![Output Probability Heatmaps](plus_last_even/plots/06_output_probs_embed.png)
+![Output Probability Heatmaps](plus_last_even/plots/07_output_probs_embed.png)
 
 One subplot per output token (0 through 10, then `+`). Each subplot shows:
 - **Background heatmap:** The probability that the model assigns to that token as the next-token prediction, evaluated at every point on the 2D embedding plane (after the feed-forward + residual pathway). Yellow = high probability, dark purple = near zero.
@@ -195,15 +195,15 @@ This figure directly shows how the LM head's linear decision boundaries partitio
 
 We've seen where tokens start (embeddings, Figure 05) and where they need to end up (output probability landscape, Figure 06). The bridge between them is self-attention. Attention uses three linear projections — Query, Key, and Value — to decide *what to attend to* and *what information to extract*. This figure shows those projections as learned 2x2 matrices and their effect on the embedding space.
 
-![QKV Transformations](plus_last_even/plots/07_qkv_transforms.png)
+![QKV Transformations](plus_last_even/plots/08_qkv_transforms.png)
 
 **Top row:**
 - *Far left:* Original token+position embeddings in 2D (all 96 combinations).
-- *W_Q, W_K, W_V:* The three 2x2 weight matrices as heatmaps. These are the learned linear transformations that create query, key, and value vectors from input embeddings.
+- *W<sub>Q</sub>, W<sub>K</sub>, W<sub>V</sub>:* The three 2x2 weight matrices as heatmaps. These are the learned linear transformations that create query, key, and value vectors from input embeddings.
 
 **Bottom row:** The result of applying each weight matrix to all 96 token+position embeddings.
 - *Q-Transformed (blue):* Queries — the model's "questions" for attention. Notice how the spatial structure has been rotated and stretched differently from the original embeddings.
-- *K-Transformed (red):* Keys — the model's "answers" to be matched against queries. The W_K matrix creates a *different* geometry from Q, so the dot product Q*K captures the desired content-based and position-based relationships.
+- *K-Transformed (red):* Keys — the model's "answers" to be matched against queries. The W<sub>K</sub> matrix creates a *different* geometry from Q, so the dot product Q*K captures the desired content-based and position-based relationships.
 - *V-Transformed (green):* Values — the information that gets routed through attention. The V space has its own structure, designed so that the attention-weighted sum of V vectors lands in the correct region of the output probability landscape.
 
 **Learning dynamics:** The Q, K, and V subspaces must co-evolve. This animation shows all four spaces (embeddings in black, Q in blue, K in red, V in green) at every checkpoint. Early in training the four spaces are nearly identical. As training progresses, each develops specialized geometry — Q vectors for `+` end up pointing in directions with high dot product against K vectors for even numbers.
@@ -216,7 +216,7 @@ We've seen where tokens start (embeddings, Figure 05) and where they need to end
 
 Figure 07 showed Q and K separately. Now we overlay them on the same axes to see the *relationship* between queries and keys. Attention weight between a query and a key is determined by their dot product, so the geometric relationship between blue (Q) and red (K) points directly reveals the attention mechanism.
 
-![Q/K Embedding Space](plus_last_even/plots/08_qk_space.png)
+![Q/K Embedding Space](plus_last_even/plots/09_qk_space.png)
 
 All 96 query vectors (blue) and 96 key vectors (red) plotted together. Each point is labeled with `token_position` (e.g., `8_7` = token 8 at position 7).
 
@@ -237,7 +237,7 @@ Key patterns:
 
 The full Q/K scatter (Figure 08) shows the global structure, but it's dense. To really understand what `+` attends to, we isolate a single query — `+` at position 5 — and color the entire plane by its dot product with that query. This turns the abstract "dot product determines attention" into a visible gradient.
 
-![Q/K Space Focus](plus_last_even/plots/09_qk_space_focus.png)
+![Q/K Space Focus](plus_last_even/plots/10_qk_space_focus.png)
 
 A focused view of the Q/K space for a single query: **`+` at position 5**. The background gradient shows the dot product of this query with every point in the plane — green = high attention, white = zero.
 
@@ -251,9 +251,9 @@ A focused view of the Q/K space for a single query: **`+` at position 5**. The b
 
 The focused query view (Figure 09) showed attention for one specific query. But what about *all* query-key pairs? This figure shows the complete attention score matrix for every possible token-position combination — all 96 queries against all 96 keys. This is the global view of what the model has learned about which tokens should attend to which other tokens.
 
-![Full Attention Matrix](plus_last_even/plots/10_qk_full_heatmap.png)
+![Full Attention Matrix](plus_last_even/plots/11_qk_full_heatmap.png)
 
-The full 96x96 attention score matrix (Q*K / sqrt(d_k)), organized as a grid of small triangular heatmaps. Each cell in the 12x12 outer grid represents one query-token row vs. one key-token column. Within each cell, the 8 positions are arranged top-to-bottom (query) and left-to-right (key), with the upper triangle masked (causal mask).
+The full 96x96 attention score matrix (Q*K / sqrt(d<sub>k</sub>)), organized as a grid of small triangular heatmaps. Each cell in the 12x12 outer grid represents one query-token row vs. one key-token column. Within each cell, the 8 positions are arranged top-to-bottom (query) and left-to-right (key), with the upper triangle masked (causal mask).
 
 Key patterns to look for:
 - **Bottom row (`+` as query):** The `+` row shows which keys `+` attends to. Even-number key columns (0, 2, 4, 6, 8, 10) show warm colors (high attention), while odd-number columns show cool colors (low attention). This confirms the focused-query view from Figure 09 across all positions.
@@ -268,9 +268,9 @@ Key patterns to look for:
 
 ### 11 — Probability Heatmap with V Values
 
-Figure 06 showed the output probability landscape with the *input embeddings* (token+position sums) overlaid — i.e., where tokens start before attention. But the Value (V) transformation is what actually carries information through attention. This figure replaces the input embeddings with the **V-transformed** vectors (W_V applied to each token+position), showing where the *value* representations sit relative to the output decision boundaries. When attention routes these V vectors, the weighted sum needs to land in the correct region.
+Figure 06 showed the output probability landscape with the *input embeddings* (token+position sums) overlaid — i.e., where tokens start before attention. But the Value (V) transformation is what actually carries information through attention. This figure replaces the input embeddings with the **V-transformed** vectors (W<sub>V</sub> applied to each token+position), showing where the *value* representations sit relative to the output decision boundaries. When attention routes these V vectors, the weighted sum needs to land in the correct region.
 
-![Probability Heatmap with V Values](plus_last_even/plots/11_probability_heatmap_with_values.png)
+![Probability Heatmap with V Values](plus_last_even/plots/12_probability_heatmap_with_values.png)
 
 Same layout as Figure 06 — one subplot per output token, probability heatmap as background — but the overlaid annotations now show V-transformed token+position vectors instead of raw embeddings. The extent of the axes is expanded to cover both the embedding and V spaces.
 
@@ -282,7 +282,7 @@ Compare this to Figure 06: the V annotations have a different spatial arrangemen
 
 So far we've looked at the model's learned parameters in the abstract — all 96 possible token-position combinations. Now we ground the analysis in a **concrete input sequence**. Before we can trace a sequence through the full pipeline (Figures 13–16), we need to see where its specific tokens land in embedding space.
 
-![Sequence Embeddings](plus_last_even/plots/12_sequence_embeddings.png)
+![Sequence Embeddings](plus_last_even/plots/13_sequence_embeddings.png)
 
 A concrete example for the sequence `10 + 10 6 + 6 4 8`.
 
@@ -298,14 +298,14 @@ Notice the `+` tokens in the sequence (positions 1 and 4) are located far from t
 
 With the sequence's embeddings established, we now trace the first half of the attention mechanism: computing queries and keys, taking their dot product, applying the causal mask, and producing attention weights. This is where the model decides "who attends to whom" for a specific input.
 
-![Q/K Attention](plus_last_even/plots/13_qk_attention.png)
+![Q/K Attention](plus_last_even/plots/14_qk_attention.png)
 
 A single demo sequence shown across five panels:
 
 1. **Q heatmap** (T x 2): Query vectors for each position in the sequence.
 2. **K heatmap** (T x 2): Key vectors for each position.
 3. **Q vs K scatter**: Q (blue) and K (red) vectors for this sequence in 2D. Gray background shows all 96 possible Q/K combinations for context.
-4. **Masked QK^T** (T x T): Raw dot-product attention scores, with future positions masked to negative infinity.
+4. **Masked QK<sup>T</sup>** (T x T): Raw dot-product attention scores, with future positions masked to negative infinity.
 5. **Attention** (T x T): Softmax-normalized attention weights. Each row shows what each position attends to.
 
 Look at the rows corresponding to `+` in the attention matrix — they concentrate weight on the positions containing even numbers, exactly as the Q/K geometry from Figures 08–09 predicts for real inputs.
@@ -316,7 +316,7 @@ Look at the rows corresponding to `+` in the attention matrix — they concentra
 
 Figure 13 showed *what* each position attends to. Now we complete the story: *what information* gets extracted from those attended positions and where does it land? The value transformation and attention-weighted sum determine the actual information routed through the network.
 
-![Value Output](plus_last_even/plots/14_value_output.png)
+![Value Output](plus_last_even/plots/15_value_output.png)
 
 The same demo sequence, now shown across five panels focused on the value pathway:
 
@@ -334,7 +334,7 @@ This completes the attention story: Figure 13 shows *what* the model attends to;
 
 Attention doesn't replace the input — it *adds to* it. The residual connection sums the original embedding with the attention output, creating a representation that combines "what token is here" with "what information was retrieved from the context." This figure visualizes that addition as arrows in 2D, showing exactly how attention nudges each position's representation.
 
-![Residuals](plus_last_even/plots/15_residuals.png)
+![Residuals](plus_last_even/plots/16_residuals.png)
 
 The same demo sequence, shown in a 2-row layout:
 
@@ -357,7 +357,7 @@ The arrow plot is the key panel: you can see the attention mechanism **moving** 
 
 Figure 15 showed the residual stream in abstract 2D space. But does each position's *final* representation actually land in the correct region of the output probability landscape? This figure answers that directly: it places the post-residual (embed + V_transformed) positions on top of the same P(next = token) heatmaps from Figure 06, arranged in a compact grid.
 
-![Final on Output Grid](plus_last_even/plots/16_final_on_output_grid.png)
+![Final on Output Grid](plus_last_even/plots/17_final_on_output_grid.png)
 
 One subplot per output token (0–10, +), each showing:
 - **Background heatmap:** P(next = token) over the 2D plane (same as Figure 06).
