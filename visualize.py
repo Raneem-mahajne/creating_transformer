@@ -13,6 +13,8 @@ from checkpoint import (
 )
 from data import get_batch_from_sequences
 from plotting import (
+    set_journal_mode,
+    clear_journal_mode,
     plot_training_data_heatmap,
     plot_learning_curve,
     plot_generated_sequences_heatmap_before_after,
@@ -46,10 +48,153 @@ def _has_odd_number(decoded_tokens: list) -> bool:
     return any(isinstance(t, int) and t % 2 == 1 for t in decoded_tokens)
 
 
+def _starts_with_even_odd_plus(decoded_tokens: list) -> bool:
+    """True if decoded token list starts with [even number, odd number, '+']."""
+    if len(decoded_tokens) < 3:
+        return False
+    first = decoded_tokens[0]
+    second = decoded_tokens[1]
+    third = decoded_tokens[2]
+    return (isinstance(first, int) and first % 2 == 0 and
+            isinstance(second, int) and second % 2 == 1 and
+            third == "+")
+
+
+def _has_two_plus_with_different_evens(decoded_tokens: list) -> bool:
+    """True if sequence has 2 plus signs, each followed by a different even number
+    and an odd number, and at least one plus is immediately preceded by an odd number."""
+    if len(decoded_tokens) < 7:
+        return False
+    
+    plus_positions = [i for i, token in enumerate(decoded_tokens) if token == "+"]
+    if len(plus_positions) < 2:
+        return False
+    
+    # Check first plus: should be followed by even, odd
+    first_plus_idx = plus_positions[0]
+    if first_plus_idx + 2 >= len(decoded_tokens):
+        return False
+    even1 = decoded_tokens[first_plus_idx + 1]
+    odd1 = decoded_tokens[first_plus_idx + 2]
+    if not (isinstance(even1, int) and even1 % 2 == 0 and isinstance(odd1, int) and odd1 % 2 == 1):
+        return False
+    
+    # Check second plus: should be followed by different even, odd
+    second_plus_idx = plus_positions[1]
+    if second_plus_idx + 2 >= len(decoded_tokens):
+        return False
+    even2 = decoded_tokens[second_plus_idx + 1]
+    odd2 = decoded_tokens[second_plus_idx + 2]
+    if not (isinstance(even2, int) and even2 % 2 == 0 and isinstance(odd2, int) and odd2 % 2 == 1):
+        return False
+    
+    # Check that the two even numbers are different
+    if even1 == even2:
+        return False
+
+    # At least one plus must be immediately preceded by an odd number
+    has_odd_before_plus = False
+    for pidx in [first_plus_idx, second_plus_idx]:
+        if pidx > 0:
+            before = decoded_tokens[pidx - 1]
+            if isinstance(before, int) and before % 2 == 1:
+                has_odd_before_plus = True
+                break
+    return has_odd_before_plus
+
+
+def _matches_pattern_2_3_1_plus_2_4_plus_4(decoded_tokens: list) -> bool:
+    """Check if sequence matches pattern like '2 3 1 + 2 4 + 4' (numbers + numbers + single_number)."""
+    plus_positions = [i for i, token in enumerate(decoded_tokens) if token == "+"]
+    if len(plus_positions) < 2:
+        return False
+    
+    first_plus_idx = plus_positions[0]
+    second_plus_idx = plus_positions[1]
+    
+    # Check that second plus is followed by exactly one number (or at least starts with one number)
+    if second_plus_idx + 1 >= len(decoded_tokens):
+        return False
+    
+    # Check that after second plus, there's at least one number
+    after_second_plus = decoded_tokens[second_plus_idx + 1]
+    if not isinstance(after_second_plus, int):
+        return False
+    
+    # Check that first plus has numbers before and after it
+    if first_plus_idx == 0 or first_plus_idx + 1 >= len(decoded_tokens):
+        return False
+    
+    # Pattern: [numbers] + [numbers] + [number]
+    # We have at least one token before first plus, tokens after first plus, and at least one after second plus
+    return True
+
+
+def _has_two_plus_with_same_even(decoded_tokens: list) -> bool:
+    """True if sequence has 2 plus signs, each followed by the same even number."""
+    plus_positions = [i for i, token in enumerate(decoded_tokens) if token == "+"]
+    if len(plus_positions) < 2:
+        return False
+    
+    first_plus_idx = plus_positions[0]
+    second_plus_idx = plus_positions[1]
+    
+    # Check that both plus signs are followed by at least one token
+    if first_plus_idx + 1 >= len(decoded_tokens) or second_plus_idx + 1 >= len(decoded_tokens):
+        return False
+    
+    # Get the token immediately after each plus sign
+    after_first = decoded_tokens[first_plus_idx + 1]
+    after_second = decoded_tokens[second_plus_idx + 1]
+    
+    # Both must be integers and even numbers, and they must be the same
+    if not (isinstance(after_first, int) and isinstance(after_second, int)):
+        return False
+    
+    if after_first % 2 != 0 or after_second % 2 != 0:
+        return False
+    
+    return after_first == after_second
+
+
+def _has_two_plus_with_different_even_numbers(decoded_tokens: list) -> bool:
+    """True if sequence has exactly 2 plus signs, each followed by a different even number.
+    Sequence should not start with a plus sign."""
+    plus_positions = [i for i, token in enumerate(decoded_tokens) if token == "+"]
+    # Must have exactly 2 plus signs
+    if len(plus_positions) != 2:
+        return False
+    
+    # Sequence should not start with a plus sign
+    if len(decoded_tokens) == 0 or decoded_tokens[0] == "+":
+        return False
+    
+    first_plus_idx = plus_positions[0]
+    second_plus_idx = plus_positions[1]
+    
+    # Check that both plus signs are followed by at least one token
+    if first_plus_idx + 1 >= len(decoded_tokens) or second_plus_idx + 1 >= len(decoded_tokens):
+        return False
+    
+    # Get the token immediately after each plus sign
+    after_first = decoded_tokens[first_plus_idx + 1]
+    after_second = decoded_tokens[second_plus_idx + 1]
+    
+    # Both must be integers and even numbers, and they must be different
+    if not (isinstance(after_first, int) and isinstance(after_second, int)):
+        return False
+    
+    if after_first % 2 != 0 or after_second % 2 != 0:
+        return False
+    
+    return after_first != after_second
+
+
 def visualize_from_checkpoint(
     config_name_actual: str, checkpoint_data: dict, config: dict, step: int = None,
     plots_subfolder: str | None = None, sequence_seed: int | None = None, sequence_index: int | None = None,
     fixed_sequence_decoded: list | None = None, require_odd_in_sequence: bool = False,
+    generate_journal: bool = False, _is_journal_pass: bool = False,
 ):
     """Generate all visualizations from checkpoint data.
     If plots_subfolder is set, save plots to that subfolder (do not overwrite main plots).
@@ -174,25 +319,37 @@ def visualize_from_checkpoint(
         # Seed for picking which train sequence to use (can be overridden by sequence_seed/sequence_index)
         seed_for_seq = 43 if sequence_seed is None else sequence_seed
         random.seed(seed_for_seq)
-        valid_sequences = [seq for seq in train_sequences if len(seq) >= 2]
+        valid_sequences = [seq for seq in train_sequences if len(seq) >= 7]  # Need at least 7 tokens for pattern with 2 plus signs
         if valid_sequences:
-            if require_odd_in_sequence:
-                # Try indices until we find a sequence that contains an odd number
-                start_idx = (sequence_index if sequence_index is not None else 0) % len(valid_sequences)
-                for k in range(len(valid_sequences)):
-                    idx = (start_idx + k) % len(valid_sequences)
-                    cand = valid_sequences[idx]
-                    if _has_odd_number(decode(cand)):
-                        consistent_sequence = cand
-                        if k > 0:
-                            print(f"Reseed: using sequence index {idx} (first with an odd number)")
-                        break
+            # Try indices until we find a sequence with 2 plus signs, each followed by different even numbers
+            start_idx = (sequence_index if sequence_index is not None else 0) % len(valid_sequences)
+            for k in range(len(valid_sequences)):
+                idx = (start_idx + k) % len(valid_sequences)
+                cand = valid_sequences[idx]
+                decoded_cand = decode(cand)
+                if _has_two_plus_with_different_evens(decoded_cand):
+                    consistent_sequence = cand
+                    if k > 0:
+                        print(f"Reseed: using sequence index {idx} (first with pattern: 2 plus signs, each followed by different even numbers)")
+                    break
+            else:
+                # Fallback: try the old pattern if new one doesn't match
+                valid_sequences_old = [seq for seq in train_sequences if len(seq) >= 3]
+                if valid_sequences_old:
+                    for k in range(len(valid_sequences_old)):
+                        idx = (start_idx + k) % len(valid_sequences_old)
+                        cand = valid_sequences_old[idx]
+                        decoded_cand = decode(cand)
+                        if _starts_with_even_odd_plus(decoded_cand):
+                            consistent_sequence = cand
+                            print(f"Warning: no sequence with 2 plus signs pattern found; using sequence with pattern [even, odd, '+']")
+                            break
+                    else:
+                        consistent_sequence = valid_sequences_old[start_idx] if valid_sequences_old else valid_sequences[start_idx]
+                        print("Warning: no matching pattern found; using default sequence")
                 else:
                     consistent_sequence = valid_sequences[start_idx]
-                    print("Warning: no training sequence contains an odd number; using default index")
-            else:
-                idx = (sequence_index if sequence_index is not None else 1) % len(valid_sequences)
-                consistent_sequence = valid_sequences[idx]
+                    print("Warning: no matching pattern found; using default sequence")
         elif train_sequences:
             consistent_sequence = train_sequences[0]
         else:
@@ -272,6 +429,22 @@ def visualize_from_checkpoint(
         )
 
     print(f"All visualizations saved to {plots_dir}")
+
+    if generate_journal and not _is_journal_pass:
+        journal_subfolder = "a4" if plots_subfolder is None else f"{plots_subfolder}/a4"
+        print(f"\n--- Generating A4 journal versions in {journal_subfolder}/ ---")
+        set_journal_mode(max_width=7.0, max_height=9.5, dpi=300)
+        try:
+            visualize_from_checkpoint(
+                config_name_actual, checkpoint_data, config, step=step,
+                plots_subfolder=journal_subfolder,
+                sequence_seed=sequence_seed, sequence_index=sequence_index,
+                fixed_sequence_decoded=fixed_sequence_decoded,
+                require_odd_in_sequence=require_odd_in_sequence,
+                generate_journal=False, _is_journal_pass=True,
+            )
+        finally:
+            clear_journal_mode()
 
 
 def visualize_all_checkpoints(config_name_actual: str, config: dict):

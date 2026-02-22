@@ -9,9 +9,132 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from matplotlib.patches import Patch
 import matplotlib.patheffects as pe
+import matplotlib.text as _mtext
 import seaborn as sns
 
 from data import get_batch_from_sequences
+
+# ---------------------------------------------------------------------------
+# Journal mode: constrain figure sizes to A4 page dimensions and scale fonts
+# ---------------------------------------------------------------------------
+_JOURNAL_MODE = False
+_JOURNAL_MAX_WIDTH = 7.0     # inches (A4 text width with typical margins)
+_JOURNAL_MAX_HEIGHT = 9.5    # inches (A4 text height with typical margins)
+_JOURNAL_DPI = 300           # print-quality DPI
+_JOURNAL_BASE_FONT_SCALE = 0.7
+_JOURNAL_FONT_SCALE = 0.7    # active scale — updated per figure
+_orig_rcparams = {}           # saved rcParams to restore later
+
+_orig_plt_figure = plt.figure
+_orig_plt_subplots = plt.subplots
+_orig_plt_savefig = plt.savefig
+_orig_text_set_fontsize = _mtext.Text.set_fontsize
+
+
+def _constrain_figsize(figsize):
+    """Scale figsize to fit A4 page while keeping reasonable proportions.
+
+    Width is capped at MAX_WIDTH.  Height is reduced by the *square root*
+    of the width scale factor so wide figures get narrower without
+    collapsing vertically.  Height is then capped at MAX_HEIGHT.
+    """
+    if figsize is None:
+        return figsize
+    w, h = figsize
+    if w > _JOURNAL_MAX_WIDTH:
+        width_scale = _JOURNAL_MAX_WIDTH / w
+        w = _JOURNAL_MAX_WIDTH
+        h = h * (width_scale ** 0.65)
+    h = min(h, _JOURNAL_MAX_HEIGHT)
+    return (w, h)
+
+
+def _update_font_scale_for_figure(orig_w):
+    """Set per-figure font scale based on how much width was reduced."""
+    global _JOURNAL_FONT_SCALE
+    if orig_w <= _JOURNAL_MAX_WIDTH:
+        _JOURNAL_FONT_SCALE = _JOURNAL_BASE_FONT_SCALE
+    else:
+        width_ratio = _JOURNAL_MAX_WIDTH / orig_w
+        _JOURNAL_FONT_SCALE = max(0.45, width_ratio ** 0.45)
+
+
+def _patched_figure(*args, **kwargs):
+    if _JOURNAL_MODE and 'figsize' in kwargs:
+        orig_w = kwargs['figsize'][0]
+        kwargs['figsize'] = _constrain_figsize(kwargs['figsize'])
+        _update_font_scale_for_figure(orig_w)
+    return _orig_plt_figure(*args, **kwargs)
+
+
+def _patched_subplots(*args, **kwargs):
+    if _JOURNAL_MODE and 'figsize' in kwargs:
+        orig_w = kwargs['figsize'][0]
+        kwargs['figsize'] = _constrain_figsize(kwargs['figsize'])
+        _update_font_scale_for_figure(orig_w)
+    return _orig_plt_subplots(*args, **kwargs)
+
+
+def _patched_savefig(*args, **kwargs):
+    if _JOURNAL_MODE:
+        if 'dpi' not in kwargs:
+            kwargs['dpi'] = _JOURNAL_DPI
+        elif kwargs['dpi'] < _JOURNAL_DPI:
+            kwargs['dpi'] = _JOURNAL_DPI
+    return _orig_plt_savefig(*args, **kwargs)
+
+
+def _patched_text_set_fontsize(self, fontsize):
+    """Scale numeric font sizes by the current per-figure scale in journal mode."""
+    if _JOURNAL_MODE and fontsize is not None:
+        try:
+            fontsize = float(fontsize) * _JOURNAL_FONT_SCALE
+        except (TypeError, ValueError):
+            pass  # string like 'large' — resolved via scaled rcParams['font.size']
+    return _orig_text_set_fontsize(self, fontsize)
+
+
+plt.figure = _patched_figure
+plt.subplots = _patched_subplots
+plt.savefig = _patched_savefig
+_mtext.Text.set_fontsize = _patched_text_set_fontsize
+_mtext.Text.set_size = _patched_text_set_fontsize  # alias used by some callers
+
+
+_JOURNAL_RCPARAMS = {
+    'axes.titlepad': 4,
+    'axes.labelpad': 2,
+    'xtick.major.pad': 2,
+    'ytick.major.pad': 2,
+}
+
+
+def set_journal_mode(max_width=7.0, max_height=9.5, dpi=300, font_scale=0.7):
+    """Activate journal mode: cap figure sizes to A4 page, use print-quality DPI, and scale fonts."""
+    global _JOURNAL_MODE, _JOURNAL_MAX_WIDTH, _JOURNAL_MAX_HEIGHT, _JOURNAL_DPI
+    global _JOURNAL_BASE_FONT_SCALE, _JOURNAL_FONT_SCALE, _orig_rcparams
+    _JOURNAL_MODE = True
+    _JOURNAL_MAX_WIDTH = max_width
+    _JOURNAL_MAX_HEIGHT = max_height
+    _JOURNAL_DPI = dpi
+    _JOURNAL_BASE_FONT_SCALE = font_scale
+    _JOURNAL_FONT_SCALE = font_scale
+    _orig_rcparams = {}
+    _orig_rcparams['font.size'] = plt.rcParams['font.size']
+    for key, val in _JOURNAL_RCPARAMS.items():
+        _orig_rcparams[key] = plt.rcParams.get(key)
+        plt.rcParams[key] = val
+    plt.rcParams['font.size'] = _orig_rcparams['font.size'] * font_scale
+
+
+def clear_journal_mode():
+    """Deactivate journal mode: restore original figure sizes, DPI, and font sizes."""
+    global _JOURNAL_MODE
+    _JOURNAL_MODE = False
+    for key, val in _orig_rcparams.items():
+        if val is not None:
+            plt.rcParams[key] = val
+
 
 def annotate_sequence(ax, chars, y=1.02, fontsize=10):
     s = "".join(chars)
@@ -575,19 +698,18 @@ def plot_embeddings_pca(model, itos, save_path=None):
     
     # Dynamic font sizing based on number of items
     def get_fontsize(num_items):
-        # Subscript labels (e.g. 8₃) are more compact than "8p3", so we can use larger fonts
         if num_items <= 12:
-            return 22
+            return 8 if _JOURNAL_MODE else 22
         elif num_items <= 20:
-            return 18
+            return 7 if _JOURNAL_MODE else 18
         elif num_items <= 40:
-            return 14
+            return 6 if _JOURNAL_MODE else 14
         elif num_items <= 80:
-            return 12
+            return 5 if _JOURNAL_MODE else 12
         elif num_items <= 150:
-            return 10
+            return 4 if _JOURNAL_MODE else 10
         else:
-            return 8
+            return 3 if _JOURNAL_MODE else 8
     
     model.eval()
     
@@ -639,18 +761,25 @@ def plot_embeddings_pca(model, itos, save_path=None):
         pc = np.array(mcolors.to_rgb(pos_color))
         return tuple(token_weight * tc + (1 - token_weight) * pc)
     
-    # Create figure: 2 rows, 4 columns; row 1 last cell spans 2 cols. Equal width_ratios so T+P scatter is same panel size as others.
+    # Create figure: journal=2 cols (4 rows); standard=2 rows × 4 cols
     from matplotlib.gridspec import GridSpec
-    fig = plt.figure(figsize=(19, 9))
-    gs = GridSpec(2, 4, figure=fig, width_ratios=[1, 1, 1, 1], hspace=0.3, wspace=0.28)
+    if _JOURNAL_MODE:
+        fig = plt.figure(figsize=(7.0, 9.0))
+        gs = GridSpec(4, 2, figure=fig, hspace=0.55, wspace=0.5)
+    else:
+        fig = plt.figure(figsize=(19, 9))
+        gs = GridSpec(2, 4, figure=fig, width_ratios=[1, 1, 1, 1], hspace=0.3, wspace=0.28)
     ax1 = fig.add_subplot(gs[0, 0])
     x_labels = list(range(embeddings.shape[1]))
     sns.heatmap(embeddings, yticklabels=y_labels, xticklabels=x_labels, cmap="RdBu_r", center=0, ax=ax1)
-    ax1.set_title(f"Token Embeddings (vocab×embd={vocab_size}×{n_embd})", fontsize=11)
+    _title_fs = 8 if _JOURNAL_MODE else 11
+    ax1.set_title(f"Token Embeddings (vocab×embd={vocab_size}×{n_embd})", fontsize=_title_fs)
     ax1.set_xlabel("Embedding dim")
     ax1.set_ylabel("Token")
+    if _JOURNAL_MODE:
+        ax1.tick_params(axis='both', labelsize=6)
     
-    # Row 1, Col 0: Token embeddings scatter
+    # Token embeddings scatter: journal row 1 col 0; standard row 1 col 0
     ax3 = fig.add_subplot(gs[1, 0])
     if n_embd > 2:
         # Do PCA for dimensions > 2
@@ -659,7 +788,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
         margin = 0.15 * max(X2[:, 0].max() - X2[:, 0].min(), X2[:, 1].max() - X2[:, 1].min())
         ax3.set_xlim(X2[:, 0].min() - margin, X2[:, 0].max() + margin)
         ax3.set_ylim(X2[:, 1].min() - margin, X2[:, 1].max() + margin)
-        ax3.set_title(f"Token Embeddings PCA 2D (vocab={vocab_size})", fontsize=11, fontweight='bold')
+        ax3.set_title(f"Token Embeddings PCA 2D (vocab={vocab_size})", fontsize=_title_fs, fontweight='bold')
         ax3.set_xlabel("PC1")
         ax3.set_ylabel("PC2")
         ax3.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
@@ -670,12 +799,14 @@ def plot_embeddings_pca(model, itos, save_path=None):
             for i in range(vocab_size):
                 ax3.text(X2[i, 0], X2[i, 1], itos[i], fontsize=token_fontsize, fontweight='bold',
                         ha='center', va='center', color=token_colors[i])
+        if _JOURNAL_MODE:
+            ax3.tick_params(axis='both', labelsize=6)
     elif n_embd == 2:
         # For 2D embeddings, show raw data
         margin = 0.15 * max(X_emb[:, 0].max() - X_emb[:, 0].min(), X_emb[:, 1].max() - X_emb[:, 1].min())
         ax3.set_xlim(X_emb[:, 0].min() - margin, X_emb[:, 0].max() + margin)
         ax3.set_ylim(X_emb[:, 1].min() - margin, X_emb[:, 1].max() + margin)
-        ax3.set_title(f"Token Embeddings (vocab={vocab_size})", fontsize=11, fontweight='bold')
+        ax3.set_title(f"Token Embeddings (vocab={vocab_size})", fontsize=_title_fs, fontweight='bold')
         ax3.set_xlabel("Dim 0")
         ax3.set_ylabel("Dim 1")
         ax3.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
@@ -686,13 +817,15 @@ def plot_embeddings_pca(model, itos, save_path=None):
             for i in range(vocab_size):
                 ax3.text(X_emb[i, 0], X_emb[i, 1], itos[i], fontsize=token_fontsize, fontweight='bold',
                         ha='center', va='center', color=token_colors[i])
+        if _JOURNAL_MODE:
+            ax3.tick_params(axis='both', labelsize=6)
     else:
         # For 1D embeddings, just plot the single dimension
         X1 = X_emb[:, 0]
         margin = 0.15 * (X1.max() - X1.min())
         ax3.set_xlim(X1.min() - margin, X1.max() + margin)
         ax3.set_ylim(-0.5, 0.5)
-        ax3.set_title(f"Token Embeddings 1D (vocab={vocab_size})", fontsize=11, fontweight='bold')
+        ax3.set_title(f"Token Embeddings 1D (vocab={vocab_size})", fontsize=_title_fs, fontweight='bold')
         ax3.set_xlabel("Embedding value")
         ax3.set_ylabel("")
         ax3.grid(True, alpha=0.3)
@@ -702,15 +835,19 @@ def plot_embeddings_pca(model, itos, save_path=None):
                 ax3.text(X1[i], 0, itos[i], fontsize=token_fontsize, fontweight='bold',
                         ha='center', va='center', color=token_colors[i])
         ax3.set_yticks([])
+        if _JOURNAL_MODE:
+            ax3.tick_params(axis='both', labelsize=6)
     
     # Row 0, Col 1: Position embeddings raw
     ax4 = fig.add_subplot(gs[0, 1])
     pos_y_labels = [f"pos {i}" for i in range(block_size)]
     x_labels = list(range(pos_emb_all.shape[1]))
     sns.heatmap(pos_emb_all, yticklabels=pos_y_labels, xticklabels=x_labels, cmap="RdBu_r", center=0, ax=ax4)
-    ax4.set_title(f"Position Embeddings (block_size×embd={block_size}×{n_embd})", fontsize=11)
+    ax4.set_title(f"Position Embeddings (block_size×embd={block_size}×{n_embd})", fontsize=_title_fs)
     ax4.set_xlabel("Embedding dim")
     ax4.set_ylabel("Position")
+    if _JOURNAL_MODE:
+        ax4.tick_params(axis='both', labelsize=6)
     
     # Row 1, Col 1: Position embeddings scatter
     ax6 = fig.add_subplot(gs[1, 1])
@@ -721,7 +858,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
         margin = 0.15 * max(X2_pos[:, 0].max() - X2_pos[:, 0].min(), X2_pos[:, 1].max() - X2_pos[:, 1].min())
         ax6.set_xlim(X2_pos[:, 0].min() - margin, X2_pos[:, 0].max() + margin)
         ax6.set_ylim(X2_pos[:, 1].min() - margin, X2_pos[:, 1].max() + margin)
-        ax6.set_title(f"Position Embeddings PCA 2D (block_size={block_size})", fontsize=11, fontweight='bold')
+        ax6.set_title(f"Position Embeddings PCA 2D (block_size={block_size})", fontsize=_title_fs, fontweight='bold')
         ax6.set_xlabel("PC1")
         ax6.set_ylabel("PC2")
         ax6.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
@@ -732,12 +869,14 @@ def plot_embeddings_pca(model, itos, save_path=None):
             for i in range(block_size):
                 ax6.text(X2_pos[i, 0], X2_pos[i, 1], _pos_only_label(i), fontsize=pos_fontsize, fontweight='bold',
                         ha='center', va='center', color=pos_colors[i])
+        if _JOURNAL_MODE:
+            ax6.tick_params(axis='both', labelsize=6)
     elif n_embd == 2:
         # For 2D embeddings, show raw data
         margin = 0.15 * max(X_pos[:, 0].max() - X_pos[:, 0].min(), X_pos[:, 1].max() - X_pos[:, 1].min())
         ax6.set_xlim(X_pos[:, 0].min() - margin, X_pos[:, 0].max() + margin)
         ax6.set_ylim(X_pos[:, 1].min() - margin, X_pos[:, 1].max() + margin)
-        ax6.set_title(f"Position Embeddings (block_size={block_size})", fontsize=11, fontweight='bold')
+        ax6.set_title(f"Position Embeddings (block_size={block_size})", fontsize=_title_fs, fontweight='bold')
         ax6.set_xlabel("Dim 0")
         ax6.set_ylabel("Dim 1")
         ax6.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
@@ -748,13 +887,15 @@ def plot_embeddings_pca(model, itos, save_path=None):
             for i in range(block_size):
                 ax6.text(X_pos[i, 0], X_pos[i, 1], _pos_only_label(i), fontsize=pos_fontsize, fontweight='bold',
                         ha='center', va='center', color=pos_colors[i])
+        if _JOURNAL_MODE:
+            ax6.tick_params(axis='both', labelsize=6)
     else:
         # For 1D embeddings, just plot the single dimension
         X1_pos = X_pos[:, 0]
         margin = 0.15 * (X1_pos.max() - X1_pos.min())
         ax6.set_xlim(X1_pos.min() - margin, X1_pos.max() + margin)
         ax6.set_ylim(-0.5, block_size - 0.5)
-        ax6.set_title(f"Position Embeddings 1D (block_size={block_size})", fontsize=11, fontweight='bold')
+        ax6.set_title(f"Position Embeddings 1D (block_size={block_size})", fontsize=_title_fs, fontweight='bold')
         ax6.set_xlabel("Embedding value")
         ax6.set_ylabel("Position index")
         ax6.grid(True, alpha=0.3)
@@ -763,6 +904,8 @@ def plot_embeddings_pca(model, itos, save_path=None):
             for i in range(block_size):
                 ax6.text(X1_pos[i], i, _pos_only_label(i), fontsize=pos_fontsize, fontweight='bold',
                         ha='center', va='center', color=pos_colors[i])
+        if _JOURNAL_MODE:
+            ax6.tick_params(axis='both', labelsize=6)
     
     # Create all token-position combinations (ALL tokens including special characters)
     max_token_idx = vocab_size
@@ -776,36 +919,43 @@ def plot_embeddings_pca(model, itos, save_path=None):
     token_labels = [itos[i] for i in range(max_token_idx)]
     pos_labels = [_pos_only_label(i) for i in range(block_size)]
     
-    # Row 0, Col 2: Token+Position Dim 0 heatmap
-    ax10 = fig.add_subplot(gs[0, 2])
+    # Token+Position Dim 0: journal row 2 col 0; standard row 0 col 2
+    ax10 = fig.add_subplot(gs[2, 0] if _JOURNAL_MODE else gs[0, 2])
     dim0_heatmap = np.zeros((max_token_idx, block_size))
     for token_idx in range(max_token_idx):
         for pos_idx in range(block_size):
             idx = token_idx * block_size + pos_idx
             dim0_heatmap[token_idx, pos_idx] = all_combinations[idx, 0]
     sns.heatmap(dim0_heatmap, yticklabels=token_labels, xticklabels=pos_labels, cmap="RdBu_r", center=0, ax=ax10)
-    ax10.set_title(f"Token+Position: Dim 0 (tokens×positions)", fontsize=11)
+    ax10.set_title("Token+Position: Dim 0 (tokens×positions)", fontsize=_title_fs)
     ax10.set_xlabel("Position")
     ax10.set_ylabel("Token")
+    ax10.set_xticklabels(ax10.get_xticklabels(), rotation=0)
+    if _JOURNAL_MODE:
+        ax10.tick_params(axis='both', labelsize=6)
     
-    # Row 0, Col 3: Token+Position Dim 1 heatmap (only when n_embd >= 2)
+    # Token+Position Dim 1: journal row 2 col 1; standard row 0 col 3 (only when n_embd >= 2)
     if n_embd >= 2:
-        ax10b = fig.add_subplot(gs[0, 3])
+        ax10b = fig.add_subplot(gs[2, 1] if _JOURNAL_MODE else gs[0, 3])
         dim1_heatmap = np.zeros((max_token_idx, block_size))
         for token_idx in range(max_token_idx):
             for pos_idx in range(block_size):
                 idx = token_idx * block_size + pos_idx
                 dim1_heatmap[token_idx, pos_idx] = all_combinations[idx, 1]
         sns.heatmap(dim1_heatmap, yticklabels=token_labels, xticklabels=pos_labels, cmap="RdBu_r", center=0, ax=ax10b)
-        ax10b.set_title(f"Token+Position: Dim 1 (tokens×positions)", fontsize=11)
+        ax10b.set_title("Token+Position: Dim 1 (tokens×positions)", fontsize=_title_fs)
         ax10b.set_xlabel("Position")
         ax10b.set_ylabel("Token")
+        ax10b.set_xticklabels(ax10b.get_xticklabels(), rotation=0)
+        if _JOURNAL_MODE:
+            ax10b.tick_params(axis='both', labelsize=6)
     
-    # Row 1: Token+Position scatter — single-panel size, centered between columns 2 and 3
-    ax12 = fig.add_subplot(gs[1, 2:4])
-    pos = ax12.get_position()
-    one_col = pos.width / 2
-    ax12.set_position([pos.x0 + pos.width / 4, pos.y0, one_col, pos.height])
+    # Token+Position scatter: journal row 3 full width; standard row 1 cols 2-3
+    ax12 = fig.add_subplot(gs[3, :] if _JOURNAL_MODE else gs[1, 2:4])
+    if not _JOURNAL_MODE:
+        pos = ax12.get_position()
+        one_col = pos.width / 2
+        ax12.set_position([pos.x0 + pos.width / 4, pos.y0, one_col, pos.height])
     # Dynamic font size for token+position (usually more items)
     combo_fontsize = get_fontsize(num_combinations)
     
@@ -829,12 +979,14 @@ def plot_embeddings_pca(model, itos, save_path=None):
                 ax12.text(X2_comb[idx, 0], X2_comb[idx, 1], label, fontsize=combo_fontsize, fontweight='bold',
                          ha='center', va='center', color=color)
         
-        ax12.set_title(f"Token+Position: PCA (all tokens)", fontsize=11, fontweight='bold')
+        ax12.set_title("Token+Position: PCA (all tokens)", fontsize=_title_fs, fontweight='bold')
         ax12.set_xlabel("PC1")
         ax12.set_ylabel("PC2")
         ax12.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
         ax12.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
         ax12.grid(True, alpha=0.3)
+        if _JOURNAL_MODE:
+            ax12.tick_params(axis='both', labelsize=6)
     elif n_embd == 2:
         # For 2D embeddings, show raw data
         X_comb = all_combinations.astype(np.float64)
@@ -852,12 +1004,14 @@ def plot_embeddings_pca(model, itos, save_path=None):
                 ax12.text(X_comb[idx, 0], X_comb[idx, 1], label, fontsize=combo_fontsize, fontweight='bold',
                          ha='center', va='center', color=color)
         
-        ax12.set_title(f"Token+Position: Raw (all tokens)", fontsize=11, fontweight='bold')
+        ax12.set_title("Token+Position: Raw (all tokens)", fontsize=_title_fs, fontweight='bold')
         ax12.set_xlabel("Dim 0")
         ax12.set_ylabel("Dim 1")
         ax12.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
         ax12.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
         ax12.grid(True, alpha=0.3)
+        if _JOURNAL_MODE:
+            ax12.tick_params(axis='both', labelsize=6)
     else:
         # For 1D embeddings
         X1_comb = all_combinations[:, 0]
@@ -875,11 +1029,13 @@ def plot_embeddings_pca(model, itos, save_path=None):
                 ax12.text(X1_comb[idx], 0, label, fontsize=combo_fontsize, fontweight='bold',
                          ha='center', va='center', color=color)
         
-        ax12.set_title(f"Token+Position: 1D (all tokens)", fontsize=11, fontweight='bold')
+        ax12.set_title("Token+Position: 1D (all tokens)", fontsize=_title_fs, fontweight='bold')
         ax12.set_xlabel("Embedding value")
         ax12.set_ylabel("")
         ax12.grid(True, alpha=0.3)
         ax12.set_yticks([])
+        if _JOURNAL_MODE:
+            ax12.tick_params(axis='both', labelsize=6)
     
     plt.tight_layout()
     if save_path:
@@ -1613,8 +1769,12 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
             all_combined_emb[idx] = all_token_emb[token_idx] + all_pos_emb[pos_idx]
     
     # Create figure: 2 rows, 3 columns with equal row heights
-    fig = plt.figure(figsize=(18, 12))
-    gs = GridSpec(2, 3, figure=fig, hspace=0.3, wspace=0.3, height_ratios=[1, 1])
+    if _JOURNAL_MODE:
+        fig = plt.figure(figsize=(7.0, 5.5))
+        gs = GridSpec(2, 3, figure=fig, hspace=0.55, wspace=0.5, height_ratios=[1, 1])
+    else:
+        fig = plt.figure(figsize=(18, 12))
+        gs = GridSpec(2, 3, figure=fig, hspace=0.3, wspace=0.3, height_ratios=[1, 1])
     
     if n_embd >= 2:
         # Row 1: Heatmaps
@@ -1707,7 +1867,7 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
                 fontweight="bold",
                 ha="center",
                 va="center",
-                color="blue",
+                color="orange",
                 zorder=3,
             )
         ax4.set_title("Token Embeddings (2D)", fontsize=14, fontweight='bold')
@@ -1746,7 +1906,7 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
                 fontweight="bold",
                 ha="center",
                 va="center",
-                color="green",
+                color="teal",
                 zorder=3,
             )
         ax5.set_title("Position Embeddings (2D)", fontsize=14, fontweight='bold')
@@ -1789,7 +1949,7 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
                 fontweight="bold",
                 ha="center",
                 va="center",
-                color="purple",
+                color="indigo",
                 zorder=3,
             )
         ax6.set_title("Token+Position Embeddings (2D)", fontsize=14, fontweight='bold')
@@ -1803,10 +1963,12 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
         # Remove aspect='equal' to allow plots to fill width like heatmaps above
         
         # Add sequence as supertitle
-        fig.suptitle(f"Sequence Embeddings: {seq_str}", fontsize=16, fontweight='bold', y=0.98)
+        _suptitle_fs = 10 if _JOURNAL_MODE else 16
+        fig.suptitle(f"Sequence Embeddings: {seq_str}", fontsize=_suptitle_fs, fontweight='bold', y=0.98)
     else:
         # 1D case - simpler visualization
-        fig.suptitle(f"Sequence Embeddings (1D): {seq_str}", fontsize=16, fontweight='bold')
+        _suptitle_fs = 10 if _JOURNAL_MODE else 16
+        fig.suptitle(f"Sequence Embeddings (1D): {seq_str}", fontsize=_suptitle_fs, fontweight='bold')
         ax = fig.add_subplot(gs[:, :])
         ax.scatter(combined_emb_np[:, 0], np.zeros(T), s=100)
         for i in range(T):
@@ -2121,22 +2283,45 @@ def plot_qkv_transformations(model, itos, save_path=None):
     Q_transformed = all_combinations @ W_Q.T  # (N, hs)
     K_transformed = all_combinations @ W_K.T  # (N, hs)
     V_transformed = all_combinations @ W_V.T  # (N, hs)
+
+    def _set_reasonable_limits(ax, xdata, ydata, max_range=12, margin_pct=0.12):
+        """Set xlim/ylim from data with margin; cap at ±max_range."""
+        xmin, xmax = xdata.min(), xdata.max()
+        ymin, ymax = ydata.min(), ydata.max()
+        xspan = max(xmax - xmin, 0.5)
+        yspan = max(ymax - ymin, 0.5)
+        xm = margin_pct * xspan
+        ym = margin_pct * yspan
+        ax.set_xlim(np.clip(xmin - xm, -max_range, max_range), np.clip(xmax + xm, -max_range, max_range))
+        ax.set_ylim(np.clip(ymin - ym, -max_range, max_range), np.clip(ymax + ym, -max_range, max_range))
     
-    # Create figure: 2 rows, 4 columns
-    # Row 1: Original token+position embeddings + W_Q, W_K, W_V
-    # Row 2: Q, K, V transformed embeddings (aligned under W_Q/W_K/W_V)
-    fig = plt.figure(figsize=(20, 10))
-    gs = GridSpec(2, 4, figure=fig, hspace=0.35, wspace=0.3)
+    # Create figure
+    # Journal: 3 rows × 3 cols — Row 0: Tok+Pos full width; Row 1: W_Q,W_K,W_V; Row 2: Q,K,V
+    # Standard: 2 rows × 4 cols (original layout)
+    if _JOURNAL_MODE:
+        fig = plt.figure(figsize=(7.0, 7.0))
+        gs = GridSpec(3, 3, figure=fig, hspace=0.45, wspace=0.4, height_ratios=[1, 0.9, 1])
+    else:
+        fig = plt.figure(figsize=(20, 10))
+        gs = GridSpec(2, 4, figure=fig, hspace=0.35, wspace=0.3)
     
-    # Row 1, Col 1: Original token+position embeddings
-    ax0 = fig.add_subplot(gs[0, 0])
+    # Tok+Pos: journal row 0 full width; standard is row 0 col 0 only
+    if _JOURNAL_MODE:
+        ax0 = fig.add_subplot(gs[0, :])
+    else:
+        ax0 = fig.add_subplot(gs[0, 0])
     if n_embd >= 2:
         # Plot original embeddings in first 2 dimensions
         X_orig = all_combinations[:, [0, 1]]
         ax0.scatter(X_orig[:, 0], X_orig[:, 1], s=0, alpha=0)
-        for i in range(len(labels)):
-            ax0.text(X_orig[i, 0], X_orig[i, 1], labels[i], fontsize=9, ha='center', va='center')
-        ax0.set_title(f"Original Token+Position Embeddings: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=12)
+        _lbl_fs = 6 if _JOURNAL_MODE else 9
+        _step = 4 if _JOURNAL_MODE and num_combinations > 48 else 1
+        _pe = [pe.withStroke(linewidth=2, foreground='white')] if _JOURNAL_MODE else []
+        for i in range(0, len(labels), _step):
+            ax0.text(X_orig[i, 0], X_orig[i, 1], labels[i], fontsize=_lbl_fs, ha='center', va='center',
+                     zorder=2, path_effects=_pe)
+        _ttl0 = f"Original Token+Position Embeddings: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)"
+        ax0.set_title(_ttl0, fontsize=9 if _JOURNAL_MODE else 12)
         ax0.set_xlabel("Embedding Dim 0")
         ax0.set_ylabel("Embedding Dim 1")
         # Add origin lines (dashed, faded)
@@ -2145,129 +2330,159 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax0.grid(True, alpha=0.3)
         ax0.set_aspect('equal', adjustable='box')
         ax0.set_xlim(left=-5)
+        if _JOURNAL_MODE:
+            ax0.tick_params(axis='both', labelsize=7)
     else:
         # 1D case
         X_orig_1d = all_combinations[:, 0]
         ax0.scatter(X_orig_1d, np.zeros_like(X_orig_1d), s=0, alpha=0)
-        for i in range(len(labels)):
-            ax0.text(X_orig_1d[i], 0, labels[i], fontsize=9, ha='center', va='center', rotation=90)
-        ax0.set_title(f"Original Token+Position Embeddings: Dim 0\n(All tokens, {num_combinations} combinations)", fontsize=12)
+        _step_1d = 4 if _JOURNAL_MODE and num_combinations > 48 else 1
+        for i in range(0, len(labels), _step_1d):
+            ax0.text(X_orig_1d[i], 0, labels[i], fontsize=6 if _JOURNAL_MODE else 9, ha='center', va='center', rotation=90)
+        _ttl0_1d = f"Original Token+Position Embeddings: Dim 0\n(All tokens, {num_combinations} combinations)"
+        ax0.set_title(_ttl0_1d, fontsize=9 if _JOURNAL_MODE else 12)
         ax0.set_xlabel("Embedding Dim 0")
         ax0.set_ylabel("")
         ax0.grid(True, alpha=0.3)
         ax0.set_yticks([])
     
-    # Row 1: QKV weights
-    # W_Q
-    ax1 = fig.add_subplot(gs[0, 1])
+    # Row 1 (journal) / Row 0 cols 1-3 (standard): QKV weights
+    _wr1, _wc1 = (1, 0) if _JOURNAL_MODE else (0, 1)
+    ax1 = fig.add_subplot(gs[_wr1, _wc1])
     x_labels = list(range(n_embd))
     y_labels_local = list(range(head_size))
     sns.heatmap(W_Q, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax1)
-    ax1.set_title(f"W_Q (hs×C={head_size}×{n_embd})", fontsize=12)
+    _wfs = 9 if _JOURNAL_MODE else 12
+    ax1.set_title(f"W_Q ({head_size}×{n_embd})", fontsize=_wfs)
     ax1.set_xlabel("C (embedding dim)")
     ax1.set_ylabel("hs (head_size)")
+    if _JOURNAL_MODE:
+        ax1.tick_params(axis='both', labelsize=7)
     
     # W_K
-    ax2 = fig.add_subplot(gs[0, 2])
+    ax2 = fig.add_subplot(gs[_wr1, _wc1 + 1])
     sns.heatmap(W_K, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax2)
-    ax2.set_title(f"W_K (hs×C={head_size}×{n_embd})", fontsize=12)
+    ax2.set_title(f"W_K ({head_size}×{n_embd})", fontsize=_wfs)
     ax2.set_xlabel("C (embedding dim)")
     ax2.set_ylabel("hs (head_size)")
+    if _JOURNAL_MODE:
+        ax2.tick_params(axis='both', labelsize=7)
     
     # W_V
-    ax3 = fig.add_subplot(gs[0, 3])
+    ax3 = fig.add_subplot(gs[_wr1, _wc1 + 2])
     sns.heatmap(W_V, cmap="viridis", xticklabels=x_labels, yticklabels=y_labels_local, cbar=True, ax=ax3)
-    ax3.set_title(f"W_V (hs×C={head_size}×{n_embd})", fontsize=12)
+    ax3.set_title(f"W_V ({head_size}×{n_embd})", fontsize=_wfs)
     ax3.set_xlabel("C (embedding dim)")
     ax3.set_ylabel("hs (head_size)")
+    if _JOURNAL_MODE:
+        ax3.tick_params(axis='both', labelsize=7)
     
-    # Row 2: Transformed token-position combinations
-    ax_empty = fig.add_subplot(gs[1, 0])
-    ax_empty.axis("off")
+    # Row 2 (journal) / Row 1 cols 1-3 (standard): Transformed Q, K, V
+    if not _JOURNAL_MODE:
+        ax_empty = fig.add_subplot(gs[1, 0])
+        ax_empty.axis("off")
+    _wr2, _wc2 = (2, 0) if _JOURNAL_MODE else (1, 1)
 
     # Q-transformed
-    ax4 = fig.add_subplot(gs[1, 1])
+    _qk_lbl = 6 if _JOURNAL_MODE else 10
+    _qk_step = 4 if _JOURNAL_MODE and num_combinations > 48 else 1
+    _qk_pe = [pe.withStroke(linewidth=2, foreground='white')] if _JOURNAL_MODE else []
+    ax4 = fig.add_subplot(gs[_wr2, _wc2])
     if head_size >= 2:
         Q_2d = Q_transformed[:, [0, 1]]
         ax4.scatter(Q_2d[:, 0], Q_2d[:, 1], s=0, alpha=0)
-        for i in range(len(labels)):
-            ax4.text(Q_2d[i, 0], Q_2d[i, 1], labels[i], fontsize=10, ha='center', va='center', color='blue')
-        ax4.set_title(f"Q-Transformed: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=12)
+        for i in range(0, len(labels), _qk_step):
+            ax4.text(Q_2d[i, 0], Q_2d[i, 1], labels[i], fontsize=_qk_lbl, ha='center', va='center',
+                     color='blue', zorder=2, path_effects=_qk_pe)
+        _qttl = f"Q-Transformed: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)"
+        ax4.set_title(_qttl, fontsize=9 if _JOURNAL_MODE else 12)
         ax4.set_xlabel("Head Dim 0")
         ax4.set_ylabel("Head Dim 1")
-        # Add origin lines (dashed, faded)
         ax4.axhline(y=0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6, zorder=10)
         ax4.axvline(x=0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6, zorder=10)
         ax4.grid(True, alpha=0.3)
-        ax4.axis('equal')
+        _set_reasonable_limits(ax4, Q_2d[:, 0], Q_2d[:, 1])
+        if _JOURNAL_MODE:
+            ax4.tick_params(axis='both', labelsize=7)
     else:
         # 1D case
         Q_1d = Q_transformed[:, 0]
         ax4.scatter(Q_1d, np.zeros_like(Q_1d), s=0, alpha=0)
-        for i in range(len(labels)):
-            ax4.text(Q_1d[i], 0, labels[i], fontsize=10, ha='center', va='center', rotation=90, color='blue')
-        ax4.set_title(f"Q-Transformed: Dim 0\n(All tokens, {num_combinations} combinations)", fontsize=12)
+        for i in range(0, len(labels), _qk_step):
+            ax4.text(Q_1d[i], 0, labels[i], fontsize=_qk_lbl, ha='center', va='center', rotation=90, color='blue')
+        _qttl1d = f"Q-Transformed: Dim 0\n(All tokens, {num_combinations} combinations)"
+        ax4.set_title(_qttl1d, fontsize=9 if _JOURNAL_MODE else 12)
         ax4.set_xlabel("Head Dim 0")
         ax4.set_ylabel("")
         ax4.grid(True, alpha=0.3)
         ax4.set_yticks([])
     
     # K-transformed
-    ax5 = fig.add_subplot(gs[1, 2])
+    ax5 = fig.add_subplot(gs[_wr2, _wc2 + 1])
     if head_size >= 2:
         K_2d = K_transformed[:, [0, 1]]
         ax5.scatter(K_2d[:, 0], K_2d[:, 1], s=0, alpha=0)
-        for i in range(len(labels)):
-            ax5.text(K_2d[i, 0], K_2d[i, 1], labels[i], fontsize=10, ha='center', va='center', color='red')
-        ax5.set_title(f"K-Transformed: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=12)
+        for i in range(0, len(labels), _qk_step):
+            ax5.text(K_2d[i, 0], K_2d[i, 1], labels[i], fontsize=_qk_lbl, ha='center', va='center',
+                     color='red', zorder=2, path_effects=_qk_pe)
+        _kttl = f"K-Transformed: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)"
+        ax5.set_title(_kttl, fontsize=9 if _JOURNAL_MODE else 12)
         ax5.set_xlabel("Head Dim 0")
         ax5.set_ylabel("Head Dim 1")
-        # Add origin lines (dashed, faded)
         ax5.axhline(y=0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6, zorder=10)
         ax5.axvline(x=0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6, zorder=10)
         ax5.grid(True, alpha=0.3)
-        ax5.axis('equal')
+        _set_reasonable_limits(ax5, K_2d[:, 0], K_2d[:, 1])
+        if _JOURNAL_MODE:
+            ax5.tick_params(axis='both', labelsize=7)
     else:
         K_1d = K_transformed[:, 0]
         ax5.scatter(K_1d, np.zeros_like(K_1d), s=0, alpha=0)
-        for i in range(len(labels)):
-            ax5.text(K_1d[i], 0, labels[i], fontsize=10, ha='center', va='center', rotation=90, color='red')
-        ax5.set_title(f"K-Transformed: Dim 0\n(All tokens, {num_combinations} combinations)", fontsize=12)
+        for i in range(0, len(labels), _qk_step):
+            ax5.text(K_1d[i], 0, labels[i], fontsize=_qk_lbl, ha='center', va='center', rotation=90, color='red')
+        _kttl1d = f"K-Transformed: Dim 0\n(All tokens, {num_combinations} combinations)"
+        ax5.set_title(_kttl1d, fontsize=9 if _JOURNAL_MODE else 12)
         ax5.set_xlabel("Head Dim 0")
         ax5.set_ylabel("")
         ax5.grid(True, alpha=0.3)
         ax5.set_yticks([])
     
     # V-transformed
-    ax6 = fig.add_subplot(gs[1, 3])
+    _v_lbl = 6 if _JOURNAL_MODE else 14
+    _v_step = 4 if _JOURNAL_MODE and num_combinations > 48 else 1
+    ax6 = fig.add_subplot(gs[_wr2, _wc2 + 2])
     # V colors: green spectrum
     v_cmap = plt.cm.get_cmap('Greens')
     v_colors = [v_cmap(0.3 + 0.6 * i / max(num_combinations - 1, 1)) for i in range(num_combinations)]
     
     if head_size >= 2:
         V_2d = V_transformed[:, [0, 1]]
-        margin = 0.15 * max(V_2d[:, 0].max() - V_2d[:, 0].min(), V_2d[:, 1].max() - V_2d[:, 1].min())
-        ax6.set_xlim(V_2d[:, 0].min() - margin, V_2d[:, 0].max() + margin)
-        ax6.set_ylim(V_2d[:, 1].min() - margin, V_2d[:, 1].max() + margin)
-        for i in range(len(labels)):
-            ax6.text(V_2d[i, 0], V_2d[i, 1], labels[i], fontsize=14, fontweight='bold', 
-                    ha='center', va='center', color=v_colors[i])
-        ax6.set_title(f"V-Transformed: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=12, fontweight='bold')
+        ax6.scatter(V_2d[:, 0], V_2d[:, 1], s=0, alpha=0)
+        _set_reasonable_limits(ax6, V_2d[:, 0], V_2d[:, 1])
+        _v_pe = [pe.withStroke(linewidth=2, foreground='white')] if _JOURNAL_MODE else []
+        for i in range(0, len(labels), _v_step):
+            ax6.text(V_2d[i, 0], V_2d[i, 1], labels[i], fontsize=_v_lbl, fontweight='bold',
+                    ha='center', va='center', color=v_colors[i], zorder=2, path_effects=_v_pe)
+        _vttl = f"V-Transformed: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)"
+        ax6.set_title(_vttl, fontsize=9 if _JOURNAL_MODE else 12, fontweight='bold')
         ax6.set_xlabel("Head Dim 0")
         ax6.set_ylabel("Head Dim 1")
         # Add origin lines (dashed, faded)
         ax6.axhline(y=0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6, zorder=10)
         ax6.axvline(x=0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6, zorder=10)
         ax6.grid(True, alpha=0.3)
+        if _JOURNAL_MODE:
+            ax6.tick_params(axis='both', labelsize=7)
     else:
         V_1d = V_transformed[:, 0]
         margin = 0.15 * (V_1d.max() - V_1d.min())
         ax6.set_xlim(V_1d.min() - margin, V_1d.max() + margin)
         ax6.set_ylim(-0.5, 0.5)
-        for i in range(len(labels)):
-            ax6.text(V_1d[i], 0, labels[i], fontsize=14, fontweight='bold', 
+        for i in range(0, len(labels), _v_step):
+            ax6.text(V_1d[i], 0, labels[i], fontsize=_v_lbl, fontweight='bold', 
                     ha='center', va='center', color=v_colors[i])
-        ax6.set_title(f"V-Transformed: Dim 0\n(All tokens, {num_combinations} combinations)", fontsize=12, fontweight='bold')
+        _vttl1d = f"V-Transformed: Dim 0\n(All tokens, {num_combinations} combinations)"
+        ax6.set_title(_vttl1d, fontsize=9 if _JOURNAL_MODE else 12, fontweight='bold')
         ax6.set_xlabel("Head Dim 0")
         ax6.set_ylabel("")
         ax6.grid(True, alpha=0.3)
@@ -2414,9 +2629,14 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
     # ========== PLOT 1: Q, K, masked QK^T, Attention, scatter(Q vs K) ==========
     use_two_rows = num_sequences == 1
     if use_two_rows:
-        n_rows_1, n_cols_plot1 = 1, 5  # One row: Q, K, Q vs K, masked QK^T, Attention
-        fig1 = plt.figure(figsize=(5 * n_cols_plot1, 5))
-        gs1 = GridSpec(n_rows_1, n_cols_plot1, figure=fig1, hspace=0.35, wspace=0.3)
+        if _JOURNAL_MODE:
+            n_rows_1, n_cols_plot1 = 2, 3
+            fig1 = plt.figure(figsize=(7.0, 5.0))
+            gs1 = GridSpec(n_rows_1, n_cols_plot1, figure=fig1, hspace=0.4, wspace=0.5)
+        else:
+            n_rows_1, n_cols_plot1 = 1, 5
+            fig1 = plt.figure(figsize=(5 * n_cols_plot1, 5))
+            gs1 = GridSpec(n_rows_1, n_cols_plot1, figure=fig1, hspace=0.35, wspace=0.3)
     else:
         num_cols_plot1 = 5
         fig1 = plt.figure(figsize=(6 * num_cols_plot1, 4 * num_sequences))
@@ -2459,7 +2679,10 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         Attention = data_dict['Attention']
         T = data_dict['T']
         if use_two_rows:
-            r0, r1, c_q, c_k, c_scat, c_masked, c_att = 0, 0, 0, 1, 2, 3, 4  # all on row 0
+            if _JOURNAL_MODE:
+                r0, r1, c_q, c_k, c_scat, c_masked, c_att = 0, 1, 0, 1, 2, 0, 1  # 2x3: row0 Q,K,scat; row1 masked,att
+            else:
+                r0, r1, c_q, c_k, c_scat, c_masked, c_att = 0, 0, 0, 1, 2, 3, 4  # all on row 0
         else:
             r0 = r1 = seq_idx
             c_q, c_k, c_scat, c_masked, c_att = 0, 1, 2, 3, 4
@@ -2471,6 +2694,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
                    yticklabels=tokens, cbar=True, ax=ax)
         ax.set_xlabel("hs", fontsize=10)
         ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n" if not use_two_rows else f"{seq_str}", fontsize=9)
+        if _JOURNAL_MODE:
+            ax.tick_params(axis='both', labelsize=7)
         ax.text(0.5, 1.02, "Q", transform=ax.transAxes, ha='right', va='bottom', color='blue', fontsize=11)
         ax.text(0.5, 1.02, " " + dim_str, transform=ax.transAxes, ha='left', va='bottom', fontsize=11)
         
@@ -2481,6 +2706,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
                    yticklabels=tokens, cbar=True, ax=ax)
         ax.set_xlabel("hs", fontsize=10)
         ax.set_ylabel("T", fontsize=10)
+        if _JOURNAL_MODE:
+            ax.tick_params(axis='both', labelsize=7)
         ax.text(0.5, 1.02, "K", transform=ax.transAxes, ha='right', va='bottom', color='red', fontsize=11)
         ax.text(0.5, 1.02, " " + dim_str, transform=ax.transAxes, ha='left', va='bottom', fontsize=11)
         
@@ -2568,8 +2795,10 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
             vmin_m, vmax_m = -1, 1
         sns.heatmap(Masked_QK_T, cmap="RdBu_r", center=0, xticklabels=tokens,
                    yticklabels=tokens, cbar=True, ax=ax, annot=annot_mask, fmt="",
-                   vmin=vmin_m, vmax=vmax_m, annot_kws={"fontsize": 6})
+                   vmin=vmin_m, vmax=vmax_m, annot_kws={"fontsize": 5 if _JOURNAL_MODE else 6})
         ax.set_xlabel("T", fontsize=10)
+        if _JOURNAL_MODE:
+            ax.tick_params(axis='both', labelsize=7)
         ax.set_ylabel("T", fontsize=10)
         ax.text(0.18, 1.04, "masked", transform=ax.transAxes, ha='right', va='bottom', color='black', fontsize=11)
         ax.text(0.24, 1.04, "Q", transform=ax.transAxes, ha='left', va='bottom', color='blue', fontsize=11)
@@ -2583,6 +2812,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
                    xticklabels=tokens, yticklabels=tokens, cbar=True, ax=ax)
         ax.set_xlabel("T", fontsize=10)
         ax.set_ylabel("T", fontsize=10)
+        if _JOURNAL_MODE:
+            ax.tick_params(axis='both', labelsize=7)
         ax.set_title(f"Attention {dim_str}", fontsize=11)
     
     # Subtitle with sequence (single-row figure)
@@ -2615,9 +2846,14 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
     # how much each position contributes. For position i: Final_Output[i] = sum_j(Attention[i,j] * V[j])
     use_two_rows_2 = num_sequences == 1
     if use_two_rows_2:
-        n_rows_2, n_cols_plot2 = 1, 5  # One row: Attention, V, Final Output, V scatter, Final scatter
-        fig2 = plt.figure(figsize=(5 * n_cols_plot2, 5))
-        gs2 = GridSpec(n_rows_2, n_cols_plot2, figure=fig2, hspace=0.35, wspace=0.3)
+        if _JOURNAL_MODE:
+            n_rows_2, n_cols_plot2 = 2, 3
+            fig2 = plt.figure(figsize=(7.0, 5.0))
+            gs2 = GridSpec(n_rows_2, n_cols_plot2, figure=fig2, hspace=0.4, wspace=0.5)
+        else:
+            n_rows_2, n_cols_plot2 = 1, 5
+            fig2 = plt.figure(figsize=(5 * n_cols_plot2, 5))
+            gs2 = GridSpec(n_rows_2, n_cols_plot2, figure=fig2, hspace=0.35, wspace=0.3)
     else:
         num_cols_plot2 = 5
         fig2 = plt.figure(figsize=(6 * num_cols_plot2, 4 * num_sequences))
@@ -2679,8 +2915,12 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         Final_Output = data_dict['Final_Output']
         T = data_dict['T']
         if use_two_rows_2:
-            r0_2 = r1_2 = 0  # all on row 0
-            c_att2, c_v2, c_final2, c_vscat2, c_finalscat2 = 0, 1, 2, 3, 4
+            if _JOURNAL_MODE:
+                r0_2, r1_2 = 0, 1
+                c_att2, c_v2, c_final2, c_vscat2, c_finalscat2 = 0, 1, 2, 0, 1  # 2x3: row0 Att,V,Final; row1 Vscat,Finalscat
+            else:
+                r0_2 = r1_2 = 0  # all on row 0
+                c_att2, c_v2, c_final2, c_vscat2, c_finalscat2 = 0, 1, 2, 3, 4
         else:
             r0_2 = r1_2 = seq_idx
             c_att2, c_v2, c_final2, c_vscat2, c_finalscat2 = 0, 1, 2, 3, 4
@@ -2696,6 +2936,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
                    xticklabels=tokens, yticklabels=tokens, cbar=True, ax=ax)
         ax.set_xlabel("T", fontsize=10)
         ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n" if not use_two_rows_2 else seq_str, fontsize=9)
+        if _JOURNAL_MODE:
+            ax.tick_params(axis='both', labelsize=7)
         ax.set_title(f"Attention {dim_str}", fontsize=11)
         
         # V: same color scheme as Q/K (viridis)
@@ -2705,6 +2947,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
                    yticklabels=tokens, cbar=True, ax=ax)
         ax.set_xlabel("hs", fontsize=10)
         ax.set_ylabel("T", fontsize=10)
+        if _JOURNAL_MODE:
+            ax.tick_params(axis='both', labelsize=7)
         ax.text(0.5, 1.02, "V", transform=ax.transAxes, ha='right', va='bottom', color='green', fontsize=11)
         ax.text(0.5, 1.02, " " + dim_str, transform=ax.transAxes, ha='left', va='bottom', fontsize=11)
         
@@ -2715,6 +2959,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
                    yticklabels=tokens, cbar=True, ax=ax)
         ax.set_xlabel("hs", fontsize=10)
         ax.set_ylabel("T", fontsize=10)
+        if _JOURNAL_MODE:
+            ax.tick_params(axis='both', labelsize=7)
         ax.set_title(f"Final Output (Attention@V) {dim_str}", fontsize=11)
         
         # Scatter plot for V
@@ -2910,12 +3156,15 @@ def plot_q_dot_product_gradients(model, X_list, itos, save_path=None, num_sequen
         ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
         ax.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
         
-        # Plot all K points with larger, more readable labels
+        # Plot K points: red if position <= query position, gray if masked (future)
         for k_idx in range(len(K_2d)):
+            is_visible = k_idx <= idx
+            color = 'red' if is_visible else '#999999'
+            alpha = 1.0 if is_visible else 0.4
             ax.text(K_2d[k_idx, 0], K_2d[k_idx, 1], 
                    _token_pos_label(tokens[k_idx], k_idx),
                    fontsize=11, ha='center', va='center', 
-                   color='red', fontweight='bold', zorder=2)
+                   color=color, fontweight='bold', alpha=alpha, zorder=2)
         
         # Highlight the focus Q point
         ax.text(Q_2d[idx, 0], Q_2d[idx, 1],
@@ -3043,8 +3292,12 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
     use_two_rows_r = num_sequences == 1
     if use_two_rows_r:
         n_rows_r, num_cols = 2, 4
-        fig = plt.figure(figsize=(4 * num_cols, 5 * n_rows_r))
-        gs = GridSpec(n_rows_r, num_cols, figure=fig, hspace=0.4, wspace=0.3)
+        if _JOURNAL_MODE:
+            fig = plt.figure(figsize=(7.0, 5.5))
+            gs = GridSpec(n_rows_r, num_cols, figure=fig, hspace=0.45, wspace=0.5)
+        else:
+            fig = plt.figure(figsize=(4 * num_cols, 5 * n_rows_r))
+            gs = GridSpec(n_rows_r, num_cols, figure=fig, hspace=0.4, wspace=0.3)
     else:
         num_cols = 7
         fig = plt.figure(figsize=(6 * num_cols, 4 * num_sequences))
@@ -3132,7 +3385,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         heatmap_axes.append(ax)
         ax.set_xlabel("Dim", fontsize=10)
         ax.set_ylabel(seq_str if use_two_rows_r else f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
-        ax.set_title(f"Embeddings (Token+Pos) {dim_str}", fontsize=11)
+        ax.set_title(f"Embed ({dim_str})" if _JOURNAL_MODE else f"Embeddings (Token+Pos) {dim_str}", fontsize=9 if _JOURNAL_MODE else 11)
         if use_two_rows_r:
             ref_hm_pos = ax.get_position()
         # V Transformed heatmap
@@ -3143,7 +3396,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         heatmap_axes.append(ax)
         ax.set_xlabel("Dim", fontsize=10)
         ax.set_ylabel(seq_str if use_two_rows_r else f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
-        ax.set_title(f"V Transformed (Attention@V) {dim_str}", fontsize=11)
+        ax.set_title(f"V Trans ({dim_str})" if _JOURNAL_MODE else f"V Transformed (Attention@V) {dim_str}", fontsize=9 if _JOURNAL_MODE else 11)
         
         # Final heatmap (col 2, row 0 when single seq) — same size as other heatmaps, centered between cols 2 and 3
         if use_two_rows_r:
@@ -3156,7 +3409,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         heatmap_axes.append(ax)
         ax.set_xlabel("Dim", fontsize=10)
         ax.set_ylabel(seq_str if use_two_rows_r else f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
-        ax.set_title(f"Final (Embed+V_transformed) {dim_str}", fontsize=11)
+        ax.set_title(f"Final ({dim_str})" if _JOURNAL_MODE else f"Final (Embed+V_transformed) {dim_str}", fontsize=9 if _JOURNAL_MODE else 11)
         if use_two_rows_r:
             # Same size as Embed heatmap, centered between cols 2 and 3
             pos = ax.get_position()
@@ -3929,37 +4182,41 @@ def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=N
     im = ax.imshow(masked_colors, cmap=cmap, aspect='auto', vmin=0, vmax=2)
     
     # Add text annotations (the actual numbers) — large, readable font
-    fontsize = 20
+    _txt_fs = 12 if _JOURNAL_MODE else 20
+    _lbl_fs = 9 if _JOURNAL_MODE else 16
+    _tit_fs = 10 if _JOURNAL_MODE else 17
+    _tk_fs = 7 if _JOURNAL_MODE else 14
     for i in range(len(sequences_to_show)):
         for j in range(max_len):
             val = data_matrix[i, j]
             if val is not None:  # Not padding
                 text_color = 'black'
-                ax.text(j, i, str(val), ha='center', va='center', fontsize=fontsize, color=text_color, fontweight='bold')
+                ax.text(j, i, str(val), ha='center', va='center', fontsize=_txt_fs, color=text_color, fontweight='bold')
     
     # Set labels — larger fonts
-    ax.set_xlabel("Position in Sequence", fontsize=16)
-    ax.set_ylabel("Sequence #", fontsize=16)
-    ax.set_title(title or "Generated Sequences with Rule Correctness\n(Green = Correct, Red = Incorrect)", fontsize=17)
-    ax.tick_params(axis='both', labelsize=14)
+    ax.set_xlabel("Position in Sequence", fontsize=_lbl_fs)
+    ax.set_ylabel("Sequence #", fontsize=_lbl_fs)
+    ax.set_title(title or "Generated Sequences with Rule Correctness\n(Green = Correct, Red = Incorrect)", fontsize=_tit_fs)
+    ax.tick_params(axis='both', labelsize=_tk_fs)
     
     # Set ticks
     ax.set_xticks(range(0, max_len, max(1, max_len // 15)))
     ax.set_yticks(range(num_sequences))
     ax.set_yticklabels([f"Seq {i+1}" for i in range(num_sequences)])
     
-    # Add colorbar/legend
-    from matplotlib.patches import Patch
-    legend_elements = [
-        Patch(facecolor='#90EE90', label='Correct'),
-        Patch(facecolor='#ff6b6b', label='Incorrect'),
-        Patch(facecolor='#d3d3d3', label='Neutral'),
-    ]
-    if show_legend:
-        ax.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1.15, 1))
-    
     if created_fig:
         plt.tight_layout()
+        if show_legend:
+            legend_elements = [
+                Patch(facecolor='#90EE90', label='Correct'),
+                Patch(facecolor='#ff6b6b', label='Incorrect'),
+                Patch(facecolor='#d3d3d3', label='Neutral'),
+            ]
+            _leg_fs = 8 if _JOURNAL_MODE else 10
+            fig.legend(handles=legend_elements, loc='lower center',
+                       ncol=3, fontsize=_leg_fs, framealpha=0.95, edgecolor='0.8',
+                       bbox_to_anchor=(0.5, -0.01))
+            fig.subplots_adjust(bottom=0.1)
         if save_path:
             plt.savefig(save_path, bbox_inches='tight', dpi=150)
             plt.close()
@@ -3983,8 +4240,12 @@ def plot_generated_sequences_heatmap_before_after(generated_sequences_e0, genera
         )
     
     # Fewer sequences, larger panels
-    fig_height = max(10, num_sequences * 1.6 + 5)
-    fig_width = max(16, max_length * 0.65)
+    if _JOURNAL_MODE:
+        fig_height = 6.0
+        fig_width = 7.0
+    else:
+        fig_height = max(10, num_sequences * 1.6 + 5)
+        fig_width = max(16, max_length * 0.65)
     fig, axes = plt.subplots(2, 1, figsize=(fig_width, fig_height))
     
     acc0, c0, i0 = plot_generated_sequences_heatmap(
@@ -3995,10 +4256,21 @@ def plot_generated_sequences_heatmap_before_after(generated_sequences_e0, genera
     accf, cf, inf = plot_generated_sequences_heatmap(
         generated_sequences_final, generator,
         save_path=None, num_sequences=num_sequences, max_length=max_length,
-        ax=axes[1], title=f"Final Generated Sequences (n={num_sequences})", show_legend=True
+        ax=axes[1], title=f"Final Generated Sequences (n={num_sequences})", show_legend=False
     )
     
+    legend_elements = [
+        Patch(facecolor='#90EE90', label='Correct'),
+        Patch(facecolor='#ff6b6b', label='Incorrect'),
+        Patch(facecolor='#d3d3d3', label='Neutral'),
+    ]
+    _leg_fs = 8 if _JOURNAL_MODE else 10
     plt.tight_layout()
+    fig.legend(handles=legend_elements, loc='lower center',
+               ncol=3, fontsize=_leg_fs, framealpha=0.95, edgecolor='0.8',
+               bbox_to_anchor=(0.5, -0.01))
+    fig.subplots_adjust(bottom=0.08)
+    
     if save_path:
         plt.savefig(save_path, bbox_inches='tight', dpi=150)
         plt.close()
@@ -4043,8 +4315,12 @@ def plot_training_data_heatmap(training_sequences, generator, save_path=None, nu
     constrained_matrix = np.array(constrained_matrix, dtype=float)
     
     # Fewer sequences, larger panels and fonts
-    fig_height = max(8, num_sequences * 1.2 + 2)
-    fig_width = max(14, max_len * 0.6)
+    if _JOURNAL_MODE:
+        fig_height = 4.0
+        fig_width = 7.0
+    else:
+        fig_height = max(8, num_sequences * 1.2 + 2)
+        fig_width = max(14, max_len * 0.6)
     fig, ax = plt.subplots(figsize=(fig_width, fig_height))
     
     # Create color matrix: 1 (correct) = light green, 0 (incorrect) = red, 2 (neutral/no valence) = gray
@@ -4065,35 +4341,40 @@ def plot_training_data_heatmap(training_sequences, generator, save_path=None, nu
     im = ax.imshow(masked_colors, cmap=cmap, aspect='auto', vmin=0, vmax=2)
     
     # Add text annotations — large, readable font
-    fontsize = 20
+    _txt_fs = 12 if _JOURNAL_MODE else 20
+    _lbl_fs = 9 if _JOURNAL_MODE else 16
+    _tit_fs = 10 if _JOURNAL_MODE else 17
+    _tk_fs = 7 if _JOURNAL_MODE else 14
     for i in range(len(sequences_to_show)):
         for j in range(max_len):
             val = data_matrix[i, j]
             if val is not None:  # Not padding
                 text_color = 'black'
-                ax.text(j, i, str(val), ha='center', va='center', fontsize=fontsize, color=text_color, fontweight='bold')
+                ax.text(j, i, str(val), ha='center', va='center', fontsize=_txt_fs, color=text_color, fontweight='bold')
     
     # Set labels — larger fonts
-    ax.set_xlabel("Position in Sequence", fontsize=16)
-    ax.set_ylabel("Sequence #", fontsize=16)
-    ax.set_title("Training Data Sequences with Rule Correctness\n(Green = Correct, Red = Incorrect)", fontsize=17)
-    ax.tick_params(axis='both', labelsize=14)
+    ax.set_xlabel("Position in Sequence", fontsize=_lbl_fs)
+    ax.set_ylabel("Sequence #", fontsize=_lbl_fs)
+    ax.set_title("Training Data Sequences with Rule Correctness\n(Green = Correct, Red = Incorrect)", fontsize=_tit_fs)
+    ax.tick_params(axis='both', labelsize=_tk_fs)
     
     # Set ticks — show all sequence labels when we have few sequences
     ax.set_xticks(range(0, max_len, max(1, max_len // 15)))
     ax.set_yticks(range(num_sequences))
     ax.set_yticklabels([f"Seq {i+1}" for i in range(num_sequences)])
     
-    # Add colorbar/legend
-    from matplotlib.patches import Patch
     legend_elements = [
         Patch(facecolor='#90EE90', label='Correct'),
         Patch(facecolor='#ff6b6b', label='Incorrect'),
         Patch(facecolor='#d3d3d3', label='Neutral'),
     ]
-    ax.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1.15, 1))
-    
+    _leg_fs = 8 if _JOURNAL_MODE else 10
     plt.tight_layout()
+    fig.legend(handles=legend_elements, loc='lower center',
+               ncol=3, fontsize=_leg_fs, framealpha=0.95, edgecolor='0.8',
+               bbox_to_anchor=(0.5, -0.01))
+    fig.subplots_adjust(bottom=0.1)
+    
     if save_path:
         plt.savefig(save_path, bbox_inches='tight', dpi=150)
         plt.close()
@@ -4161,15 +4442,27 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
         use_residual = getattr(model, 'use_residual', True)
 
     # ── figure setup (defer xlim until we know total width) ───────────
-    H_px = 500
-    fig, ax = plt.subplots(figsize=(20, 6), dpi=160)
-    ax.set_ylim(H_px, 0)        # y increases downward (like SVG)
+    if _JOURNAL_MODE:
+        # Vertical layout for A4 paper: 7" wide, ~9" tall
+        fig, ax = plt.subplots(figsize=(7.0, 9.0), dpi=200)
+        H_px = 1100  # total height for vertical flow
+        W_px = 420   # width (wider for legibility)
+        ax.set_ylim(H_px, 0)
+        ax.set_xlim(0, W_px)
+    else:
+        H_px = 500
+        fig, ax = plt.subplots(figsize=(20, 6), dpi=160)
+        ax.set_ylim(H_px, 0)        # y increases downward (like SVG)
     ax.axis('off')
     fig.patch.set_facecolor('white')
 
     # ── drawing helpers ─────────────────────────────────────────────────
-    def draw_box(x, y, w, h, color, label, sub=None, fs=10.5, sub_fs=8.5):
+    _fs = 9 if _JOURNAL_MODE else 10.5
+    _sub_fs = 7 if _JOURNAL_MODE else 8.5
+    def draw_box(x, y, w, h, color, label, sub=None, fs=None, sub_fs=None):
         """Rounded-rectangle box centred at (x+w/2, y+h/2)."""
+        if fs is None: fs = _fs
+        if sub_fs is None: sub_fs = _sub_fs
         fancy = FancyBboxPatch((x, y), w, h,
                                boxstyle="round,pad=0,rounding_size=7",
                                facecolor=color, edgecolor=C_STROKE,
@@ -4204,34 +4497,39 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
                         fontsize=fs, fontweight='bold', color=C_STROKE, zorder=4,
                         fontfamily='sans-serif')
 
-    def draw_arrow(x1, y1, x2, y2, color=C_STROKE, lw=1.3):
+    _arrow_lw = 1.8 if _JOURNAL_MODE else 1.3
+    def draw_arrow(x1, y1, x2, y2, color=C_STROKE, lw=None):
+        lw = lw if lw is not None else _arrow_lw
         ax.annotate('', xy=(x2, y2), xytext=(x1, y1),
                     arrowprops=dict(arrowstyle='->', color=color, lw=lw,
-                                    shrinkA=1, shrinkB=1), zorder=5)
+                                    shrinkA=2, shrinkB=2), zorder=5)
 
+    _plus_fs = 13 if _JOURNAL_MODE else 15
     def draw_circle(cx, cy, r, label='+'):
         circ = Circle((cx, cy), r, facecolor='white', edgecolor=C_STROKE,
-                       linewidth=1.4, zorder=3)
+                       linewidth=1.4 if not _JOURNAL_MODE else 1.6, zorder=3)
         ax.add_patch(circ)
         ax.text(cx, cy, label, ha='center', va='center',
-                fontsize=15, fontweight='bold', color=C_STROKE, zorder=4,
+                fontsize=_plus_fs, fontweight='bold', color=C_STROKE, zorder=4,
                 fontfamily='sans-serif')
 
+    _resid_lw = 1.8 if _JOURNAL_MODE else 1.3
+    _resid_fs = 9 if _JOURNAL_MODE else 8
     def draw_residual(x1, y_start, x2, y_end, label='residual', below=True):
         """Right-angle residual: go down, across, then up to target."""
         drop = 55 if below else -55
         y_mid = y_start + drop
         # down from source
-        ax.plot([x1, x1], [y_start, y_mid], color=C_RESID, lw=1.3,
+        ax.plot([x1, x1], [y_start, y_mid], color=C_RESID, lw=_resid_lw,
                 linestyle='--', zorder=2, clip_on=False)
         # across
-        ax.plot([x1, x2], [y_mid, y_mid], color=C_RESID, lw=1.3,
+        ax.plot([x1, x2], [y_mid, y_mid], color=C_RESID, lw=_resid_lw,
                 linestyle='--', zorder=2, clip_on=False)
         # up to target (with arrow)
-        draw_arrow(x2, y_mid, x2, y_end, color=C_RESID, lw=1.3)
+        draw_arrow(x2, y_mid, x2, y_end, color=C_RESID, lw=_resid_lw)
         # label
         ax.text((x1 + x2) / 2, y_mid + (12 if below else -12), label,
-                ha='center', va='center', fontsize=8, color=C_RESID,
+                ha='center', va='center', fontsize=_resid_fs, color=C_RESID,
                 fontfamily='sans-serif', fontstyle='italic', zorder=4)
 
     # ── layout constants ────────────────────────────────────────────────
@@ -4239,221 +4537,368 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
     bh = 80            # standard box height
     gap = 24           # horizontal gap between elements
     r_plus = 18        # radius of + circles
+    if _JOURNAL_MODE:
+        r_plus = 14
+        vgap = 45  # vertical gap between rows
+        vh = 58    # box height per row (slightly larger for text)
+        vw = 140   # box width (centered)
 
-    # ── build diagram left to right ─────────────────────────────────────
-    x = 30
+    # ── build diagram ───────────────────────────────────────────────────
+    if _JOURNAL_MODE:
+        cx = W_px / 2
+        skip_x = 42          # left-side x for skip connection routing
+        y = 40
 
-    # Input Tokens
-    inp_w = 88
-    draw_box(x, cy - bh/2, inp_w, bh, C_INPUT, 'Input\nTokens', f'({batch_size}, {block_size})')
-    x_inp_r = x + inp_w
-    x += inp_w + gap
+        # ── Input Tokens ────────────────────────────────────────────
+        bw, bh_v = 110, vh
+        draw_box(cx - bw/2, y, bw, bh_v, C_INPUT, 'Input\nTokens', f'({batch_size},{block_size})', fs=9, sub_fs=7)
+        y_inp_b = y + bh_v
+        y += bh_v + vgap * 0.8
 
-    # Token + Position Embeddings (stacked)
-    emb_w, emb_h = 115, 64
-    emb_gap = 14
-    emb_top_y = cy - emb_h - emb_gap / 2
-    emb_bot_y = cy + emb_gap / 2
-    draw_box(x, emb_top_y, emb_w, emb_h, C_EMBED, 'Token Emb', f'({vocab_size}, {n_embd})')
-    draw_box(x, emb_bot_y, emb_w, emb_h, C_EMBED, 'Position Emb', f'({block_size}, {n_embd})')
-    draw_arrow(x_inp_r, cy - 12, x, emb_top_y + emb_h / 2)
-    draw_arrow(x_inp_r, cy + 12, x, emb_bot_y + emb_h / 2)
-    x_emb_r = x + emb_w
-    x += emb_w + gap
+        # ── Token Emb + Position Emb (side by side) ────────────────
+        eb_w, eb_h = 80, 46
+        te_x = cx - eb_w - 10           # left edge of Token Emb
+        pe_x = cx + 10                   # left edge of Position Emb
+        draw_box(te_x, y, eb_w, eb_h, C_EMBED, 'Token Emb', f'({vocab_size},{n_embd})', fs=8, sub_fs=6)
+        draw_box(pe_x, y, eb_w, eb_h, C_EMBED, 'Position Emb', f'({block_size},{n_embd})', fs=8, sub_fs=6)
+        draw_arrow(cx, y_inp_b, te_x + eb_w/2, y)
+        draw_arrow(cx, y_inp_b, pe_x + eb_w/2, y)
+        y_emb_b = y + eb_h
+        y += eb_h + vgap * 0.6
 
-    # Add embeddings (+)
-    plus0_cx = x + r_plus
-    draw_circle(plus0_cx, cy, r_plus)
-    draw_arrow(x_emb_r, emb_top_y + emb_h / 2, plus0_cx - r_plus, cy - 6)
-    draw_arrow(x_emb_r, emb_bot_y + emb_h / 2, plus0_cx - r_plus, cy + 6)
-    # Shape label above
-    ax.text(plus0_cx, emb_top_y - 14, f'x : (B,T,C) = ({batch_size},{block_size},{n_embd})',
-            ha='center', va='center', fontsize=8, color='#777', fontfamily='sans-serif')
-    x_add0_r = plus0_cx + r_plus
-    x = x_add0_r + gap
+        # ── Add embeddings (+) ─────────────────────────────────────
+        plus_cx, plus_y = cx, y + r_plus
+        draw_circle(plus_cx, plus_y, r_plus)
+        draw_arrow(te_x + eb_w/2, y_emb_b, plus_cx - 6, plus_y - r_plus)
+        draw_arrow(pe_x + eb_w/2, y_emb_b, plus_cx + 6, plus_y - r_plus)
+        ax.text(plus_cx + r_plus + 8, plus_y, f'x: ({batch_size},{block_size},{n_embd})',
+                ha='left', va='center', fontsize=7, color='#555', fontfamily='sans-serif')
+        y_add_b = plus_y + r_plus
+        y += 2 * r_plus + vgap * 0.8
 
-    # ── Self-Attention block ────────────────────────────────────────────
-    attn_x0 = x - 8
+        # ── Self-Attention: W_Q, W_K, W_V ──────────────────────────
+        qkv_w, qkv_h = 52, 34
+        qkv_gap = 8
+        total_qkv_w = 3 * qkv_w + 2 * qkv_gap
+        qkv_x0 = cx - total_qkv_w / 2   # left edge of first box
+        qkv_cx = []
+        for i, lbl in enumerate(['W_Q', 'W_K', 'W_V']):
+            bx = qkv_x0 + i * (qkv_w + qkv_gap)
+            draw_box(bx, y, qkv_w, qkv_h, C_ATTN, lbl, f'{n_embd}\u2192{head_size}', fs=7, sub_fs=6)
+            qkv_cx.append(bx + qkv_w / 2)
+        # Fan-out: trunk down from (+), then horizontal branches
+        fan_y = y - 10
+        ax.plot([cx, cx], [y_add_b, fan_y], color=C_STROKE, lw=_arrow_lw, zorder=5, solid_capstyle='round')
+        for qc in qkv_cx:
+            ax.plot([cx, qc], [fan_y, fan_y], color=C_STROKE, lw=_arrow_lw, zorder=5, solid_capstyle='round')
+            draw_arrow(qc, fan_y, qc, y)
+        y_qkv_b = y + qkv_h
+        y += qkv_h + 16
 
-    # W_Q, W_K, W_V (stacked)
-    qkv_w, qkv_h, qkv_gap = 66, 44, 8
-    total_qkv = 3 * qkv_h + 2 * qkv_gap
-    qkv_top = cy - total_qkv / 2
-    qkv_cy_list = []
-    for i, lbl in enumerate(['W_Q', 'W_K', 'W_V']):
-        by = qkv_top + i * (qkv_h + qkv_gap)
-        draw_box(x, by, qkv_w, qkv_h, C_ATTN, lbl, f'{n_embd}\u2192{head_size}', fs=10, sub_fs=8)
-        qkv_cy_list.append(by + qkv_h / 2)
-    # Fan-out arrows from + to each W_Q/W_K/W_V — use a short horizontal
-    # trunk then individual branches so arrows don't cross through boxes
-    fan_x = x_add0_r + (x - x_add0_r) * 0.5  # midpoint of gap
-    # Trunk: horizontal line from + to the fan point
-    ax.plot([x_add0_r, fan_x], [cy, cy],
-            color=C_STROKE, lw=1.3, zorder=5, solid_capstyle='round')
-    # Branches: from fan point to each QKV box
-    for yc in qkv_cy_list:
-        ax.plot([fan_x, fan_x], [cy, yc],
+        # ── Self-Attention: QK^T, Mask+Softmax, Attn×V ─────────────
+        dot_w, dot_h = 58, 40
+        dot_gap = 6
+        total_dot_w = 3 * dot_w + 2 * dot_gap
+        dot_x0 = cx - total_dot_w / 2
+        dot_cx = []
+        for i, (lbl, fs_i) in enumerate([('QK\u1d40/\u221Ad\u2096', 7), ('Mask\n+Softmax', 6.5), ('Attn\u00d7V', 7)]):
+            bx = dot_x0 + i * (dot_w + dot_gap)
+            draw_box(bx, y, dot_w, dot_h, C_ATTN, lbl, fs=fs_i)
+            dot_cx.append(bx + dot_w / 2)
+        # W_Q → QK^T
+        draw_arrow(qkv_cx[0], y_qkv_b, dot_cx[0], y)
+        # W_K → QK^T  (slight offset so arrows don't overlap)
+        draw_arrow(qkv_cx[1], y_qkv_b, dot_cx[0] + 8, y)
+        # W_V → Attn×V
+        draw_arrow(qkv_cx[2], y_qkv_b, dot_cx[2], y)
+        # QK^T → Mask+Softmax → Attn×V  (horizontal)
+        draw_arrow(dot_x0 + dot_w, y + dot_h/2, dot_x0 + dot_w + dot_gap, y + dot_h/2)
+        draw_arrow(dot_x0 + 2*(dot_w + dot_gap) - dot_gap, y + dot_h/2,
+                   dot_x0 + 2*(dot_w + dot_gap), y + dot_h/2)
+        y_attn_b = y + dot_h
+        y += dot_h + vgap * 0.7
+
+        # ── Residual add #1 (+) ────────────────────────────────────
+        plus1_cx, plus1_y = cx, y + r_plus
+        draw_circle(plus1_cx, plus1_y, r_plus)
+        draw_arrow(dot_cx[2], y_attn_b, plus1_cx, plus1_y - r_plus)
+        # Skip connection: route down the LEFT side (around attention)
+        ax.plot([plus_cx - r_plus, skip_x], [plus_y, plus_y],
+                color=C_RESID, lw=_resid_lw, linestyle='--', zorder=2, clip_on=False)
+        ax.plot([skip_x, skip_x], [plus_y, plus1_y],
+                color=C_RESID, lw=_resid_lw, linestyle='--', zorder=2, clip_on=False)
+        draw_arrow(skip_x, plus1_y, plus1_cx - r_plus, plus1_y, color=C_RESID, lw=_resid_lw)
+        ax.text(skip_x - 4, (plus_y + plus1_y) / 2, 'skip', ha='right', va='center',
+                fontsize=_resid_fs, color=C_RESID, fontfamily='sans-serif', fontstyle='italic', zorder=4)
+        y_plus1_b = plus1_y + r_plus
+        y += 2 * r_plus + vgap * 0.7
+
+        # ── Feed-Forward ───────────────────────────────────────────
+        ff_w, ff_h = 140, vh
+        draw_box(cx - ff_w/2, y, ff_w, ff_h, C_LINEAR, 'Feed-Forward',
+                 f'Linear({n_embd},{ffwd_hidden_dim})\nReLU\u2192Linear({ffwd_hidden_dim},{n_embd})', fs=8, sub_fs=6)
+        draw_arrow(plus1_cx, y_plus1_b, cx, y)
+        y_ff_b = y + ff_h
+        y += ff_h + vgap * 0.7
+
+        # ── Residual add #2 (+) ────────────────────────────────────
+        plus2_cx, plus2_y = cx, y + r_plus
+        draw_circle(plus2_cx, plus2_y, r_plus)
+        draw_arrow(cx, y_ff_b, plus2_cx, plus2_y - r_plus)
+        # Skip connection: route down the LEFT side (around FFN)
+        ax.plot([plus1_cx - r_plus, skip_x], [plus1_y, plus1_y],
+                color=C_RESID, lw=_resid_lw, linestyle='--', zorder=2, clip_on=False)
+        ax.plot([skip_x, skip_x], [plus1_y, plus2_y],
+                color=C_RESID, lw=_resid_lw, linestyle='--', zorder=2, clip_on=False)
+        draw_arrow(skip_x, plus2_y, plus2_cx - r_plus, plus2_y, color=C_RESID, lw=_resid_lw)
+        ax.text(skip_x - 4, (plus1_y + plus2_y) / 2, 'skip', ha='right', va='center',
+                fontsize=_resid_fs, color=C_RESID, fontfamily='sans-serif', fontstyle='italic', zorder=4)
+        y_plus2_b = plus2_y + r_plus
+        y += 2 * r_plus + vgap * 0.7
+
+        # ── LM Head ───────────────────────────────────────────────
+        lm_w, lm_h = 100, vh
+        y_lm_top = y
+        draw_box(cx - lm_w/2, y, lm_w, lm_h, C_OUTPUT, 'LM Head', f'Linear({n_embd},{vocab_size})', fs=8, sub_fs=6)
+        draw_arrow(plus2_cx, y_plus2_b, cx, y)
+        y_lm_b = y + lm_h
+        y += lm_h + vgap * 0.5
+
+        # ── Softmax → P(next) ─────────────────────────────────────
+        sm_w, sm_h = 60, vh
+        draw_box(cx - sm_w - 6, y, sm_w, sm_h, C_OUTPUT, 'Softmax', fs=8)
+        draw_box(cx + 6, y, sm_w, sm_h, C_OUTPUT, 'P(next)', f'({batch_size},{block_size},{vocab_size})', fs=8, sub_fs=6)
+        draw_arrow(cx, y_lm_b, cx - sm_w/2 - 6, y)
+        draw_arrow(cx - 6, y + sm_h/2, cx + 6, y + sm_h/2)
+
+        # ── Notation (top-right) ──────────────────────────────────
+        ax.text(W_px - 10, 20, 'Notation', ha='right', va='top', fontsize=8, fontweight='bold', color=C_STROKE, fontfamily='sans-serif')
+        for i, ln in enumerate([f'B={batch_size}', f'T={block_size}', f'C={n_embd}', f'd_k={head_size}', f'vocab={vocab_size}']):
+            ax.text(W_px - 10, 34 + i * 14, ln, ha='right', va='top', fontsize=7, color='#555', fontfamily='sans-serif')
+
+        # ── Legend (bottom, horizontal) ───────────────────────────
+        ly = H_px - 35
+        for i, (c, lbl) in enumerate([(C_EMBED, 'Embedding'), (C_ATTN, 'Attention'), (C_LINEAR, 'Feed-Forward'), (C_OUTPUT, 'Output')]):
+            ox = 20 + i * 95
+            fancy = FancyBboxPatch((ox, ly - 6), 12, 12, boxstyle="round,pad=0,rounding_size=2",
+                                   facecolor=c, edgecolor=C_STROKE, linewidth=0.8, zorder=3)
+            ax.add_patch(fancy)
+            ax.text(ox + 18, ly, lbl, ha='left', va='center', fontsize=8, color=C_STROKE, fontfamily='sans-serif', zorder=4)
+    else:
+        # Original horizontal layout
+        x = 30
+
+        # Input Tokens
+        inp_w = 88
+        draw_box(x, cy - bh/2, inp_w, bh, C_INPUT, 'Input\nTokens', f'({batch_size}, {block_size})')
+        x_inp_r = x + inp_w
+        x += inp_w + gap
+
+        # Token + Position Embeddings (stacked)
+        emb_w, emb_h = 115, 64
+        emb_gap = 14
+        emb_top_y = cy - emb_h - emb_gap / 2
+        emb_bot_y = cy + emb_gap / 2
+        draw_box(x, emb_top_y, emb_w, emb_h, C_EMBED, 'Token Emb', f'({vocab_size}, {n_embd})')
+        draw_box(x, emb_bot_y, emb_w, emb_h, C_EMBED, 'Position Emb', f'({block_size}, {n_embd})')
+        draw_arrow(x_inp_r, cy - 12, x, emb_top_y + emb_h / 2)
+        draw_arrow(x_inp_r, cy + 12, x, emb_bot_y + emb_h / 2)
+        x_emb_r = x + emb_w
+        x += emb_w + gap
+
+        # Add embeddings (+)
+        plus0_cx = x + r_plus
+        draw_circle(plus0_cx, cy, r_plus)
+        draw_arrow(x_emb_r, emb_top_y + emb_h / 2, plus0_cx - r_plus, cy - 6)
+        draw_arrow(x_emb_r, emb_bot_y + emb_h / 2, plus0_cx - r_plus, cy + 6)
+        # Shape label above
+        ax.text(plus0_cx, emb_top_y - 14, f'x : (B,T,C) = ({batch_size},{block_size},{n_embd})',
+                ha='center', va='center', fontsize=8, color='#777', fontfamily='sans-serif')
+        x_add0_r = plus0_cx + r_plus
+        x = x_add0_r + gap
+
+        # ── Self-Attention block ────────────────────────────────────────────
+        attn_x0 = x - 8
+
+        # W_Q, W_K, W_V (stacked)
+        qkv_w, qkv_h, qkv_gap = 66, 44, 8
+        total_qkv = 3 * qkv_h + 2 * qkv_gap
+        qkv_top = cy - total_qkv / 2
+        qkv_cy_list = []
+        for i, lbl in enumerate(['W_Q', 'W_K', 'W_V']):
+            by = qkv_top + i * (qkv_h + qkv_gap)
+            draw_box(x, by, qkv_w, qkv_h, C_ATTN, lbl, f'{n_embd}\u2192{head_size}', fs=10, sub_fs=8)
+            qkv_cy_list.append(by + qkv_h / 2)
+        # Fan-out arrows from + to each W_Q/W_K/W_V — use a short horizontal
+        # trunk then individual branches so arrows don't cross through boxes
+        fan_x = x_add0_r + (x - x_add0_r) * 0.5  # midpoint of gap
+        # Trunk: horizontal line from + to the fan point
+        ax.plot([x_add0_r, fan_x], [cy, cy],
                 color=C_STROKE, lw=1.3, zorder=5, solid_capstyle='round')
-        draw_arrow(fan_x, yc, x, yc, lw=1.3)
-    x_qkv_r = x + qkv_w
-    x += qkv_w + gap
+        # Branches: from fan point to each QKV box
+        for yc in qkv_cy_list:
+            ax.plot([fan_x, fan_x], [cy, yc],
+                    color=C_STROKE, lw=1.3, zorder=5, solid_capstyle='round')
+            draw_arrow(fan_x, yc, x, yc, lw=1.3)
+        x_qkv_r = x + qkv_w
+        x += qkv_w + gap
 
-    # QK^T / sqrt(dk)
-    dot_w = 80
-    x_dot_l = x
-    draw_box(x, cy - bh/2, dot_w, bh, C_ATTN, 'QK\u1d40 / \u221Ad\u2096', fs=10)
-    # Q → top of QK^T, K → bottom of QK^T (short horizontal arrows)
-    draw_arrow(x_qkv_r, qkv_cy_list[0], x, cy - 12)
-    draw_arrow(x_qkv_r, qkv_cy_list[1], x, cy + 12)
-    x_dot_r = x + dot_w
-    x += dot_w + gap
+        # QK^T / sqrt(dk)
+        dot_w = 80
+        x_dot_l = x
+        draw_box(x, cy - bh/2, dot_w, bh, C_ATTN, 'QK\u1d40 / \u221Ad\u2096', fs=10)
+        # Q → top of QK^T, K → bottom of QK^T (short horizontal arrows)
+        draw_arrow(x_qkv_r, qkv_cy_list[0], x, cy - 12)
+        draw_arrow(x_qkv_r, qkv_cy_list[1], x, cy + 12)
+        x_dot_r = x + dot_w
+        x += dot_w + gap
 
-    # Causal Mask + Softmax
-    mask_w = 90
-    draw_box(x, cy - bh/2, mask_w, bh, C_ATTN, 'Causal Mask\n+ Softmax', fs=9.5)
-    draw_arrow(x_dot_r, cy, x, cy)
-    x_mask_r = x + mask_w
-    x += mask_w + gap
+        # Causal Mask + Softmax
+        mask_w = 90
+        draw_box(x, cy - bh/2, mask_w, bh, C_ATTN, 'Causal Mask\n+ Softmax', fs=9.5)
+        draw_arrow(x_dot_r, cy, x, cy)
+        x_mask_r = x + mask_w
+        x += mask_w + gap
 
-    # Attn × V
-    av_w = 78
-    x_av_l = x
-    draw_box(x, cy - bh/2, av_w, bh, C_ATTN, 'Attn \u00d7 V', fs=10.5)
-    # Attention weights → top of Attn×V
-    draw_arrow(x_mask_r, cy, x_av_l, cy - 8)
-    # V path: route BELOW the QK^T and Mask boxes to avoid crossing
-    # W_V right edge → down to below boxes → right → up into Attn×V bottom
-    v_route_y = cy + bh / 2 + 14  # below the main-flow boxes
-    v_start_x = x_qkv_r
-    v_start_y = qkv_cy_list[2]  # W_V center-y
-    v_end_x = x_av_l + av_w / 2  # center of Attn×V
-    v_end_y = cy + bh / 2       # bottom edge of Attn×V
-    # Draw the routed V path: right from W_V → down → across → up into Attn×V
-    ax.plot([v_start_x, v_start_x + 10], [v_start_y, v_start_y],
-            color=C_STROKE, lw=1.3, zorder=5, solid_capstyle='round')
-    ax.plot([v_start_x + 10, v_start_x + 10], [v_start_y, v_route_y],
-            color=C_STROKE, lw=1.3, zorder=5, solid_capstyle='round')
-    ax.plot([v_start_x + 10, v_end_x], [v_route_y, v_route_y],
-            color=C_STROKE, lw=1.3, zorder=5, solid_capstyle='round')
-    draw_arrow(v_end_x, v_route_y, v_end_x, v_end_y, lw=1.3)
-    # Label the V path
-    ax.text((v_start_x + 10 + v_end_x) / 2, v_route_y + 10, 'V',
-            ha='center', va='center', fontsize=9, fontweight='bold',
-            color=C_STROKE, fontfamily='sans-serif', zorder=6)
+        # Attn × V
+        av_w = 78
+        x_av_l = x
+        draw_box(x, cy - bh/2, av_w, bh, C_ATTN, 'Attn \u00d7 V', fs=10.5)
+        # Attention weights → top of Attn×V
+        draw_arrow(x_mask_r, cy, x_av_l, cy - 8)
+        # V path: route BELOW the QK^T and Mask boxes to avoid crossing
+        # W_V right edge → down to below boxes → right → up into Attn×V bottom
+        v_route_y = cy + bh / 2 + 14  # below the main-flow boxes
+        v_start_x = x_qkv_r
+        v_start_y = qkv_cy_list[2]  # W_V center-y
+        v_end_x = x_av_l + av_w / 2  # center of Attn×V
+        v_end_y = cy + bh / 2       # bottom edge of Attn×V
+        # Draw the routed V path: right from W_V → down → across → up into Attn×V
+        ax.plot([v_start_x, v_start_x + 10], [v_start_y, v_start_y],
+                color=C_STROKE, lw=1.3, zorder=5, solid_capstyle='round')
+        ax.plot([v_start_x + 10, v_start_x + 10], [v_start_y, v_route_y],
+                color=C_STROKE, lw=1.3, zorder=5, solid_capstyle='round')
+        ax.plot([v_start_x + 10, v_end_x], [v_route_y, v_route_y],
+                color=C_STROKE, lw=1.3, zorder=5, solid_capstyle='round')
+        draw_arrow(v_end_x, v_route_y, v_end_x, v_end_y, lw=1.3)
+        # Label the V path
+        ax.text((v_start_x + 10 + v_end_x) / 2, v_route_y + 10, 'V',
+                ha='center', va='center', fontsize=9, fontweight='bold',
+                color=C_STROKE, fontfamily='sans-serif', zorder=6)
 
-    x_av_r = x + av_w
-    x += av_w + gap + 6
+        x_av_r = x + av_w
+        x += av_w + gap + 6
 
-    attn_x1 = x
+        attn_x1 = x
 
-    # Attention block outline (dashed) — must enclose V routing path
-    attn_pad = 14
-    attn_bottom = v_route_y + 22
-    attn_rect_top = qkv_top - 30
-    attn_rect = FancyBboxPatch(
-        (attn_x0 - attn_pad, attn_rect_top), attn_x1 - attn_x0 + 2 * attn_pad, attn_bottom - attn_rect_top,
-        boxstyle="round,pad=0,rounding_size=10",
-        facecolor=C_ATTN_BG, edgecolor=C_ATTN_BD,
-        linewidth=1.4, linestyle='--', zorder=1)
-    ax.add_patch(attn_rect)
-    ax.text((attn_x0 + attn_x1) / 2, qkv_top - 16,
-            f'Self-Attention ({num_heads} head{"s" if num_heads > 1 else ""})',
-            ha='center', va='center', fontsize=10, fontweight='bold',
-            color=C_ATTN_BD, fontfamily='sans-serif', zorder=2)
+        # Attention block outline (dashed) — must enclose V routing path
+        attn_pad = 14
+        attn_bottom = v_route_y + 22
+        attn_rect_top = qkv_top - 30
+        attn_rect = FancyBboxPatch(
+            (attn_x0 - attn_pad, attn_rect_top), attn_x1 - attn_x0 + 2 * attn_pad, attn_bottom - attn_rect_top,
+            boxstyle="round,pad=0,rounding_size=10",
+            facecolor=C_ATTN_BG, edgecolor=C_ATTN_BD,
+            linewidth=1.4, linestyle='--', zorder=1)
+        ax.add_patch(attn_rect)
+        ax.text((attn_x0 + attn_x1) / 2, qkv_top - 16,
+                f'Self-Attention ({num_heads} head{"s" if num_heads > 1 else ""})',
+                ha='center', va='center', fontsize=10, fontweight='bold',
+                color=C_ATTN_BD, fontfamily='sans-serif', zorder=2)
 
-    # ── Post-attention ──────────────────────────────────────────────────
-    if use_residual:
-        # Residual add #1: x + attn_out
-        plus1_cx = x + r_plus
-        draw_circle(plus1_cx, cy, r_plus)
-        draw_arrow(x_av_r, cy, plus1_cx - r_plus, cy)
-        # Residual path: from embedding add (+0) down-across-up to +1
-        draw_residual(plus0_cx, cy + r_plus, plus1_cx, cy + r_plus,
-                      label='x (skip around attention)')
-        x_p1_r = plus1_cx + r_plus
-        x = x_p1_r + gap
-    else:
-        x_p1_r = x_av_r
-        x = x_av_r + gap
+        # ── Post-attention ──────────────────────────────────────────────────
+        if use_residual:
+            # Residual add #1: x + attn_out
+            plus1_cx = x + r_plus
+            draw_circle(plus1_cx, cy, r_plus)
+            draw_arrow(x_av_r, cy, plus1_cx - r_plus, cy)
+            # Residual path: from embedding add (+0) down-across-up to +1
+            draw_residual(plus0_cx, cy + r_plus, plus1_cx, cy + r_plus,
+                          label='x (skip around attention)')
+            x_p1_r = plus1_cx + r_plus
+            x = x_p1_r + gap
+        else:
+            x_p1_r = x_av_r
+            x = x_av_r + gap
 
-    # Feed-Forward
-    ff_w = 125
-    draw_box(x, cy - bh/2, ff_w, bh, C_LINEAR, 'Feed-Forward',
-             f'Linear({n_embd},{ffwd_hidden_dim})\nReLU \u2192 Linear({ffwd_hidden_dim},{n_embd})',
-             sub_fs=8)
-    draw_arrow(x_p1_r, cy, x, cy)
-    x_ff_r = x + ff_w
-    x += ff_w + gap
+        # Feed-Forward
+        ff_w = 125
+        draw_box(x, cy - bh/2, ff_w, bh, C_LINEAR, 'Feed-Forward',
+                 f'Linear({n_embd},{ffwd_hidden_dim})\nReLU \u2192 Linear({ffwd_hidden_dim},{n_embd})',
+                 sub_fs=8)
+        draw_arrow(x_p1_r, cy, x, cy)
+        x_ff_r = x + ff_w
+        x += ff_w + gap
 
-    if use_residual:
-        # Residual add #2: x + ffwd(x)
-        plus2_cx = x + r_plus
-        draw_circle(plus2_cx, cy, r_plus)
-        draw_arrow(x_ff_r, cy, plus2_cx - r_plus, cy)
-        # Residual path: from +1 down-across-up to +2
-        draw_residual(plus1_cx, cy + r_plus, plus2_cx, cy + r_plus,
-                      label='x (skip around FFN)')
-        x_p2_r = plus2_cx + r_plus
-        x = x_p2_r + gap
-    else:
-        x_p2_r = x_ff_r
-        x = x_ff_r + gap
+        if use_residual:
+            # Residual add #2: x + ffwd(x)
+            plus2_cx = x + r_plus
+            draw_circle(plus2_cx, cy, r_plus)
+            draw_arrow(x_ff_r, cy, plus2_cx - r_plus, cy)
+            # Residual path: from +1 down-across-up to +2
+            draw_residual(plus1_cx, cy + r_plus, plus2_cx, cy + r_plus,
+                          label='x (skip around FFN)')
+            x_p2_r = plus2_cx + r_plus
+            x = x_p2_r + gap
+        else:
+            x_p2_r = x_ff_r
+            x = x_ff_r + gap
 
-    # LM Head
-    lm_w = 88
-    draw_box(x, cy - bh/2, lm_w, bh, C_OUTPUT, 'LM Head',
-             f'Linear({n_embd}, {vocab_size})')
-    draw_arrow(x_p2_r, cy, x, cy)
-    x_lm_r = x + lm_w
-    x += lm_w + gap
+        # LM Head
+        lm_w = 88
+        draw_box(x, cy - bh/2, lm_w, bh, C_OUTPUT, 'LM Head',
+                 f'Linear({n_embd}, {vocab_size})')
+        draw_arrow(x_p2_r, cy, x, cy)
+        x_lm_r = x + lm_w
+        x += lm_w + gap
 
-    # Softmax
-    sm_w = 76
-    draw_box(x, cy - bh/2, sm_w, bh, C_OUTPUT, 'Softmax')
-    draw_arrow(x_lm_r, cy, x, cy)
-    x_sm_r = x + sm_w
-    x += sm_w + gap
+        # Softmax
+        sm_w = 76
+        draw_box(x, cy - bh/2, sm_w, bh, C_OUTPUT, 'Softmax')
+        draw_arrow(x_lm_r, cy, x, cy)
+        x_sm_r = x + sm_w
+        x += sm_w + gap
 
-    # Output Probabilities
-    out_w = 92
-    draw_box(x, cy - bh/2, out_w, bh, C_OUTPUT, 'P(next)',
-             f'({batch_size},{block_size},{vocab_size})')
-    draw_arrow(x_sm_r, cy, x, cy)
-    x += out_w + 30
+        # Output Probabilities
+        out_w = 92
+        draw_box(x, cy - bh/2, out_w, bh, C_OUTPUT, 'P(next)',
+                 f'({batch_size},{block_size},{vocab_size})')
+        draw_arrow(x_sm_r, cy, x, cy)
+        x += out_w + 30
 
-    # ── Notation (top-right) ────────────────────────────────────────────
-    nx = x - 115
-    ny = 22
-    ax.text(nx, ny, 'Notation', ha='left', va='top', fontsize=9.5,
-            fontweight='bold', color=C_STROKE, fontfamily='sans-serif')
-    for i, ln in enumerate([
-        f'B = {batch_size}  (batch)',
-        f'T = {block_size}  (sequence)',
-        f'C = {n_embd}  (n_embd)',
-        f'd_k = {head_size}  (head size)',
-        f'vocab = {vocab_size}',
-    ]):
-        ax.text(nx, ny + 18 + i * 15, ln, ha='left', va='top',
-                fontsize=8, color='#555', fontfamily='sans-serif')
+        # ── Notation (top-right) ────────────────────────────────────────────
+        nx = x - 115
+        ny = 22
+        ax.text(nx, ny, 'Notation', ha='left', va='top', fontsize=9.5,
+                fontweight='bold', color=C_STROKE, fontfamily='sans-serif')
+        for i, ln in enumerate([
+            f'B = {batch_size}  (batch)',
+            f'T = {block_size}  (sequence)',
+            f'C = {n_embd}  (n_embd)',
+            f'd_k = {head_size}  (head size)',
+            f'vocab = {vocab_size}',
+        ]):
+            ax.text(nx, ny + 18 + i * 15, ln, ha='left', va='top',
+                    fontsize=8, color='#555', fontfamily='sans-serif')
 
-    # ── Legend (bottom-left) ────────────────────────────────────────────
-    lx, ly = 30, H_px - 26
-    for i, (c, lbl) in enumerate([
-        (C_EMBED, 'Embedding'), (C_ATTN, 'Attention'),
-        (C_LINEAR, 'Feed-Forward'), (C_OUTPUT, 'Output'),
-    ]):
-        ox = lx + i * 120
-        fancy = FancyBboxPatch((ox, ly - 7), 14, 14,
-                               boxstyle="round,pad=0,rounding_size=3",
-                               facecolor=c, edgecolor=C_STROKE, linewidth=0.8, zorder=3)
-        ax.add_patch(fancy)
-        ax.text(ox + 20, ly, lbl, ha='left', va='center',
-                fontsize=8.5, color=C_STROKE, fontfamily='sans-serif', zorder=4)
+        # ── Legend (bottom-left) ────────────────────────────────────────────
+        lx, ly = 30, H_px - 26
+        for i, (c, lbl) in enumerate([
+            (C_EMBED, 'Embedding'), (C_ATTN, 'Attention'),
+            (C_LINEAR, 'Feed-Forward'), (C_OUTPUT, 'Output'),
+        ]):
+            ox = lx + i * 120
+            fancy = FancyBboxPatch((ox, ly - 7), 14, 14,
+                                   boxstyle="round,pad=0,rounding_size=3",
+                                   facecolor=c, edgecolor=C_STROKE, linewidth=0.8, zorder=3)
+            ax.add_patch(fancy)
+            ax.text(ox + 20, ly, lbl, ha='left', va='center',
+                    fontsize=8.5, color=C_STROKE, fontfamily='sans-serif', zorder=4)
 
-    # ── finalise axes limits ────────────────────────────────────────────
-    W_px = x + 20
-    ax.set_xlim(0, W_px)
-    ax.set_aspect('equal')
+        # ── finalise axes limits ────────────────────────────────────────────
+        W_px = x + 20
+        ax.set_xlim(0, W_px)
+        ax.set_aspect('equal')
 
     # ── save ────────────────────────────────────────────────────────────
     if save_path:
@@ -4529,13 +4974,17 @@ def plot_qk_embedding_space(model, itos, save_path: str = None, step_label: int 
         K_2d = combined_2d[num_combinations:]
     
     # Create single large figure
-    fig, ax = plt.subplots(figsize=(20, 16))
+    if _JOURNAL_MODE:
+        fig, ax = plt.subplots(figsize=(7.0, 6.0))
+    else:
+        fig, ax = plt.subplots(figsize=(20, 16))
     if step_label is not None:
-        fig.suptitle(f"Step: {step_label}", fontsize=18, fontweight="bold", y=0.98)
-    label_fontsize = 20
-    title_fontsize = 24
-    axis_fontsize = 24
-    tick_fontsize = 22
+        _suptitle_fs = 10 if _JOURNAL_MODE else 18
+        fig.suptitle(f"Step: {step_label}", fontsize=_suptitle_fs, fontweight="bold", y=0.98)
+    label_fontsize = 9 if _JOURNAL_MODE else 20
+    title_fontsize = 9 if _JOURNAL_MODE else 24
+    axis_fontsize = 8 if _JOURNAL_MODE else 24
+    tick_fontsize = 7 if _JOURNAL_MODE else 22
 
     # Plot invisible scatter points (for axis scaling)
     all_x = np.concatenate([Q_2d[:, 0], K_2d[:, 0]])
@@ -4564,7 +5013,8 @@ def plot_qk_embedding_space(model, itos, save_path: str = None, step_label: int 
         Patch(facecolor='blue', edgecolor='black', label='Query'),
         Patch(facecolor='red', edgecolor='black', label='Key'),
     ]
-    leg = ax.legend(handles=legend_handles, loc='upper left', fontsize=axis_fontsize)
+    _leg_fs = 8 if _JOURNAL_MODE else axis_fontsize
+    leg = ax.legend(handles=legend_handles, loc='upper left', fontsize=_leg_fs)
 
     plt.tight_layout()
 
@@ -4644,12 +5094,15 @@ def plot_qk_embedding_space_focused_query(model, itos, token_str="+", position=5
     # At each (x,y) the "key" is (x,y); dot product with q_focus
     dot_grid = Xgrid * q_focus[0] + Ygrid * q_focus[1]
 
-    fig, ax = plt.subplots(figsize=(14, 12))
+    if _JOURNAL_MODE:
+        fig, ax = plt.subplots(figsize=(7.0, 6.0))
+    else:
+        fig, ax = plt.subplots(figsize=(14, 12))
     label_fontsize = 12
-    title_fontsize = 18
-    axis_fontsize = 20
-    tick_fontsize = 18
-    legend_fontsize = 14
+    title_fontsize = 12 if _JOURNAL_MODE else 18
+    axis_fontsize = 9 if _JOURNAL_MODE else 20
+    tick_fontsize = 7 if _JOURNAL_MODE else 18
+    legend_fontsize = 7 if _JOURNAL_MODE else 14
 
     # Background heatmap (dot product with focus query)
     im = ax.pcolormesh(xx, yy, dot_grid, cmap='Greens', shading='auto', zorder=0)
@@ -5043,10 +5496,13 @@ def plot_final_on_output_heatmap_grid(
     probs = np.exp(logits - logits.max(axis=1, keepdims=True))
     probs /= probs.sum(axis=1, keepdims=True)
 
-    # 2 rows x 6 cols for rectangular layout (same as other heatmap grids)
-    n_cols = min(6, vocab_size)
+    # Journal: 4 cols for A4; else 6 cols.
+    n_cols = min(4 if _JOURNAL_MODE else 6, vocab_size)
     n_rows = (vocab_size + n_cols - 1) // n_cols
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
+    if _JOURNAL_MODE:
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(7.0, 5.5), sharex=True, sharey=True)
+    else:
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
     if n_rows == 1 and n_cols == 1:
         axes = np.array([[axes]])
     elif n_rows == 1:
@@ -5086,6 +5542,8 @@ def plot_final_on_output_heatmap_grid(
         seq_str += "..."
     fig.suptitle(f"Final (embed+V_transformed) on output heatmaps  |  {seq_str}", fontsize=11, fontweight='bold', y=1.01)
     plt.tight_layout()
+    if _JOURNAL_MODE:
+        plt.subplots_adjust(hspace=0.12, wspace=0.08)
     if save_path:
         plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')
         plt.close()
@@ -5169,10 +5627,13 @@ def plot_probability_heatmap_with_embeddings(
             labels.append(_token_pos_label(itos[token_idx], pos_idx))
     all_combinations = np.array(all_combinations)  # (vocab_size * block_size, 2)
 
-    # Create figure with one subplot per token (2 rows x 6 cols for rectangular layout)
-    n_cols = min(6, vocab_size)
+    # Create figure with one subplot per token. Journal: 4 cols for A4; else 6 cols.
+    n_cols = min(4 if _JOURNAL_MODE else 6, vocab_size)
     n_rows = (vocab_size + n_cols - 1) // n_cols
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
+    if _JOURNAL_MODE:
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(7.0, 5.5), sharex=True, sharey=True)
+    else:
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
     if step_label is not None:
         fig.suptitle(f"Step: {step_label}", fontsize=16, fontweight="bold", y=0.98)
     if n_rows == 1 and n_cols == 1:
@@ -5199,9 +5660,10 @@ def plot_probability_heatmap_with_embeddings(
         ax.axvline(x=0, color='white', linestyle='--', linewidth=1, alpha=0.5, zorder=15)
         
         # Overlay annotations only (no marker dots/circles)
+        _lbl_fs = 4 if _JOURNAL_MODE else 7
         for combo_idx, (emb, label) in enumerate(zip(all_combinations, labels)):
             if vocab_size * block_size <= 200:
-                ax.text(emb[0], emb[1], label, fontsize=7, ha='center', va='center',
+                ax.text(emb[0], emb[1], label, fontsize=_lbl_fs, ha='center', va='center',
                        color='white', weight='bold', zorder=6)
         
         ax.set_title(f"P(next = {itos[token_idx]})", fontsize=10)
@@ -5217,6 +5679,8 @@ def plot_probability_heatmap_with_embeddings(
         axes[row, col].axis('off')
 
     plt.tight_layout()
+    if _JOURNAL_MODE:
+        plt.subplots_adjust(hspace=0.12, wspace=0.08)
     if save_path:
         plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')
         plt.close()
@@ -5282,10 +5746,13 @@ def plot_probability_heatmap(
     probs = np.exp(logits - logits.max(axis=1, keepdims=True))
     probs /= probs.sum(axis=1, keepdims=True)             # (N, vocab_size)
 
-    # Create figure with one subplot per token (2 rows x 6 cols for rectangular layout)
-    n_cols = min(6, vocab_size)
+    # Create figure with one subplot per token. Journal: 4 cols for A4; else 6 cols.
+    n_cols = min(4 if _JOURNAL_MODE else 6, vocab_size)
     n_rows = (vocab_size + n_cols - 1) // n_cols
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
+    if _JOURNAL_MODE:
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(7.0, 5.5), sharex=True, sharey=True)
+    else:
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
     if step_label is not None:
         fig.suptitle(f"Step: {step_label}", fontsize=16, fontweight="bold", y=0.98)
     if n_rows == 1 and n_cols == 1:
@@ -5326,6 +5793,8 @@ def plot_probability_heatmap(
         axes[row, col].axis('off')
 
     plt.tight_layout()
+    if _JOURNAL_MODE:
+        plt.subplots_adjust(hspace=0.12, wspace=0.08)
     if save_path:
         plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')
         plt.close()
@@ -5406,10 +5875,13 @@ def plot_probability_heatmap_with_values(
     probs = np.exp(logits - logits.max(axis=1, keepdims=True))
     probs /= probs.sum(axis=1, keepdims=True)
 
-    # 2 rows x 6 cols for rectangular layout (same as probability_heatmap_with_embeddings)
-    n_cols = min(6, vocab_size)
+    # Journal: 4 cols for A4; else 6 cols.
+    n_cols = min(4 if _JOURNAL_MODE else 6, vocab_size)
     n_rows = (vocab_size + n_cols - 1) // n_cols
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
+    if _JOURNAL_MODE:
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(7.0, 5.5), sharex=True, sharey=True)
+    else:
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
     if step_label is not None:
         fig.suptitle(f"Step: {step_label}", fontsize=16, fontweight="bold", y=0.98)
     if n_rows == 1 and n_cols == 1:
@@ -5434,9 +5906,10 @@ def plot_probability_heatmap_with_values(
         ax.axvline(x=0, color='white', linestyle='--', linewidth=1, alpha=0.5, zorder=15)
 
         # Overlay annotations only (no marker dots/circles)
+        _v_lbl_fs = 4 if _JOURNAL_MODE else 7
         for v_vec, label in zip(all_V, labels):
             if vocab_size * block_size <= 200:
-                ax.text(v_vec[0], v_vec[1], label, fontsize=7, ha='center', va='center',
+                ax.text(v_vec[0], v_vec[1], label, fontsize=_v_lbl_fs, ha='center', va='center',
                        color='white', weight='bold', zorder=6)
 
         ax.set_title(f"P(next = {itos[token_idx]})", fontsize=10)
@@ -5451,6 +5924,8 @@ def plot_probability_heatmap_with_values(
         axes[row, col].axis('off')
 
     plt.tight_layout()
+    if _JOURNAL_MODE:
+        plt.subplots_adjust(hspace=0.12, wspace=0.08)
     if save_path:
         plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')
         plt.close()
@@ -5516,7 +5991,10 @@ def plot_qk_full_attention_heatmap(model, itos, save_path: str = None):
     masked_attention = np.where(causal_mask, attention_matrix, np.nan)
     
     # Create figure
-    fig, ax = plt.subplots(figsize=(20, 16))
+    if _JOURNAL_MODE:
+        fig, ax = plt.subplots(figsize=(7.0, 7.0))
+    else:
+        fig, ax = plt.subplots(figsize=(20, 16))
     
     # Use 'nipy_spectral' - maximum color divergence across full spectrum
     im = ax.imshow(masked_attention, cmap='nipy_spectral', aspect='auto')
@@ -5535,9 +6013,9 @@ def plot_qk_full_attention_heatmap(model, itos, save_path: str = None):
         ytick_labels.append(itos[t])
     
     ax.set_xticks(xtick_positions)
-    ax.set_xticklabels(xtick_labels, fontsize=9, fontweight='bold')
+    ax.set_xticklabels(xtick_labels, fontsize=18, fontweight='bold')
     ax.set_yticks(ytick_positions)
-    ax.set_yticklabels(ytick_labels, fontsize=9, fontweight='bold')
+    ax.set_yticklabels(ytick_labels, fontsize=18, fontweight='bold')
     
     # Add grid lines to separate token groups
     for t in range(vocab_size + 1):
@@ -5552,6 +6030,7 @@ def plot_qk_full_attention_heatmap(model, itos, save_path: str = None):
     # Colorbar
     cbar = plt.colorbar(im, ax=ax, shrink=0.6)
     cbar.set_label("Attention Score (pre-softmax)", fontsize=10)
+    cbar.ax.tick_params(labelsize=18)  # Make colorbar tick labels bigger
     
     plt.tight_layout()
     
@@ -5635,10 +6114,13 @@ def plot_qk_full_attention_heatmap_last_row(model, itos, save_path: str = None):
     plus_query_end = (plus_token_idx + 1) * block_size
     last_row_attention = masked_attention[plus_query_start:plus_query_end, :]  # (block_size, num_combinations)
     
-    # Create figure: 2 rows x 6 columns so subplots are larger and clearer
-    n_cols = 6
-    n_rows = 2
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 4.5 * n_rows), sharey=True)
+    # Journal: 4 cols for A4; else 6 cols.
+    n_cols = 4 if _JOURNAL_MODE else 6
+    n_rows = (vocab_size + n_cols - 1) // n_cols
+    if _JOURNAL_MODE:
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(7.0, 5.5), sharey=True)
+    else:
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 4.5 * n_rows), sharey=True)
     
     if n_rows == 1 and n_cols == 1:
         axes = np.array([[axes]])
@@ -5669,10 +6151,11 @@ def plot_qk_full_attention_heatmap_last_row(model, itos, save_path: str = None):
             ax.axvline(x=i - 0.5, color='white', linewidth=1, alpha=0.6)
         
         # Set ticks to show positions - make them larger and clearer
+        _tick_fs = 5 if _JOURNAL_MODE else 10
         ax.set_xticks(range(block_size))
-        ax.set_xticklabels([f"p{i}" for i in range(block_size)], fontsize=10)
+        ax.set_xticklabels([f"p{i}" for i in range(block_size)], fontsize=_tick_fs)
         ax.set_yticks(range(block_size))
-        ax.set_yticklabels([f"p{i}" for i in range(block_size)], fontsize=10)
+        ax.set_yticklabels([f"p{i}" for i in range(block_size)], fontsize=_tick_fs)
         
         # Title shows the Key Token - make it larger
         ax.set_title(f"Key: {itos[key_token_idx]}", fontsize=13, fontweight='bold', pad=10)

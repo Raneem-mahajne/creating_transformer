@@ -1,5 +1,7 @@
 """Plotting package for embeddings, attention, heatmaps, architecture."""
 from plotting.plots import (
+    set_journal_mode,
+    clear_journal_mode,
     annotate_sequence,
     sparse_ticks,
     plot_token_embeddings_heatmap,
@@ -47,6 +49,8 @@ from plotting.plots import (
 )
 
 __all__ = [
+    "set_journal_mode",
+    "clear_journal_mode",
     "annotate_sequence",
     "sparse_ticks",
     "plot_token_embeddings_heatmap",

@@ -60,7 +60,8 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
     """
     print(f"Starting with config: {config_name}")
     # Set seeds for reproducibility
-    seed = 42  # Fixed seed for all random operations
+    seed = 12
+    #8898  # Fixed seed for all random operations
     torch.manual_seed(seed)
     random.seed(seed)
     np.random.seed(seed)
@@ -105,6 +106,8 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
             create_output_heatmaps_video(config_name_actual, config, fps=fps, max_steps=None)
         return
     
+    journal = "--journal" in sys.argv
+
     # Handle visualize_only mode
     if visualize_only:
         if visualize_all:
@@ -118,19 +121,77 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
             reseed = "--reseed" in sys.argv
             if reseed:
                 subfolder = "seq_1"
-                seed = 123
-                seq_idx = 0  # start index; will search for first sequence with an odd number
-                print(f"Reseed run: different sequence (seed={seed}), saving to {subfolder}/ (will pick sequence with an odd)")
-                visualize_from_checkpoint(
-                    config_name_actual, checkpoint_data, config, step=step,
-                    plots_subfolder=subfolder, sequence_seed=seed, sequence_index=seq_idx,
-                    require_odd_in_sequence=True,
-                )
+                from visualize import _has_two_plus_with_different_even_numbers
+                from checkpoint import create_decode_from_itos
+                
+                # Generate sequences and search for pattern with 2 plus signs followed by different even numbers
+                model = checkpoint_data["model"]
+                vocab_size = checkpoint_data["vocab_size"]
+                itos = checkpoint_data["itos"]
+                if "decode" in checkpoint_data:
+                    decode = checkpoint_data["decode"]
+                else:
+                    decode = create_decode_from_itos(itos)
+                
+                data_config = config["data"]
+                model_config = checkpoint_data["model_config"]
+                block_size = model_config["block_size"]
+                found_sequence = None
+                max_attempts = 200
+                
+                print(f"Searching generated sequences for pattern: exactly 2 plus signs, each followed by different even numbers (within block_size={block_size})...")
+                for attempt in range(max_attempts):
+                    seed = random.randint(100000, 999999)
+                    random.seed(seed)
+                    torch.manual_seed(seed)
+                    np.random.seed(seed)
+                    
+                    # Generate multiple sequences, try shorter lengths to fit within block_size
+                    generated_sequences = []
+                    for _ in range(20):  # Generate more sequences per seed
+                        # Try shorter sequences first to increase chance of fitting in block_size
+                        seq_length = random.randint(block_size, min(block_size + 5, data_config["max_length"]))
+                        start_token = random.randint(0, vocab_size - 1)
+                        start = torch.tensor([[start_token]], dtype=torch.long)
+                        sample = model.generate(start, max_new_tokens=seq_length - 1)[0].tolist()
+                        decoded = decode(sample)
+                        generated_sequences.append(decoded)
+                        
+                        # Check if this sequence matches the pattern
+                        # Also ensure both plus signs are within block_size
+                        if _has_two_plus_with_different_even_numbers(decoded):
+                            # Check that both plus signs are within block_size
+                            plus_positions = [i for i, token in enumerate(decoded) if token == "+"]
+                            if len(plus_positions) == 2 and plus_positions[1] < block_size:
+                                found_sequence = decoded
+                                plus_count = sum(1 for t in decoded if t == "+")
+                                print(f"Found matching sequence (attempt {attempt + 1}, seed {seed}): {' '.join(str(t) for t in decoded)}")
+                                print(f"  Plus signs count: {plus_count}, Sequence length: {len(decoded)}, Both pluses at positions: {plus_positions}")
+                                break
+                    
+                    if found_sequence:
+                        break
+                
+                if found_sequence:
+                    print(f"Using found sequence: {' '.join(str(t) for t in found_sequence)}, saving to {subfolder}/")
+                    visualize_from_checkpoint(
+                        config_name_actual, checkpoint_data, config, step=step,
+                        plots_subfolder=subfolder, fixed_sequence_decoded=found_sequence,
+                        generate_journal=journal,
+                    )
+                else:
+                    print(f"Warning: Could not find matching sequence after {max_attempts} attempts. Using default.")
+                    visualize_from_checkpoint(
+                        config_name_actual, checkpoint_data, config, step=step,
+                        plots_subfolder=subfolder, fixed_sequence_decoded=[3, "+", 4, 1, 6, 6, "+", 6],
+                        generate_journal=journal,
+                    )
             else:
-                # Default run: use fixed sequence "10 + 10 6 + 6 4 8" for main plots
+                # Default run: use fixed sequence "4 9 + 4 5 1 + 4" for main plots
                 visualize_from_checkpoint(
                     config_name_actual, checkpoint_data, config, step=step,
-                    fixed_sequence_decoded=[10, "+", 10, 6, "+", 6, 4, 8],
+                    fixed_sequence_decoded=[4, 9, "+", 4, 5, 1, "+", 4],
+                    generate_journal=journal,
                 )
         return
     
@@ -336,7 +397,7 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
     batch_size = training_config.get('batch_size', 4)  # For getting batches for visualization
     
     # Generate visualizations for final checkpoint
-    visualize_from_checkpoint(config_name_actual, checkpoint_data, config, step=None)
+    visualize_from_checkpoint(config_name_actual, checkpoint_data, config, step=None, generate_journal=journal)
 
 
 if __name__ == "__main__":
@@ -346,6 +407,7 @@ if __name__ == "__main__":
     #   python main.py <config_name> --visualize       # Only visualize (final checkpoint)
     #   python main.py <config_name> --visualize --step <step_num>  # Visualize specific step
     #   python main.py <config_name> --force-retrain    # Force retrain
+    #   python main.py <config_name> --visualize --journal  # Also generate A4 journal-sized plots in a4/ subfolder
     
     config_name = "plus_last_even"  # default
     force_retrain = False
