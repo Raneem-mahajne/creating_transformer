@@ -3271,13 +3271,13 @@ def plot_q_dot_product_gradients(model, X_list, itos, save_path=None, num_sequen
         wei_all.append(wei[0].cpu().numpy())
     Attention = np.stack(wei_all, axis=0).mean(axis=0)
 
-    # Grid: 2 rows of gradient panels + 1 row for heatmaps. Square content via set_aspect('equal') on axes.
-    n_rows, n_cols = 2, 4
-    height_ratios = [1, 1, 1.4]
-    fig = plt.figure(figsize=(4 * n_cols, 2.8 * n_rows + 4.0))
+    # Grid: 2 rows of gradient panels + 1 row for heatmaps. Make gradient cells square from actual positions.
+    n_rows, n_cols = 1, 4
+    height_ratios = [1, 1, 1.6]
+    fig = plt.figure(figsize=(12, 8))
     gs = GridSpec(3, n_cols, figure=fig,
-                  left=0.08, right=0.96, top=0.96, bottom=0.04,
-                  height_ratios=height_ratios)
+                  left=0.08, right=0.96, top=0.90, bottom=0.04,
+                  height_ratios=height_ratios, hspace=0.6)
     
     # Number of queries to show (up to 8)
     num_queries_to_show = min(8, T)
@@ -3294,6 +3294,12 @@ def plot_q_dot_product_gradients(model, X_list, itos, save_path=None, num_sequen
         col = idx % n_cols
         ax = fig.add_subplot(gs[row, col])
         _grad_axes.append(ax)
+        # # Resize figure so gradient cells are square (do once, from first cell's slot before aspect/plotting)
+        # if idx == 0:
+        #     pos = ax.get_position()
+        #     fig_h = 8.0
+        #     fig_w = fig_h * pos.height / pos.width
+        #     fig.set_size_inches(fig_w, fig_h)
         
         # Get the Q vector for this query
         q_focus_2d = Q_2d[idx]  # (2,)
@@ -3339,9 +3345,9 @@ def plot_q_dot_product_gradients(model, X_list, itos, save_path=None, num_sequen
             ax.set_ylabel("Dim 2" + (" (PCA)" if Q.shape[1] > 2 else ""), fontsize=10, labelpad=14)
         else:
             ax.set_ylabel("")
-        ax.set_title(f"Q: {_token_pos_label(tokens[idx], idx)}", fontsize=12, fontweight='bold', pad=5)
+        ax.set_title(f"Q: {_token_pos_label(tokens[idx], idx)}", fontsize=10, fontweight='normal', pad=5)
         ax.grid(True, alpha=0.3)
-        ax.set_aspect('equal', adjustable='box')
+        # ax.set_aspect('equal')
         ax.tick_params(axis='y', left=True, right=False, labelleft=True, labelright=False)
     
     # Row 3: masked QK^T (cols 0-1) and Attention (cols 2-3)
@@ -3360,33 +3366,21 @@ def plot_q_dot_product_gradients(model, X_list, itos, save_path=None, num_sequen
                vmin=-lim, vmax=lim, annot_kws={"fontsize": 6})
     ax_masked.set_xlabel("T", fontsize=10)
     ax_masked.set_ylabel("T", fontsize=10)
-    ax_masked.text(0.18, 1.08, "masked", transform=ax_masked.transAxes, ha='right', va='bottom', color='black', fontsize=11)
-    ax_masked.text(0.24, 1.08, "Q", transform=ax_masked.transAxes, ha='left', va='bottom', color='blue', fontsize=11)
-    ax_masked.text(0.30, 1.08, "K", transform=ax_masked.transAxes, ha='left', va='bottom', color='red', fontsize=11)
-    ax_masked.text(0.36, 1.08, f"^T (T\u00d7T={T}\u00d7{T})", transform=ax_masked.transAxes, ha='left', va='bottom', fontsize=11)
+    ax_masked.set_title(r"masked $Q \cdot K^T$ ($T \times T = {} \times {}$)".format(T, T), fontsize=10, fontweight='normal', pad=6)
 
     ax_att = fig.add_subplot(gs[2, 2:4])
     sns.heatmap(Attention, cmap="jet", vmin=0.0, vmax=1.0,
                xticklabels=tokens, yticklabels=tokens, cbar=True, ax=ax_att)
     ax_att.set_xlabel("T", fontsize=10)
     ax_att.set_ylabel("T", fontsize=10)
-    ax_att.set_title(f"Attention (T\u00d7T={T}\u00d7{T})", fontsize=11, pad=14)
+    ax_att.set_title(r"Attention ($T \times T = {} \times {}$)".format(T, T), fontsize=10, fontweight='normal', pad=6)
 
     _label_panels(_grad_axes + [ax_masked, ax_att], fontsize=10)
 
-    # Add overall title with better positioning
-    fig.suptitle(f"Dot Product Gradients for Each Query\nSequence: {seq_str}", 
-                 fontsize=13, fontweight='bold', y=0.99)
-
     # Skip tight_layout to preserve equal-aspect gradient plots and our GridSpec spacing
 
-    # Bottom row section title: place well above the heatmaps so it doesn't collide with subplot (i) title
-    bbox = ax_masked.get_position()
-    _row_title_fs = 10 if _JOURNAL_MODE else 12
-    fig.text(0.5, bbox.ymax + 0.068, "Masked Q·K^T and Attention", ha='center', fontsize=_row_title_fs, fontweight='bold')
-
     if save_path:
-        plt.savefig(save_path, bbox_inches='tight', dpi=300, facecolor='white')
+        plt.savefig(save_path, dpi=300, facecolor='white')  # no bbox_inches='tight' to preserve square panels
         plt.close()
         print(f"Q dot product gradients plot saved to {save_path}")
     else:
