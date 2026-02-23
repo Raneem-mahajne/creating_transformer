@@ -33,6 +33,7 @@ from plotting import (
     plot_sequence_embeddings,
     plot_qk_full_attention_heatmap,
     plot_qk_full_attention_heatmap_last_row,
+    plot_qk_full_attention_combined,
     plot_lm_head_probability_heatmaps,
     plot_v_before_after_demo_sequences,
     plot_final_on_output_heatmap_grid,
@@ -267,6 +268,14 @@ def visualize_from_checkpoint(
             f.write(" ".join(str(i) for i in seq) + "\n")
     print(f"Generated {num_sequences_to_generate} sequences for step {step}")
 
+    _train_acc, _train_correct, _train_incorrect = plot_training_data_heatmap(
+        decoded_train_sequences,
+        generator,
+        save_path=_plot_path("training_data_heatmap.png"),
+        num_sequences=min(4, len(decoded_train_sequences)),
+        max_length=20,
+    )
+
     plot_learning_curve(
         steps_for_plot,
         train_loss_history,
@@ -274,14 +283,6 @@ def visualize_from_checkpoint(
         rule_error_history=rule_error_history,
         save_path=_plot_path("learning_curve.png"),
         eval_interval=eval_interval,
-    )
-
-    _train_acc, _train_correct, _train_incorrect = plot_training_data_heatmap(
-        decoded_train_sequences,
-        generator,
-        save_path=_plot_path("training_data_heatmap.png"),
-        num_sequences=min(4, len(decoded_train_sequences)),
-        max_length=20,
     )
 
     if generated_sequences_e0:
@@ -404,12 +405,17 @@ def visualize_from_checkpoint(
     plot_sequence_embeddings(
         model, X_consistent, itos, save_path=_plot_path("sequence_embeddings.png")
     )
-    plot_qk_full_attention_heatmap(
-        model, itos, save_path=_plot_path("qk_full_attention_heatmap.png")
-    )
-    plot_qk_full_attention_heatmap_last_row(
-        model, itos, save_path=_plot_path("qk_full_attention_heatmap_last_row.png")
-    )
+    if _is_journal_pass:
+        plot_qk_full_attention_combined(
+            model, itos, save_path=_plot_path("qk_full_attention_heatmap.png")
+        )
+    else:
+        plot_qk_full_attention_heatmap(
+            model, itos, save_path=_plot_path("qk_full_attention_heatmap.png")
+        )
+        plot_qk_full_attention_heatmap_last_row(
+            model, itos, save_path=_plot_path("qk_full_attention_heatmap_last_row.png")
+        )
     path_lm_head = _plot_path_if_in_manifest("lm_head_probability_heatmaps.png", manifest, config_name_actual, plots_dir)
     if path_lm_head:
         plot_lm_head_probability_heatmaps(model, itos, save_path=path_lm_head)
