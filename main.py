@@ -60,7 +60,7 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
     """
     print(f"Starting with config: {config_name}")
     # Set seeds for reproducibility
-    seed = 12
+    seed = 18
     #8898  # Fixed seed for all random operations
     torch.manual_seed(seed)
     random.seed(seed)
@@ -122,8 +122,8 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
             if reseed:
                 subfolder = "seq_1"
                 from visualize import _has_two_plus_with_different_even_numbers
-                from checkpoint import create_decode_from_itos
-                
+                from checkpoint import create_decode_from_itos as _create_decode
+
                 # Generate sequences and search for pattern with 2 plus signs followed by different even numbers
                 model = checkpoint_data["model"]
                 vocab_size = checkpoint_data["vocab_size"]
@@ -131,7 +131,7 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
                 if "decode" in checkpoint_data:
                     decode = checkpoint_data["decode"]
                 else:
-                    decode = create_decode_from_itos(itos)
+                    decode = _create_decode(itos)
                 
                 data_config = config["data"]
                 model_config = checkpoint_data["model_config"]
@@ -190,7 +190,7 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
                 # Default run: use fixed sequence "4 9 + 4 5 1 + 4" for main plots
                 visualize_from_checkpoint(
                     config_name_actual, checkpoint_data, config, step=step,
-                    fixed_sequence_decoded=[4, 9, "+", 4, 5, 1, "+", 4],
+                    fixed_sequence_decoded=[4, 9, "+", 4, 10, 7, "+", 10],  # from _try_seeds.py seed 20
                     generate_journal=journal,
                 )
         return

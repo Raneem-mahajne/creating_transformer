@@ -18,7 +18,7 @@ print(f"block_size={block_size}, vocab_size={vocab_size}")
 print(f"{'seed':>4}  sequence")
 print("-" * 70)
 
-for seed in range(1, 101):
+for seed in range(0, 101):
     random.seed(seed)
     torch.manual_seed(seed)
     np.random.seed(seed)
