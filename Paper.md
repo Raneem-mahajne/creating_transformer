@@ -172,6 +172,11 @@ The full 96×96 attention score matrix (Figure 10) confirms that this pattern ge
 ![Full Attention Matrix](plus_last_even/plots/a4/11_qk_full_heatmap.png)
 ***Figure 10.** Full 96×96 attention score matrix, organized as a 12×12 grid of token–token blocks.*
 
+For the demo sequence used in the sequence-trace section below, Figure 10a shows the dot-product gradient for each query position: each panel colors the Q/K plane by that query's dot product with keys, plus the masked Q·K<sup>⊤</sup> scores and the resulting attention weights. This makes the retrieval pattern explicit per position (e.g. the two `+` queries attend strongly to even-number keys).
+
+![Q dot product gradients](plus_last_even/plots/a4/15_q_dot_product_gradients.png)
+***Figure 10a.** Dot-product gradients for each query in the demo sequence, with masked Q·K<sup>⊤</sup> and attention heatmaps.*
+
 ### 5.6 What Gets Retrieved: The Value Space
 
 The Q/K geometry determines *where* the model looks; the value transformation determines *what information* it extracts. Figure 11 overlays the value-transformed vectors (W<sub>V</sub> applied to each token+position embedding) on the same probability heatmaps from Figure 6. The key observation is that the value vectors for each even number are positioned so that, after being selected by attention and summed, the resulting vector lands in the high-probability region for that even number in the output landscape. The model has learned a value transformation that is *coordinated* with the LM head's decision boundaries: V carries information in a form that the output layer can directly decode.
@@ -218,7 +223,7 @@ For the plus-last-even rule, the model's behavior decomposes into a five-step al
 
 2. **Detect the operator.** The query projection W<sub>Q</sub> maps the `+` embedding to a query vector that is geometrically distinct from number queries. The Q/K embedding space (Figure 8) shows `+` queries forming a separate cluster.
 
-3. **Retrieve the last even number.** The dot product between the `+` query and all keys yields high attention weight for even-number keys, with recency encoded in the positional component of the key layout. The focused-query analysis (Figure 9) and full attention matrix (Figure 10) make this retrieval pattern explicit.
+3. **Retrieve the last even number.** The dot product between the `+` query and all keys yields high attention weight for even-number keys, with recency encoded in the positional component of the key layout. The focused-query analysis (Figure 9) and full attention matrix (Figure 10) make this retrieval pattern explicit; the per-query gradient figure (Figure 10a) shows it for the demo sequence.
 
 4. **Route value through residual.** Attention selects the value vector at the most recent even-number position; the residual connection adds it to the current state. The residual stream visualization (Figure 15) shows the `+` position's representation being displaced toward the correct even number's region.
 

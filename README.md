@@ -304,13 +304,18 @@ To make the attention pattern even more concrete, Figure 9 isolates a single que
 ![Q/K Space Focus](plus_last_even/plots/a4/10_qk_space_focus.png)
 ***Figure 9.** Dot-product gradient for the query `+` at position 5. Green = high attention.*
 
-The full 96×96 attention score matrix (Figure 10) confirms that this pattern generalizes across all token–position combinations. The matrix is organized as a 12×12 grid of blocks, where each block represents one query-token versus one key-token, with the 8 positions arranged within each block. The bottom row — corresponding to `+` as the query token — is the most informative: even-number key columns (0, 2, 4, 6, 8, 10) show warm colors (high attention scores), while odd-number key columns show cool colors (low scores). The `+` operator attends selectively and strongly to even numbers, regardless of position. The training-dynamics animation (Figure 10a) shows this row sharpening from a diffuse pattern at initialization to the clean even/odd dichotomy observed in the final model.
+The full 96×96 attention score matrix (Figure 10) confirms that this pattern generalizes across all token–position combinations. The matrix is organized as a 12×12 grid of blocks, where each block represents one query-token versus one key-token, with the 8 positions arranged within each block. The bottom row — corresponding to `+` as the query token — is the most informative: even-number key columns (0, 2, 4, 6, 8, 10) show warm colors (high attention scores), while odd-number key columns show cool colors (low scores). The `+` operator attends selectively and strongly to even numbers, regardless of position. The training-dynamics animation (Figure 10b) shows this row sharpening from a diffuse pattern at initialization to the clean even/odd dichotomy observed in the final model.
 
 ![Full Attention Matrix](plus_last_even/plots/a4/11_qk_full_heatmap.png)
 ***Figure 10.** Full 96×96 attention score matrix, organized as a 12×12 grid of token–token blocks.*
 
+For the demo sequence used in the sequence-trace section below, Figure 10a shows the dot-product gradient for each query position: each panel colors the Q/K plane by that query's dot product with keys, plus the masked Q·K<sup>⊤</sup> scores and the resulting attention weights. This makes the retrieval pattern explicit per position (e.g. the two `+` queries attend strongly to even-number keys).
+
+![Q dot product gradients](plus_last_even/plots/a4/15_q_dot_product_gradients.png)
+***Figure 10a.** Dot-product gradients for each query in the demo sequence, with masked Q·K<sup>⊤</sup> and attention heatmaps.*
+
 ![Q/K + Attention over training](plus_last_even/plots/learning_dynamics/04_qk_space_plus_attention.gif)
-***Figure 10a.** Evolution of the attention matrix over training.*
+***Figure 10b.** Evolution of the attention matrix over training.*
 
 ### 5.6 What Gets Retrieved: The Value Space
 
@@ -358,7 +363,7 @@ For the plus-last-even rule, the model's behavior decomposes into a five-step al
 
 2. **Detect the operator.** The query projection W<sub>Q</sub> maps the `+` embedding to a query vector that is geometrically distinct from number queries. The Q/K embedding space (Figure 8) shows `+` queries forming a separate cluster.
 
-3. **Retrieve the last even number.** The dot product between the `+` query and all keys yields high attention weight for even-number keys, with recency encoded in the positional component of the key layout. The focused-query analysis (Figure 9) and full attention matrix (Figure 10) make this retrieval pattern explicit.
+3. **Retrieve the last even number.** The dot product between the `+` query and all keys yields high attention weight for even-number keys, with recency encoded in the positional component of the key layout. The focused-query analysis (Figure 9) and full attention matrix (Figure 10) make this retrieval pattern explicit; the per-query gradient figure (Figure 10a) shows it for the demo sequence.
 
 4. **Route value through residual.** Attention selects the value vector at the most recent even-number position; the residual connection adds it to the current state. The residual stream visualization (Figure 15) shows the `+` position's representation being displaced toward the correct even number's region.
 

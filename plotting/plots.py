@@ -2439,7 +2439,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         X_orig = all_combinations[:, [0, 1]]
         ax0.scatter(X_orig[:, 0], X_orig[:, 1], s=0, alpha=0)
         _lbl_fs = 6 if _JOURNAL_MODE else 9
-        _step = 4 if _JOURNAL_MODE and num_combinations > 48 else 1
+        _step = 1  # label all combinations
         _pe = [pe.withStroke(linewidth=2, foreground='white')] if _JOURNAL_MODE else []
         for i in range(0, len(labels), _step):
             ax0.text(X_orig[i, 0], X_orig[i, 1], labels[i], fontsize=_lbl_fs, ha='center', va='center',
@@ -2460,7 +2460,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         # 1D case
         X_orig_1d = all_combinations[:, 0]
         ax0.scatter(X_orig_1d, np.zeros_like(X_orig_1d), s=0, alpha=0)
-        _step_1d = 4 if _JOURNAL_MODE and num_combinations > 48 else 1
+        _step_1d = 1  # label all combinations
         for i in range(0, len(labels), _step_1d):
             ax0.text(X_orig_1d[i], 0, labels[i], fontsize=6 if _JOURNAL_MODE else 9, ha='center', va='center', rotation=90)
         _ttl0_1d = f"Original Token+Position Embeddings: Dim 0\n(All tokens, {num_combinations} combinations)"
@@ -2507,13 +2507,29 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax_empty.axis("off")
     _wr2, _wc2 = (2, 0) if _JOURNAL_MODE else (1, 1)
 
+    # Shared axis limits for Q/K/V bottom row so panel sizes and aspect are consistent
+    if head_size >= 2:
+        Q_2d = Q_transformed[:, [0, 1]]
+        K_2d = K_transformed[:, [0, 1]]
+        V_2d = V_transformed[:, [0, 1]]
+        _all_x = np.concatenate([Q_2d[:, 0], K_2d[:, 0], V_2d[:, 0]])
+        _all_y = np.concatenate([Q_2d[:, 1], K_2d[:, 1], V_2d[:, 1]])
+        _xmin, _xmax = _all_x.min(), _all_x.max()
+        _ymin, _ymax = _all_y.min(), _all_y.max()
+        _xspan = max(_xmax - _xmin, 0.5)
+        _yspan = max(_ymax - _ymin, 0.5)
+        _xm = 0.12 * _xspan
+        _ym = 0.12 * _yspan
+        _max_range = 12
+        _shared_xlim = (np.clip(_xmin - _xm, -_max_range, _max_range), np.clip(_xmax + _xm, -_max_range, _max_range))
+        _shared_ylim = (np.clip(_ymin - _ym, -_max_range, _max_range), np.clip(_ymax + _ym, -_max_range, _max_range))
+
     # Q-transformed
     _qk_lbl = 6 if _JOURNAL_MODE else 10
-    _qk_step = 4 if _JOURNAL_MODE and num_combinations > 48 else 1
+    _qk_step = 1  # label all combinations
     _qk_pe = [pe.withStroke(linewidth=2, foreground='white')] if _JOURNAL_MODE else []
     ax4 = fig.add_subplot(gs[_wr2, _wc2])
     if head_size >= 2:
-        Q_2d = Q_transformed[:, [0, 1]]
         ax4.scatter(Q_2d[:, 0], Q_2d[:, 1], s=0, alpha=0)
         for i in range(0, len(labels), _qk_step):
             ax4.text(Q_2d[i, 0], Q_2d[i, 1], labels[i], fontsize=_qk_lbl, ha='center', va='center',
@@ -2525,7 +2541,8 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax4.axhline(y=0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6, zorder=10)
         ax4.axvline(x=0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6, zorder=10)
         ax4.grid(True, alpha=0.3)
-        _set_reasonable_limits(ax4, Q_2d[:, 0], Q_2d[:, 1])
+        ax4.set_xlim(_shared_xlim)
+        ax4.set_ylim(_shared_ylim)
         ax4.set_aspect('equal', adjustable='box')
         if _JOURNAL_MODE:
             ax4.tick_params(axis='both', labelsize=7)
@@ -2545,7 +2562,6 @@ def plot_qkv_transformations(model, itos, save_path=None):
     # K-transformed
     ax5 = fig.add_subplot(gs[_wr2, _wc2 + 1])
     if head_size >= 2:
-        K_2d = K_transformed[:, [0, 1]]
         ax5.scatter(K_2d[:, 0], K_2d[:, 1], s=0, alpha=0)
         for i in range(0, len(labels), _qk_step):
             ax5.text(K_2d[i, 0], K_2d[i, 1], labels[i], fontsize=_qk_lbl, ha='center', va='center',
@@ -2557,7 +2573,8 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax5.axhline(y=0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6, zorder=10)
         ax5.axvline(x=0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6, zorder=10)
         ax5.grid(True, alpha=0.3)
-        _set_reasonable_limits(ax5, K_2d[:, 0], K_2d[:, 1])
+        ax5.set_xlim(_shared_xlim)
+        ax5.set_ylim(_shared_ylim)
         ax5.set_aspect('equal', adjustable='box')
         if _JOURNAL_MODE:
             ax5.tick_params(axis='both', labelsize=7)
@@ -2575,12 +2592,11 @@ def plot_qkv_transformations(model, itos, save_path=None):
     
     # V-transformed
     _v_lbl = 6 if _JOURNAL_MODE else 14
-    _v_step = 4 if _JOURNAL_MODE and num_combinations > 48 else 1
+    _v_step = 1  # label all combinations
     ax6 = fig.add_subplot(gs[_wr2, _wc2 + 2])
     v_color = 'green'
     
     if head_size >= 2:
-        V_2d = V_transformed[:, [0, 1]]
         ax6.scatter(V_2d[:, 0], V_2d[:, 1], s=0, alpha=0)
         _v_pe = [pe.withStroke(linewidth=2, foreground='white')] if _JOURNAL_MODE else []
         for i in range(0, len(labels), _v_step):
@@ -2594,7 +2610,8 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax6.axhline(y=0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6, zorder=10)
         ax6.axvline(x=0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6, zorder=10)
         ax6.grid(True, alpha=0.3)
-        _set_reasonable_limits(ax6, V_2d[:, 0], V_2d[:, 1])
+        ax6.set_xlim(_shared_xlim)
+        ax6.set_ylim(_shared_ylim)
         ax6.set_aspect('equal', adjustable='box')
         if _JOURNAL_MODE:
             ax6.tick_params(axis='both', labelsize=7)
@@ -3254,12 +3271,13 @@ def plot_q_dot_product_gradients(model, X_list, itos, save_path=None, num_sequen
         wei_all.append(wei[0].cpu().numpy())
     Attention = np.stack(wei_all, axis=0).mean(axis=0)
 
-    # Create grid: 2 rows of gradients + 1 tall row for matrices
+    # Grid: 2 rows of gradient panels + 1 row for heatmaps. Square content via set_aspect('equal') on axes.
     n_rows, n_cols = 2, 4
+    height_ratios = [1, 1, 1.4]
     fig = plt.figure(figsize=(4 * n_cols, 2.8 * n_rows + 4.0))
-    gs = GridSpec(3, n_cols, figure=fig, hspace=0.28, wspace=0.38,
+    gs = GridSpec(3, n_cols, figure=fig,
                   left=0.08, right=0.96, top=0.96, bottom=0.04,
-                  height_ratios=[1, 1, 1.4])
+                  height_ratios=height_ratios)
     
     # Number of queries to show (up to 8)
     num_queries_to_show = min(8, T)
@@ -3300,16 +3318,11 @@ def plot_q_dot_product_gradients(model, X_list, itos, save_path=None, num_sequen
                    fontsize=11, ha='center', va='center', 
                    color=color, fontweight='bold', alpha=alpha, zorder=2)
         
-        # Highlight the focus Q point
+        # Highlight the focus Q point (same font size as keys)
         ax.text(Q_2d[idx, 0], Q_2d[idx, 1],
                _token_pos_label(tokens[idx], idx),
-               fontsize=16, fontweight='bold', ha='center', va='center',
+               fontsize=11, fontweight='bold', ha='center', va='center',
                color='blue', zorder=3)
-
-        # Arrow from origin to the explicit query
-        ax.annotate('', xy=(q_focus_2d[0], q_focus_2d[1]), xytext=(0, 0),
-                    arrowprops=dict(arrowstyle='->', color='blue', lw=1.5, shrinkB=0),
-                    zorder=4)
 
         # Plot other Q points (lighter, but still readable)
         for q_idx in range(len(Q_2d)):
@@ -3322,7 +3335,10 @@ def plot_q_dot_product_gradients(model, X_list, itos, save_path=None, num_sequen
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(y_min, y_max)
         ax.set_xlabel("Dim 1" + (" (PCA)" if Q.shape[1] > 2 else ""), fontsize=10)
-        ax.set_ylabel("Dim 2" + (" (PCA)" if Q.shape[1] > 2 else ""), fontsize=10, labelpad=14)
+        if col == 0:
+            ax.set_ylabel("Dim 2" + (" (PCA)" if Q.shape[1] > 2 else ""), fontsize=10, labelpad=14)
+        else:
+            ax.set_ylabel("")
         ax.set_title(f"Q: {_token_pos_label(tokens[idx], idx)}", fontsize=12, fontweight='bold', pad=5)
         ax.grid(True, alpha=0.3)
         ax.set_aspect('equal', adjustable='box')
@@ -5818,7 +5834,8 @@ def plot_probability_heatmap_with_embeddings(
     n_cols = min(3 if _JOURNAL_MODE else 6, vocab_size)
     n_rows = (vocab_size + n_cols - 1) // n_cols
     if _JOURNAL_MODE:
-        fig, axes = plt.subplots(n_rows, n_cols, figsize=(7.0, 8.0), sharex=True, sharey=True)
+        # Larger figsize so panels are less crowded (12 panels in 4x3 grid)
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(9.0, 11.0), sharex=True, sharey=True)
     else:
         fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
     if step_label is not None:
@@ -5864,7 +5881,7 @@ def plot_probability_heatmap_with_embeddings(
 
     plt.tight_layout()
     if _JOURNAL_MODE:
-        plt.subplots_adjust(hspace=0.12, wspace=0.08)
+        plt.subplots_adjust(hspace=0.14, wspace=0.10)
     if save_path:
         plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')
         plt.close()
@@ -6052,13 +6069,13 @@ def plot_probability_heatmap_with_values(
     probs = np.exp(logits - logits.max(axis=1, keepdims=True))
     probs /= probs.sum(axis=1, keepdims=True)
 
-    # Journal: 3 cols for A4; else 6 cols.
+    # Journal: 3 cols for A4; else 6 cols. No axis sharing so each panel has correct scale.
     n_cols = min(3 if _JOURNAL_MODE else 6, vocab_size)
     n_rows = (vocab_size + n_cols - 1) // n_cols
     if _JOURNAL_MODE:
-        fig, axes = plt.subplots(n_rows, n_cols, figsize=(7.0, 8.0), sharex=True, sharey=True)
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(7.0, 8.0))
     else:
-        fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows))
     if step_label is not None:
         fig.suptitle(f"Step: {step_label}", fontsize=16, fontweight="bold", y=0.98)
     if n_rows == 1 and n_cols == 1:
