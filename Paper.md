@@ -7,7 +7,7 @@
 
 ## 1. Introduction
 
-Understanding how transformers process sequences remains a central challenge in mechanistic interpretability. Large-scale models achieve strong performance but their internal representations are high-dimensional and opaque: one can probe attention or activations, but a *complete* picture of information flow from input to output remains elusive. At the other extreme, toy models on synthetic tasks are easier to analyze but often lack the full machinery of production transformers — attention over variable context, residual connections, and a learned output head.
+Understanding how transformers process sequences remains a central challenge in mechanistic interpretability. Large-scale models achieve strong performance but their internal representations are high-dimensional and opaque: one can probe attention or activations, but a *complete* picture of information flow from input to output remains elusive. 
 
 We bridge this gap with **minimal transformers**: models that retain the full structure of a decoder-only transformer (token and positional embeddings, single-head causal self-attention, residual connections, a feedforward layer, and an LM head) but are constrained to two-dimensional embeddings and head dimension. Every internal state — embeddings, queries, keys, values, attention outputs, residual sums, and pre-softmax logit vectors — lives in $\mathbb{R}^2$. No PCA, t-SNE, or UMAP is required; the model's geometry is directly visible in the plane.
 
@@ -16,10 +16,10 @@ We bridge this gap with **minimal transformers**: models that retain the full st
 1. Detect the `+` token via its query representation.
 2. Search backward over the context to find the most recent even number via query–key dot products.
 3. Retrieve that number's value vector through attention.
-4. Update the current state via the residual connection.
+4. Add that value to the '+' token's embedding (passed via the residual connection) to update its position in the LM head's input domain.
 5. Map the resulting 2D point to the correct output token via the LM head's decision boundaries.
 
-Each step is directly legible from the learned 2D layout. The figures presented in this paper make each step explicit.
+Each step is directly legible from the layout of the learned 2D information geometry. The figures presented in this paper make each step explicit.
 
 ---
 
