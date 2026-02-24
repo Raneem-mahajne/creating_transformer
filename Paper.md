@@ -1,7 +1,7 @@
 # Interpretable Minimal Transformers: Geometry as Algorithm
 
 > **Abstract.**
-> We present a framework for building and interpreting minimal transformer language models trained on procedurally generated integer sequences. By constraining the embedding dimension to n<sub>embd</sub> = 2 and the head size to d<sub>k</sub> = 2, we enable full two-dimensional visualization of every internal representation — embeddings, query/key/value transforms, attention outputs, residual streams, and the language-model head's decision boundaries. Our central claim is that **the learned geometry implies an algorithm**: the arrangement of points and boundaries in ℝ² can be read as a step-by-step procedure. For the *plus-last-even* task, the model encodes the `+` operator at a query position, attends to keys of the most recent even number, retrieves its value, and maps the resulting state into the correct output region via the residual connection and LM head. We introduce a suite of interpretability visualizations that make this algorithmic reading explicit, and provide training-evolution animations showing how the algorithmic geometry emerges during learning. The framework offers a pedagogical and experimental testbed where *seeing the geometry is seeing the algorithm*.
+> We present a framework for building and interpreting minimal transformer language models trained on procedurally generated integer sequences. By constraining the embedding dimension to $n_{\mathrm{embd}} = 2$ and the head size to $d_k = 2$, we enable full two-dimensional visualization of every internal representation — embeddings, query/key/value transforms, attention outputs, residual streams, and the language-model head's decision boundaries. Our central claim is that **the learned geometry implies an algorithm**: the arrangement of points and boundaries in $\mathbb{R}^2$ can be read as a step-by-step procedure. For the *plus-last-even* task, the model encodes the `+` operator at a query position, attends to keys of the most recent even number, retrieves its value, and maps the resulting state into the correct output region via the residual connection and LM head. We introduce a suite of interpretability visualizations that make this algorithmic reading explicit, and provide training-evolution animations showing how the algorithmic geometry emerges during learning. The framework offers a pedagogical and experimental testbed where *seeing the geometry is seeing the algorithm*.
 
 ---
 
@@ -9,7 +9,7 @@
 
 Understanding how transformers process sequences remains a central challenge in mechanistic interpretability. Large-scale models achieve strong performance but their internal representations are high-dimensional and opaque: one can probe attention or activations, but a *complete* picture of information flow from input to output remains elusive. At the other extreme, toy models on synthetic tasks are easier to analyze but often lack the full machinery of production transformers — attention over variable context, residual connections, and a learned output head.
 
-We bridge this gap with **minimal transformers**: models that retain the full structure of a decoder-only transformer (token and positional embeddings, single-head causal self-attention, residual connections, a feedforward layer, and an LM head) but are constrained to two-dimensional embeddings and head dimension. Every internal state — embeddings, queries, keys, values, attention outputs, residual sums, and pre-softmax logit vectors — lives in ℝ². No PCA, t-SNE, or UMAP is required; the model's geometry is directly visible in the plane.
+We bridge this gap with **minimal transformers**: models that retain the full structure of a decoder-only transformer (token and positional embeddings, single-head causal self-attention, residual connections, a feedforward layer, and an LM head) but are constrained to two-dimensional embeddings and head dimension. Every internal state — embeddings, queries, keys, values, attention outputs, residual sums, and pre-softmax logit vectors — lives in $\mathbb{R}^2$. No PCA, t-SNE, or UMAP is required; the model's geometry is directly visible in the plane.
 
 **Geometry implies an algorithm.** We argue that the model does not merely *use* geometry as an internal representation; the geometry *is* the algorithm. By "algorithm" we mean a step-by-step procedure that implements the task. For the *plus-last-even* rule — after seeing `+`, output the most recent even number — the procedure is:
 
@@ -60,12 +60,12 @@ See `configs/` for the full list of available rules.
 
 | Parameter | Value |
 |-----------|-------|
-| n<sub>embd</sub> | 2 |
-| Block size (T) | 8 |
+| $n_{\mathrm{embd}}$ | 2 |
+| Block size ($T$) | 8 |
 | Number of heads | 1 |
-| Head size (d<sub>k</sub>) | 2 |
-| Vocabulary size (V) | 12 (integers 0–10, operator +) |
-| Feed-forward hidden size | 16 × n<sub>embd</sub> = 32 |
+| Head size ($d_k$) | 2 |
+| Vocabulary size ($V$) | 12 (integers 0–10, operator +) |
+| Feed-forward hidden size | $16 \times n_{\mathrm{embd}} = 32$ |
 | Residual connections | Yes |
 
 The model is a single-layer, single-head decoder-only causal transformer:
@@ -74,19 +74,21 @@ The model is a single-layer, single-head decoder-only causal transformer:
 Input → [E + P] → x → Self-Attention → + residual → FFN → + residual → LM Head → softmax → P(next token)
 ```
 
-**Token embedding** E ∈ ℝ<sup>V×2</sup> maps each token to a point in ℝ². **Positional embedding** P ∈ ℝ<sup>T×2</sup> maps each position to a point in ℝ². The input representation at position *i* is **x**<sub>i</sub> = E<sub>t<sub>i</sub></sub> + P<sub>i</sub>.
+**Token embedding** $E \in \mathbb{R}^{V \times 2}$ maps each token to a point in $\mathbb{R}^2$. **Positional embedding** $P \in \mathbb{R}^{T \times 2}$ maps each position to a point in $\mathbb{R}^2$. The input representation at position $i$ is $\mathbf{x}_i = E_{t_i} + P_i$.
 
-**Self-attention** computes queries **q**<sub>i</sub> = W<sub>Q</sub> **x**<sub>i</sub>, keys **k**<sub>i</sub> = W<sub>K</sub> **x**<sub>i</sub>, and values **v**<sub>i</sub> = W<sub>V</sub> **x**<sub>i</sub>, with W<sub>Q</sub>, W<sub>K</sub>, W<sub>V</sub> ∈ ℝ<sup>2×2</sup>. Attention weights are computed as:
+**Self-attention** computes queries $\mathbf{q}_i = W_Q \cdot \mathbf{x}_i$, keys $\mathbf{k}_i = W_K \cdot \mathbf{x}_i$, and values $\mathbf{v}_i = W_V \cdot \mathbf{x}_i$, with $W_Q, W_K, W_V \in \mathbb{R}^{2 \times 2}$. Attention weights are computed as:
 
-> α<sub>ij</sub> = exp(**q**<sub>i</sub><sup>⊤</sup> **k**<sub>j</sub> / √d<sub>k</sub>) / Σ<sub>j'≤i</sub> exp(**q**<sub>i</sub><sup>⊤</sup> **k**<sub>j'</sub> / √d<sub>k</sub>)
+$$
+\alpha_{ij} = \frac{\exp(\mathbf{q}_i \cdot \mathbf{k}_j / \sqrt{d_k})}{\sum_{j' \leq i} \exp(\mathbf{q}_i \cdot \mathbf{k}_{j'} / \sqrt{d_k})}
+$$
 
-with a causal mask zeroing out j > i. The attention output at position *i* is Σ<sub>j</sub> α<sub>ij</sub> **v**<sub>j</sub>.
+with a causal mask zeroing out $j > i$. The attention output at position $i$ is $\sum_j \alpha_{ij} \mathbf{v}_j$ (a weighted sum of value vectors).
 
-**Residual connection.** The block output is **x**<sub>i</sub> + Attn(**x**)<sub>i</sub>, updating the state by adding the attention output to the current embedding.
+**Residual connection.** The block output is $\mathbf{x}_i + \mathrm{Attn}(\mathbf{x})_i$, updating the state by adding the attention output to the current embedding.
 
-**LM head.** A linear map **x** → **x** W<sub>lm</sub><sup>⊤</sup> + **b** produces logits over the vocabulary, followed by softmax.
+**LM head.** A linear map $\mathbf{x} \mapsto \mathbf{x} \cdot W_{\mathrm{lm}}^\top + \mathbf{b}$ produces logits over the vocabulary, followed by softmax.
 
-With n<sub>embd</sub> = 2 and d<sub>k</sub> = 2, every vector in this pipeline lives in ℝ². This is the key design choice: the model's full geometry is directly visible without dimensionality reduction.
+With $n_{\mathrm{embd}} = 2$ and $d_k = 2$, every vector in this pipeline lives in $\mathbb{R}^2$. This is the key design choice: the model's full geometry is directly visible without dimensionality reduction.
 
 ---
 
@@ -98,7 +100,7 @@ Training data consists of 2,000 sequences of length 20–50, generated by the pl
 
 ## 5. Results
 
-The full computation graph of the minimal transformer is shown in Figure 1. Every component — token and position embeddings, the single-head attention block with its W<sub>Q</sub>, W<sub>K</sub>, W<sub>V</sub> projections, the causal mask, residual connections, feed-forward network, and LM head — operates entirely in ℝ², making it possible to visualize each stage of the pipeline without any dimensionality reduction. All figures are located in `plus_last_even/plots/a4/` (A4 journal-sized).
+The full computation graph of the minimal transformer is shown in Figure 1. Every component — token and position embeddings, the single-head attention block with its $W_Q$, $W_K$, $W_V$ projections, the causal mask, residual connections, feed-forward network, and LM head — operates entirely in $\mathbb{R}^2$, making it possible to visualize each stage of the pipeline without any dimensionality reduction. All figures are located in `plus_last_even/plots/a4/` (A4 journal-sized).
 
 ![Architecture Overview](plus_last_even/plots/a4/01_architecture_overview.png)
 ***Figure 1.** Architecture of the minimal transformer.*
@@ -120,7 +122,7 @@ We first verify that training succeeds. We examine both the training data and th
 
 The first stage of the transformer maps each input token and position to a 2D vector. Figure 5 reveals that the learned embedding layer has already done significant organizational work before any attention occurs. In the token embedding scatter plot (bottom-left), the six even numbers (0, 2, 4, 6, 8, 10) cluster together in one region of the plane, the five odd numbers (1, 3, 5, 7, 9) cluster separately, and the `+` operator sits far from both groups as an isolated outlier. The model has discovered, without supervision, that the categories relevant to the rule — even numbers, odd numbers, and the operator — should occupy geometrically distinct regions.
 
-The position embeddings (bottom-center) form a near-linear vertical ladder, with p<sub>0</sub> at the bottom and p<sub>7</sub> at the top. This orderly arrangement allows the model to encode "how far back" a token is, which is essential for the "most recent" aspect of the rule. When token and position embeddings are summed (bottom-right), each token fans out into eight copies — one per position — shifted vertically by the position embedding. Crucially, even-number groups remain clearly separable from odd-number groups at every position, meaning the model can distinguish even from odd regardless of where in the context window a token appears.
+The position embeddings (bottom-center) form a near-linear vertical ladder, with $p_0$ at the bottom and $p_7$ at the top. This orderly arrangement allows the model to encode "how far back" a token is, which is essential for the "most recent" aspect of the rule. When token and position embeddings are summed (bottom-right), each token fans out into eight copies — one per position — shifted vertically by the position embedding. Crucially, even-number groups remain clearly separable from odd-number groups at every position, meaning the model can distinguish even from odd regardless of where in the context window a token appears.
 
 ![Token Embeddings](plus_last_even/plots/a4/05_token_embeddings.png)
 ***Figure 5.** Learned embeddings. Bottom row: 2D scatter of token (left), position (center), and combined (right) embeddings.*
@@ -129,20 +131,20 @@ This structure does not exist at initialization. Movie 1 shows the embedding spa
 
 ### 5.3 The Output Landscape: Where Representations Need to Land
 
-Before examining the attention mechanism, it is useful to understand the *destination*: given a 2D point after all processing, what does the model predict? The LM head is a linear map followed by softmax, so it partitions the 2D plane into decision regions — one per output token — separated by linear boundaries. Figure 6 makes this partition explicit. Each subplot shows the probability that the model assigns to one particular output token, evaluated at every point on the plane (yellow = high, purple ≈ 0), with all 96 token+position embeddings annotated at their starting coordinates.
+Before examining the attention mechanism, it is useful to understand the *destination*: given a 2D point after all processing, what does the model predict? The LM head is a linear map followed by softmax, so it partitions the 2D plane into decision regions — one per output token — separated by linear boundaries. Figure 6 makes this partition explicit. Each subplot shows the probability that the model assigns to one particular output token, evaluated at every point on the plane (yellow = high, purple $\approx 0$), with all 96 token+position embeddings annotated at their starting coordinates.
 
 Several observations are immediately apparent. First, each even number occupies its own distinct high-probability stripe. The stripe for token 0 lies in one part of the plane, the stripe for token 2 in another, and so on for 4, 6, 8, and 10 — they tile the region of the plane where `+` embeddings will land after attention processing. Second, the high-probability region for `+` as the next token spans the broad area where number embeddings reside, consistent with the 30% base rate of `+` in the training data. Third, odd numbers have their own probability regions, but these are less sharply defined because odd-number predictions are never required by the rule — they are only predicted at unconstrained positions.
 
-The critical implication is this: for the model to correctly output, say, token 8 after a `+`, the `+` position's representation must be *moved* — by attention and the residual connection — from its starting location in the `+` cluster to the specific stripe where P(next = 8) is high. The remaining figures will show exactly how the model accomplishes this movement.
+The critical implication is this: for the model to correctly output, say, token 8 after a `+`, the `+` position's representation must be *moved* — by attention and the residual connection — from its starting location in the `+` cluster to the specific stripe where $P(\text{next} = 8)$ is high. The remaining figures will show exactly how the model accomplishes this movement.
 
 ![Output Probability Heatmaps](plus_last_even/plots/a4/07_output_probs_embed.png)
-***Figure 6.** Output probability landscape. Each subplot shows P(next = token) over the 2D plane, with all token+position embeddings annotated.*
+***Figure 6.** Output probability landscape. Each subplot shows $P(\text{next} = \text{token})$ over the 2D plane, with all token+position embeddings annotated.*
 
 The output landscape and the embedding positions co-evolve during training (Movie 2). At initialization, the probability landscape is nearly uniform — no decision boundaries exist. As the model first learns token frequencies, broad regions form. These sharpen progressively into the final configuration where each even number has a well-defined, non-overlapping high-probability region in exactly the part of the plane that the attention mechanism will target.
 
 ### 5.4 The Attention Mechanism: Query, Key, and Value Projections
 
-The bridge between the starting embeddings and the output landscape is self-attention. The model applies three learned 2×2 linear transformations — W<sub>Q</sub>, W<sub>K</sub>, W<sub>V</sub> — to every token+position embedding, producing query, key, and value vectors respectively. Figure 7 shows these transformations and their effect. The original embedding space (top-left) is transformed into three distinct spaces: the query space (blue), the key space (red), and the value space (green). Each transformation stretches, rotates, and rearranges the points differently, reflecting the different roles these vectors play.
+The bridge between the starting embeddings and the output landscape is self-attention. The model applies three learned $2 \times 2$ linear transformations — $W_Q$, $W_K$, $W_V$ — to every token+position embedding, producing query, key, and value vectors respectively. Figure 7 shows these transformations and their effect. The original embedding space (top-left) is transformed into three distinct spaces: the query space (blue), the key space (red), and the value space (green). Each transformation stretches, rotates, and rearranges the points differently, reflecting the different roles these vectors play.
 
 The query and key transformations jointly determine *who attends to whom*: the dot product between a query and a key controls the attention weight. The value transformation determines *what information gets routed*: the attention-weighted sum of value vectors is what actually gets added to the residual stream. These three spaces must be coordinated — the Q/K geometry must select the right positions, and the V geometry must carry the right information to those positions. Movie 3 shows that early in training, all three projections produce nearly identical spaces, but they progressively specialize as the model learns to implement the rule.
 
@@ -162,7 +164,7 @@ But the rule demands more than just "attend to even numbers" — it requires att
 
 Movie 4 reveals how this structure develops over the course of training. At initialization, queries and keys are intermingled with no meaningful separation. Over the first several thousand steps, the `+` queries begin migrating away from the number queries. Simultaneously, even-number keys separate from odd-number keys along the axis that aligns with the `+` query direction. By the end of training, the geometry has converged to the configuration described above: a clear `+` query cluster aligned with even-number keys and orthogonal to odd-number keys.
 
-To make the attention pattern even more concrete, Figure 9 isolates a single query — `+` at position 5 — and colors the entire Q/K plane by its dot product with that query. The resulting gradient shows high values (green) concentrated at the locations of even-number keys at positions 0–4, and low values (white) at odd-number key locations. Keys at positions ≥ 5 are irrelevant due to the causal mask. This is the retrieval mechanism laid bare: the `+` query acts as a selective filter that picks out even-number keys from the past context, with recency biasing the selection toward the most recent one.
+To make the attention pattern even more concrete, Figure 9 isolates a single query — `+` at position 5 — and colors the entire Q/K plane by its dot product with that query. The resulting gradient shows high values (green) concentrated at the locations of even-number keys at positions 0–4, and low values (white) at odd-number key locations. Keys at positions $\geq 5$ are irrelevant due to the causal mask. This is the retrieval mechanism laid bare: the `+` query acts as a selective filter that picks out even-number keys from the past context, with recency biasing the selection toward the most recent one.
 
 ![Q/K Space Focus](plus_last_even/plots/a4/10_qk_space_focus.png)
 ***Figure 9.** Dot-product gradient for the query `+` at position 5. Green = high attention.*
@@ -172,14 +174,14 @@ The full 96×96 attention score matrix (Figure 10) confirms that this pattern ge
 ![Full Attention Matrix](plus_last_even/plots/a4/11_qk_full_heatmap.png)
 ***Figure 10.** Full 96×96 attention score matrix, organized as a 12×12 grid of token–token blocks.*
 
-For the demo sequence used in the sequence-trace section below, Figure 10a shows the dot-product gradient for each query position: each panel colors the Q/K plane by that query's dot product with keys, plus the masked Q·K<sup>⊤</sup> scores and the resulting attention weights. This makes the retrieval pattern explicit per position (e.g. the two `+` queries attend strongly to even-number keys).
+For the demo sequence used in the sequence-trace section below, Figure 10a shows the dot-product gradient for each query position: each panel colors the Q/K plane by that query's dot product with keys, plus the masked $Q \cdot K^\top$ scores and the resulting attention weights. This makes the retrieval pattern explicit per position (e.g. the two `+` queries attend strongly to even-number keys).
 
 ![Q dot product gradients](plus_last_even/plots/a4/15_q_dot_product_gradients.png)
-***Figure 10a.** Dot-product gradients for each query in the demo sequence, with masked Q·K<sup>⊤</sup> and attention heatmaps.*
+***Figure 10a.** Dot-product gradients for each query in the demo sequence, with masked $Q \cdot K^\top$ and attention heatmaps.*
 
 ### 5.6 What Gets Retrieved: The Value Space
 
-The Q/K geometry determines *where* the model looks; the value transformation determines *what information* it extracts. Figure 11 overlays the value-transformed vectors (W<sub>V</sub> applied to each token+position embedding) on the same probability heatmaps from Figure 6. The key observation is that the value vectors for each even number are positioned so that, after being selected by attention and summed, the resulting vector lands in the high-probability region for that even number in the output landscape. The model has learned a value transformation that is *coordinated* with the LM head's decision boundaries: V carries information in a form that the output layer can directly decode.
+The Q/K geometry determines *where* the model looks; the value transformation determines *what information* it extracts. Figure 11 overlays the value-transformed vectors ($W_V \cdot \mathbf{x}$ applied to each token+position embedding) on the same probability heatmaps from Figure 6. The key observation is that the value vectors for each even number are positioned so that, after being selected by attention and summed, the resulting vector lands in the high-probability region for that even number in the output landscape. The model has learned a value transformation that is *coordinated* with the LM head's decision boundaries: V carries information in a form that the output layer can directly decode.
 
 ![Probability Heatmap with V Values](plus_last_even/plots/a4/12_probability_heatmap_with_values.png)
 ***Figure 11.** Output probability landscape with value-transformed vectors overlaid (cf. Figure 6, which shows raw embeddings).*
@@ -208,7 +210,7 @@ The preceding analysis characterized the model's learned parameters in the abstr
 ![Residuals](plus_last_even/plots/a4/17_residuals.png)
 ***Figure 15.** Residual stream for the demo sequence. Bottom row: embeddings (a), attention output arrows (b), residual shift arrows (c), and final representations (d).*
 
-**Output verification.** Finally, Figure 16 provides the empirical proof that the full pipeline works. Each subplot overlays the post-residual positions on the output probability heatmaps from Figure 6. At every constrained position, the final representation — after attention has routed the correct value and the residual connection has shifted the state — sits squarely inside the high-probability region for the correct even number. The `+` at position 1 has been moved into the region where P(next = 10) is maximal. The `+` at position 4 has been moved into the region where P(next = 6) is maximal. The geometry has executed the algorithm: detect `+`, retrieve the most recent even number, route its value through the residual, and land in the correct output region.
+**Output verification.** Finally, Figure 16 provides the empirical proof that the full pipeline works. Each subplot overlays the post-residual positions on the output probability heatmaps from Figure 6. At every constrained position, the final representation — after attention has routed the correct value and the residual connection has shifted the state — sits squarely inside the high-probability region for the correct even number. The `+` at position 1 has been moved into the region where $P(\text{next} = 10)$ is maximal. The `+` at position 4 has been moved into the region where $P(\text{next} = 6)$ is maximal. The geometry has executed the algorithm: detect `+`, retrieve the most recent even number, route its value through the residual, and land in the correct output region.
 
 ![Final on Output Grid](plus_last_even/plots/a4/18_final_on_output_grid.png)
 ***Figure 16.** Final post-residual representations overlaid on the output probability landscape. Each `+` position lands in the high-probability region for the correct even number.*
@@ -219,15 +221,15 @@ The preceding analysis characterized the model's learned parameters in the abstr
 
 For the plus-last-even rule, the model's behavior decomposes into a five-step algorithm. Each step corresponds to a specific geometric structure visible in the preceding figures.
 
-1. **Encode.** Map each (token, position) pair to a 2D point: **x**<sub>i</sub> = E<sub>t<sub>i</sub></sub> + P<sub>i</sub>. The embedding scatter plots (Figure 5) show this mapping, with even numbers, odd numbers, and `+` occupying distinct regions.
+1. **Encode.** Map each (token, position) pair to a 2D point: $\mathbf{x}_i = E_{t_i} + P_i$. The embedding scatter plots (Figure 5) show this mapping, with even numbers, odd numbers, and `+` occupying distinct regions.
 
-2. **Detect the operator.** The query projection W<sub>Q</sub> maps the `+` embedding to a query vector that is geometrically distinct from number queries. The Q/K embedding space (Figure 8) shows `+` queries forming a separate cluster.
+2. **Detect the operator.** The query projection $W_Q$ maps the `+` embedding to a query vector that is geometrically distinct from number queries. The Q/K embedding space (Figure 8) shows `+` queries forming a separate cluster.
 
 3. **Retrieve the last even number.** The dot product between the `+` query and all keys yields high attention weight for even-number keys, with recency encoded in the positional component of the key layout. The focused-query analysis (Figure 9) and full attention matrix (Figure 10) make this retrieval pattern explicit; the per-query gradient figure (Figure 10a) shows it for the demo sequence.
 
 4. **Route value through residual.** Attention selects the value vector at the most recent even-number position; the residual connection adds it to the current state. The residual stream visualization (Figure 15) shows the `+` position's representation being displaced toward the correct even number's region.
 
-5. **Output.** The LM head partitions ℝ² into decision regions, one per token. The post-residual state lands in the region corresponding to the correct even number, and softmax produces the prediction. The output probability heatmaps (Figure 6) and the final-state overlay (Figure 16) confirm this.
+5. **Output.** The LM head partitions $\mathbb{R}^2$ into decision regions, one per token. The post-residual state lands in the region corresponding to the correct even number, and softmax produces the prediction. The output probability heatmaps (Figure 6) and the final-state overlay (Figure 16) confirm this.
 
 The geometry *is* the algorithm. There is no separate procedure hidden in the weights; the 2D arrangement of points and decision boundaries is itself the step-by-step computation the model executes.
 
@@ -235,7 +237,7 @@ The geometry *is* the algorithm. There is no separate procedure hidden in the we
 
 ## 7. Discussion
 
-**Why two dimensions?** Constraining n<sub>embd</sub> = 2 and d<sub>k</sub> = 2 sacrifices expressiveness for complete interpretability. The model must implement the rule in a low-dimensional space, which forces it to discover a compact solution. Every state and every boundary is directly visible without projection artifacts. For many procedural rules (copy-modulo, successor, plus-last-even), two dimensions suffice for high accuracy. For harder tasks, the framework could be extended to n<sub>embd</sub> = 4 or higher, using paired 2D projections to retain partial interpretability.
+**Why two dimensions?** Constraining $n_{\mathrm{embd}} = 2$ and $d_k = 2$ sacrifices expressiveness for complete interpretability. The model must implement the rule in a low-dimensional space, which forces it to discover a compact solution. Every state and every boundary is directly visible without projection artifacts. For many procedural rules (copy-modulo, successor, plus-last-even), two dimensions suffice for high accuracy. For harder tasks, the framework could be extended to $n_{\mathrm{embd}} = 4$ or higher, using paired 2D projections to retain partial interpretability.
 
 **Limitations.** (1) The rules are synthetic and the vocabulary is small; transfer to natural-language tasks or more complex reasoning remains an open question. (2) We use a single head and a single block; deeper or wider models would require dimensionality reduction or other tools. (3) Some rules may require more than two dimensions to learn efficiently; we have not systematically tested the minimal sufficient dimensionality. (4) The algorithmic reading is a qualitative interpretation of the geometry; we do not provide a formal proof that the model "implements" this algorithm, though the figures constitute strong evidence.
 
