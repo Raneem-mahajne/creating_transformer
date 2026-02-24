@@ -1,7 +1,7 @@
-# Interpretable Minimal Transformers: Geometry as Algorithm
+# Fully Interpretable Minimal Transformers: From Geometry to Algorithm
 
 > **Abstract.**
-> We present a framework for building and interpreting minimal transformer language models trained on procedurally generated integer sequences. By constraining the embedding dimension to $n_{\mathrm{embd}} = 2$ and the head size to $d_k = 2$, we enable full two-dimensional visualization of every internal representation — embeddings, query/key/value transforms, attention outputs, residual streams, and the language-model head's decision boundaries. Our central claim is that **the learned geometry implies an algorithm**: the arrangement of points and boundaries in $\mathbb{R}^2$ can be read as a step-by-step procedure. For the *plus-last-even* task, the model encodes the `+` operator at a query position, attends to keys of the most recent even number, retrieves its value, and maps the resulting state into the correct output region via the residual connection and LM head. We introduce a suite of interpretability visualizations that make this algorithmic reading explicit, and provide training-evolution animations showing how the algorithmic geometry emerges during learning. The framework offers a pedagogical and experimental testbed where *seeing the geometry is seeing the algorithm*.
+> We present a framework for building and interpreting minimal transformer language models trained on procedurally-generated integer sequences. By constraining the embedding dimension to $n_{\mathrm{embed}} = 2$ and the head size to $d_k = 2$, we enable full two-dimensional visualization of every internal representation — embeddings, query/key/value transforms, attention outputs, residual streams, and the language-model head's decision boundaries. Our central claim is that **the learned geometry implies an algorithm**: the arrangement of points and boundaries in $\mathbb{R}^2$ can be read as a step-by-step procedure. Using a simple task where the model must produce the most recent even number whenever it sees the '+' operator, we show how the model embeds the tokens and their respective positions in the sequence, transforms them via the Q, K, and V matrices, uses the dot product between the Q and K representations to form the attention matrix, and uses the attention matrix to select values that move the representation of each input token to the region of the domain of the LM head that will correctly predict the next token. We introduce a suite of interpretability visualizations that make the  algorithmic interpretation of this procedure explicit, and provide training-evolution animations showing how the algorithmic geometry emerges during learning. The framework offers a pedagogical and experimental testbed where *seeing the geometry is seeing the algorithm*.
 
 ---
 
@@ -60,12 +60,12 @@ See `configs/` for the full list of available rules.
 
 | Parameter | Value |
 |-----------|-------|
-| $n_{\mathrm{embd}}$ | 2 |
+| $n_{\mathrm{embed}}$ | 2 |
 | Block size ($T$) | 8 |
 | Number of heads | 1 |
 | Head size ($d_k$) | 2 |
 | Vocabulary size ($V$) | 12 (integers 0–10, operator +) |
-| Feed-forward hidden size | $16 \times n_{\mathrm{embd}} = 32$ |
+| Feed-forward hidden size | $16 \times n_{\mathrm{embed}} = 32$ |
 | Residual connections | Yes |
 
 The model is a single-layer, single-head decoder-only causal transformer:
@@ -88,7 +88,7 @@ with a causal mask zeroing out $j > i$. The attention output at position $i$ is 
 
 **LM head.** A linear map $\mathbf{x} \mapsto \mathbf{x} \cdot W_{\mathrm{lm}}^\top + \mathbf{b}$ produces logits over the vocabulary, followed by softmax.
 
-With $n_{\mathrm{embd}} = 2$ and $d_k = 2$, every vector in this pipeline lives in $\mathbb{R}^2$. This is the key design choice: the model's full geometry is directly visible without dimensionality reduction.
+With $n_{\mathrm{embed}} = 2$ and $d_k = 2$, every vector in this pipeline lives in $\mathbb{R}^2$. This is the key design choice: the model's full geometry is directly visible without dimensionality reduction.
 
 ---
 
@@ -237,7 +237,7 @@ The geometry *is* the algorithm. There is no separate procedure hidden in the we
 
 ## 7. Discussion
 
-**Why two dimensions?** Constraining $n_{\mathrm{embd}} = 2$ and $d_k = 2$ sacrifices expressiveness for complete interpretability. The model must implement the rule in a low-dimensional space, which forces it to discover a compact solution. Every state and every boundary is directly visible without projection artifacts. For many procedural rules (copy-modulo, successor, plus-last-even), two dimensions suffice for high accuracy. For harder tasks, the framework could be extended to $n_{\mathrm{embd}} = 4$ or higher, using paired 2D projections to retain partial interpretability.
+**Why two dimensions?** Constraining $n_{\mathrm{embed}} = 2$ and $d_k = 2$ sacrifices expressiveness for complete interpretability. The model must implement the rule in a low-dimensional space, which forces it to discover a compact solution. Every state and every boundary is directly visible without projection artifacts. For many procedural rules (copy-modulo, successor, plus-last-even), two dimensions suffice for high accuracy. For harder tasks, the framework could be extended to $n_{\mathrm{embed}} = 4$ or higher, using paired 2D projections to retain partial interpretability.
 
 **Limitations.** (1) The rules are synthetic and the vocabulary is small; transfer to natural-language tasks or more complex reasoning remains an open question. (2) We use a single head and a single block; deeper or wider models would require dimensionality reduction or other tools. (3) Some rules may require more than two dimensions to learn efficiently; we have not systematically tested the minimal sufficient dimensionality. (4) The algorithmic reading is a qualitative interpretation of the geometry; we do not provide a formal proof that the model "implements" this algorithm, though the figures constitute strong evidence.
 
