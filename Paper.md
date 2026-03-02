@@ -64,8 +64,9 @@ Input → [E + P] → x → Self-Attention → + residual → FFN → + residual
 **Self-attention** computes queries $\mathbf{q}_i = W_Q \cdot \mathbf{x}_i$, keys $\mathbf{k}_i = W_K \cdot \mathbf{x}_i$, and values $\mathbf{v}_i = W_V \cdot \mathbf{x}_i$, with $W_Q, W_K, W_V \in \mathbb{R}^{2 \times 2}$. Attention weights at position $i$ (over $j \leq i$, causal mask) are:
 
 $$
-\boldsymbol{\alpha}_i = \mathrm{softmax}\left(\frac{\mathbf{q}_i \cdot \mathbf{k}_{1:i}}{\sqrt{d_k}}\right).
+\boldsymbol{\alpha}_i = \mathrm{softmax}\left(\frac{\mathbf{q}_i^\top \mathbf{K}_{1:i}}{\sqrt{d_k}}\right),
 $$
+where $\mathbf{q}_i, \mathbf{k}_j \in \mathbb{R}^2$ (column vectors), $\mathbf{K}_{1:i} = [\mathbf{k}_1 \, \cdots \, \mathbf{k}_i] \in \mathbb{R}^{2 \times i}$, so $\mathbf{q}_i^\top \mathbf{K}_{1:i}$ is a row vector of length $i$ (one score per $j \leq i$; causal masking is implicit in the index range).
 
 The attention output at position $i$ is $\sum_j \alpha_{ij} \mathbf{v}_j$ (a weighted sum of value vectors).
 
