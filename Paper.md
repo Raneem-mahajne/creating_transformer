@@ -7,7 +7,7 @@
 
 ## 1. Introduction
 
-Understanding how transformers process sequences remains a central challenge in mechanistic interpretability. Large-scale models achieve strong performance but their internal representations are high-dimensional and opaque: one can probe attention or activations, but a *complete* picture of information flow from input to output remains elusive. 
+Understanding how transformers process sequences remains a central challenge in mechanistic interpretability. Large-scale models achieve strong performance but their internal representations are high-dimensional and opaque: one can probe attention or activations, but a complete picture of information flow from input to output remains elusive. 
 
 We bridge this gap with **minimal transformers**: models that retain the full structure of a decoder-only transformer (token and positional embeddings, single-head causal self-attention, residual connections, a feedforward layer, and an LM head) but are constrained to two-dimensional embeddings and head dimension. Every internal state — embeddings, queries, keys, values, attention outputs, residual sums, and pre-softmax logit vectors — lives in $\mathbb{R}^2$. No PCA, t-SNE, or UMAP is required; the model's geometry is directly visible in the plane.
 
@@ -39,21 +39,6 @@ The primary demonstration task is the **plus-last-even** rule. Sequences are gen
 
 Positions not immediately following `+` are unconstrained — any token may appear. The rule constrains only a fraction of positions; the remainder serve as context. The model must learn to (1) identify when the current position follows `+`, (2) scan backward through the context to locate the most recent even number, and (3) output that number with high probability. This is a non-trivial attention task: it requires routing information from a variable, content-dependent past position to the present.
 
-### 2.2 Additional Rules
-
-The framework supports multiple rules beyond plus-last-even. Each is specified by a procedural `generate_sequence` function and a `verify_sequence` function for evaluation:
-
-| Rule | Description |
-|------|-------------|
-| `plus_last_even` | After `+`, output the most recent even number |
-| `lucky7` | After `7`, output the token that appeared before the `7` |
-| `step_back` | Each token is one less than the previous |
-| `copy_modulo` | Copy with modular arithmetic |
-| `plus_max_of_two` | After `+`, output the maximum of the two preceding numbers |
-| `plus_means_even` | After `+`, output any even number |
-
-See `configs/` for the full list of available rules.
-
 ---
 
 ## 3. Model Architecture
@@ -74,21 +59,21 @@ The model is a single-layer, single-head decoder-only causal transformer:
 Input → [E + P] → x → Self-Attention → + residual → FFN → + residual → LM Head → softmax → P(next token)
 ```
 
-**Token embedding** $E \in \mathbb{R}^{V \times 2}$ maps each token to a point in $\mathbb{R}^2$. **Positional embedding** $P \in \mathbb{R}^{T \times 2}$ maps each position to a point in $\mathbb{R}^2$. The input representation at position $i$ is $\mathbf{x}_i = E_{t_i} + P_i$.
+**Token embedding:** $E \in \mathbb{R}^{V \times 2}$; the embedding of token $t$ is the row vector $\mathbf{e}_t \in \mathbb{R}^2$. **Positional embedding:** $P \in \mathbb{R}^{T \times 2}$; the embedding of position $i$ is $\mathbf{p}_i \in \mathbb{R}^2$. The input representation at position $i$ is $\mathbf{x}_i = \mathbf{e}_{t_i} + \mathbf{p}_i$.
 
-**Self-attention** computes queries $\mathbf{q}_i = W_Q \cdot \mathbf{x}_i$, keys $\mathbf{k}_i = W_K \cdot \mathbf{x}_i$, and values $\mathbf{v}_i = W_V \cdot \mathbf{x}_i$, with $W_Q, W_K, W_V \in \mathbb{R}^{2 \times 2}$. Attention weights are computed as:
+**Self-attention** computes queries $\mathbf{q}_i = W_Q \cdot \mathbf{x}_i$, keys $\mathbf{k}_i = W_K \cdot \mathbf{x}_i$, and values $\mathbf{v}_i = W_V \cdot \mathbf{x}_i$, with $W_Q, W_K, W_V \in \mathbb{R}^{2 \times 2}$. Attention weights at position $i$ (over $j \leq i$, causal mask) are:
 
 $$
-\alpha_{ij} = \frac{\exp(\mathbf{q}_i \cdot \mathbf{k}_j / \sqrt{d_k})}{\sum_{j' \leq i} \exp(\mathbf{q}_i \cdot \mathbf{k}_{j'} / \sqrt{d_k})}
+\boldsymbol{\alpha}_i = \mathrm{softmax}\left(\frac{\mathbf{q}_i \cdot \mathbf{k}_{1:i}}{\sqrt{d_k}}\right).
 $$
 
-with a causal mask zeroing out $j > i$. The attention output at position $i$ is $\sum_j \alpha_{ij} \mathbf{v}_j$ (a weighted sum of value vectors).
+The attention output at position $i$ is $\sum_j \alpha_{ij} \mathbf{v}_j$ (a weighted sum of value vectors).
 
 **Residual connection.** The block output is $\mathbf{x}_i + \mathrm{Attn}(\mathbf{x})_i$, updating the state by adding the attention output to the current embedding.
 
 **LM head.** A linear map $\mathbf{x} \mapsto \mathbf{x} \cdot W_{\mathrm{lm}}^\top + \mathbf{b}$ produces logits over the vocabulary, followed by softmax.
 
-With $n_{\mathrm{embed}} = 2$ and $d_k = 2$, every vector in this pipeline lives in $\mathbb{R}^2$. This is the key design choice: the model's full geometry is directly visible without dimensionality reduction.
+With $n_{\mathrm{embed}} = 2$ and $d_k = 2$, every vector in this pipeline lives in $\mathbb{R}^2$. This is the critical design choice: the model's full geometry is directly visible without dimensionality reduction.
 
 ---
 
