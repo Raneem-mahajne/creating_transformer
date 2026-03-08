@@ -2437,6 +2437,10 @@ def plot_qkv_transformations(model, itos, save_path=None):
         gs = GridSpec(2, 4, figure=fig, hspace=0.35, wspace=0.3)
     
     # Tok+Pos: journal row 0 full width; standard is row 0 col 0 only
+    _lbl_fs = 6 if _JOURNAL_MODE else 9
+    _step = 4 if _JOURNAL_MODE and num_combinations > 48 else 1
+    _step_1d = _step
+    _pe = [pe.withStroke(linewidth=2, foreground='white')] if _JOURNAL_MODE else []
     if _JOURNAL_MODE:
         ax0 = fig.add_subplot(gs[0, :])
     else:
@@ -2445,9 +2449,6 @@ def plot_qkv_transformations(model, itos, save_path=None):
         # Plot original embeddings in first 2 dimensions
         X_orig = all_combinations[:, [0, 1]]
         ax0.scatter(X_orig[:, 0], X_orig[:, 1], s=0, alpha=0)
-        _lbl_fs = 6 if _JOURNAL_MODE else 9
-        _step = 4 if _JOURNAL_MODE and num_combinations > 48 else 1
-        _pe = [pe.withStroke(linewidth=2, foreground='white')] if _JOURNAL_MODE else []
         for i in range(0, len(labels), _step):
             ax0.text(X_orig[i, 0], X_orig[i, 1], labels[i], fontsize=_lbl_fs, ha='center', va='center',
                      zorder=2, path_effects=_pe)
@@ -2467,7 +2468,6 @@ def plot_qkv_transformations(model, itos, save_path=None):
         # 1D case
         X_orig_1d = all_combinations[:, 0]
         ax0.scatter(X_orig_1d, np.zeros_like(X_orig_1d), s=0, alpha=0)
-        _step_1d = 4 if _JOURNAL_MODE and num_combinations > 48 else 1
         for i in range(0, len(labels), _step_1d):
             ax0.text(X_orig_1d[i], 0, labels[i], fontsize=6 if _JOURNAL_MODE else 9, ha='center', va='center', rotation=90)
         _ttl0_1d = f"Original Token+Position Embeddings: Dim 0\n(All tokens, {num_combinations} combinations)"
@@ -2514,17 +2514,14 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax_empty.axis("off")
     _wr2, _wc2 = (2, 0) if _JOURNAL_MODE else (1, 1)
 
-    # Q-transformed
-    _qk_lbl = 6 if _JOURNAL_MODE else 10
-    _qk_step = 4 if _JOURNAL_MODE and num_combinations > 48 else 1
-    _qk_pe = [pe.withStroke(linewidth=2, foreground='white')] if _JOURNAL_MODE else []
+    # Q-transformed (same annotation pattern as ax0)
     ax4 = fig.add_subplot(gs[_wr2, _wc2])
     if head_size >= 2:
         Q_2d = Q_transformed[:, [0, 1]]
         ax4.scatter(Q_2d[:, 0], Q_2d[:, 1], s=0, alpha=0)
-        for i in range(0, len(labels), _qk_step):
-            ax4.text(Q_2d[i, 0], Q_2d[i, 1], labels[i], fontsize=_qk_lbl, ha='center', va='center',
-                     color='blue', zorder=2, path_effects=_qk_pe)
+        for i in range(0, len(labels), _step):
+            ax4.text(Q_2d[i, 0], Q_2d[i, 1], labels[i], fontsize=_lbl_fs, ha='center', va='center',
+                     color='blue', zorder=2, path_effects=_pe)
         _qttl = f"Q-Transformed: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)"
         ax4.set_title(_qttl, fontsize=9 if _JOURNAL_MODE else 12)
         ax4.set_xlabel("Head Dim 0")
@@ -2540,8 +2537,8 @@ def plot_qkv_transformations(model, itos, save_path=None):
         # 1D case
         Q_1d = Q_transformed[:, 0]
         ax4.scatter(Q_1d, np.zeros_like(Q_1d), s=0, alpha=0)
-        for i in range(0, len(labels), _qk_step):
-            ax4.text(Q_1d[i], 0, labels[i], fontsize=_qk_lbl, ha='center', va='center', rotation=90, color='blue')
+        for i in range(0, len(labels), _step_1d):
+            ax4.text(Q_1d[i], 0, labels[i], fontsize=_lbl_fs, ha='center', va='center', rotation=90, color='blue')
         _qttl1d = f"Q-Transformed: Dim 0\n(All tokens, {num_combinations} combinations)"
         ax4.set_title(_qttl1d, fontsize=9 if _JOURNAL_MODE else 12)
         ax4.set_xlabel("Head Dim 0")
@@ -2554,9 +2551,9 @@ def plot_qkv_transformations(model, itos, save_path=None):
     if head_size >= 2:
         K_2d = K_transformed[:, [0, 1]]
         ax5.scatter(K_2d[:, 0], K_2d[:, 1], s=0, alpha=0)
-        for i in range(0, len(labels), _qk_step):
-            ax5.text(K_2d[i, 0], K_2d[i, 1], labels[i], fontsize=_qk_lbl, ha='center', va='center',
-                     color='red', zorder=2, path_effects=_qk_pe)
+        for i in range(0, len(labels), _step):
+            ax5.text(K_2d[i, 0], K_2d[i, 1], labels[i], fontsize=_lbl_fs, ha='center', va='center',
+                     color='red', zorder=2, path_effects=_pe)
         _kttl = f"K-Transformed: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)"
         ax5.set_title(_kttl, fontsize=9 if _JOURNAL_MODE else 12)
         ax5.set_xlabel("Head Dim 0")
@@ -2571,8 +2568,8 @@ def plot_qkv_transformations(model, itos, save_path=None):
     else:
         K_1d = K_transformed[:, 0]
         ax5.scatter(K_1d, np.zeros_like(K_1d), s=0, alpha=0)
-        for i in range(0, len(labels), _qk_step):
-            ax5.text(K_1d[i], 0, labels[i], fontsize=_qk_lbl, ha='center', va='center', rotation=90, color='red')
+        for i in range(0, len(labels), _step_1d):
+            ax5.text(K_1d[i], 0, labels[i], fontsize=_lbl_fs, ha='center', va='center', rotation=90, color='red')
         _kttl1d = f"K-Transformed: Dim 0\n(All tokens, {num_combinations} combinations)"
         ax5.set_title(_kttl1d, fontsize=9 if _JOURNAL_MODE else 12)
         ax5.set_xlabel("Head Dim 0")
@@ -2581,20 +2578,16 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax5.set_yticks([])
     
     # V-transformed
-    _v_lbl = 6 if _JOURNAL_MODE else 14
-    _v_step = 4 if _JOURNAL_MODE and num_combinations > 48 else 1
     ax6 = fig.add_subplot(gs[_wr2, _wc2 + 2])
     v_color = 'green'
-    
     if head_size >= 2:
         V_2d = V_transformed[:, [0, 1]]
         ax6.scatter(V_2d[:, 0], V_2d[:, 1], s=0, alpha=0)
-        _v_pe = [pe.withStroke(linewidth=2, foreground='white')] if _JOURNAL_MODE else []
-        for i in range(0, len(labels), _v_step):
-            ax6.text(V_2d[i, 0], V_2d[i, 1], labels[i], fontsize=_v_lbl, fontweight='bold',
-                    ha='center', va='center', color=v_color, zorder=2, path_effects=_v_pe)
+        for i in range(0, len(labels), _step):
+            ax6.text(V_2d[i, 0], V_2d[i, 1], labels[i], fontsize=_lbl_fs, ha='center', va='center',
+                     color=v_color, zorder=2, path_effects=_pe)
         _vttl = f"V-Transformed: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)"
-        ax6.set_title(_vttl, fontsize=9 if _JOURNAL_MODE else 12, fontweight='bold')
+        ax6.set_title(_vttl, fontsize=9 if _JOURNAL_MODE else 12)
         ax6.set_xlabel("Head Dim 0")
         ax6.set_ylabel("Head Dim 1")
         # Add origin lines (dashed, faded)
@@ -2610,11 +2603,10 @@ def plot_qkv_transformations(model, itos, save_path=None):
         margin = 0.15 * (V_1d.max() - V_1d.min())
         ax6.set_xlim(V_1d.min() - margin, V_1d.max() + margin)
         ax6.set_ylim(-0.5, 0.5)
-        for i in range(0, len(labels), _v_step):
-            ax6.text(V_1d[i], 0, labels[i], fontsize=_v_lbl, fontweight='bold', 
-                    ha='center', va='center', color=v_color)
+        for i in range(0, len(labels), _step_1d):
+            ax6.text(V_1d[i], 0, labels[i], fontsize=_lbl_fs, ha='center', va='center', color=v_color)
         _vttl1d = f"V-Transformed: Dim 0\n(All tokens, {num_combinations} combinations)"
-        ax6.set_title(_vttl1d, fontsize=9 if _JOURNAL_MODE else 12, fontweight='bold')
+        ax6.set_title(_vttl1d, fontsize=9 if _JOURNAL_MODE else 12)
         ax6.set_xlabel("Head Dim 0")
         ax6.set_ylabel("")
         ax6.grid(True, alpha=0.3)
@@ -4592,10 +4584,10 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
 
     # ── figure setup (defer xlim until we know total width) ───────────
     if _JOURNAL_MODE:
-        # Vertical layout for A4 paper: 7" wide, ~9" tall; more height for spacing
-        fig, ax = plt.subplots(figsize=(7.0, 9.0), dpi=200)
-        H_px = 1450
-        W_px = 420   # width (wider for legibility)
+        # Vertical layout for A4 paper: 7" wide, tall for clarity
+        fig, ax = plt.subplots(figsize=(7.0, 14.0), dpi=200)
+        H_px = 2800   # accommodate LARGER boxes
+        W_px = 420    # width (wider for legibility)
         ax.set_ylim(H_px, 0)
         ax.set_xlim(0, W_px)
     else:
@@ -4609,25 +4601,25 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
     _fs = 9 if _JOURNAL_MODE else 10.5
     _sub_fs = 8 if _JOURNAL_MODE else 8.5
     def draw_box(x, y, w, h, color, label, sub=None, fs=None, sub_fs=None, gap=None, sub_lh=None):
-        """Rounded-rectangle box centred at (x+w/2, y+h/2)."""
+        """Rounded-rectangle box. Text centred with generous internal spacing."""
         if fs is None: fs = _fs
         if sub_fs is None: sub_fs = _sub_fs
         fancy = FancyBboxPatch((x, y), w, h,
-                               boxstyle="round,pad=0,rounding_size=7",
+                               boxstyle="round,pad=0,rounding_size=10",
                                facecolor=color, edgecolor=C_STROKE,
                                linewidth=1.4, zorder=3)
         ax.add_patch(fancy)
         cx, cy_box = x + w / 2, y + h / 2
         lines = label.split('\n')
         n = len(lines)
-        lh = fs * 1.4
+        lh = fs * 1.6   # line height for spacing
         if sub:
             sub_lines = sub.split('\n')
             n_sub = len(sub_lines)
             label_block = lh * (n - 1)
-            _sub_lh = sub_lh if sub_lh is not None else sub_fs * 1.3
+            _sub_lh = sub_lh if sub_lh is not None else sub_fs * 1.5
             sub_block = _sub_lh * (n_sub - 1)
-            gap_between = gap if gap is not None else 16
+            gap_between = gap if gap is not None else 22
             total = label_block + gap_between + sub_block
             label_top = cy_box - total / 2
             for i, ln in enumerate(lines):
@@ -4656,6 +4648,15 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
                                     shrinkA=shrinkA, shrinkB=shrinkB,
                                     mutation_scale=12 if _JOURNAL_MODE else 10),
                     zorder=5)
+
+    def draw_arrow_vertical_path(x1, y1, x2, y2, color=C_STROKE, lw=None):
+        """Draw path: vertical, horizontal, vertical. Arrow tip at end of final vertical (pointing down)."""
+        lw = lw if lw is not None else _arrow_lw
+        y_mid = (y1 + y2) / 2
+        ax.plot([x1, x1], [y1, y_mid], color=color, lw=lw, zorder=5, solid_capstyle='round')
+        ax.plot([x1, x2], [y_mid, y_mid], color=color, lw=lw, zorder=5, solid_capstyle='round')
+        ax.plot([x2, x2], [y_mid, y2 - 2], color=color, lw=lw, zorder=5, solid_capstyle='round')
+        draw_arrow(x2, y2 - 2, x2, y2, color=color, lw=lw, shrinkA=0, shrinkB=0)
 
     _plus_fs = 13 if _JOURNAL_MODE else 15
     def draw_circle(cx, cy, r, label='+'):
@@ -4692,165 +4693,170 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
     r_plus = 18        # radius of + circles
     if _JOURNAL_MODE:
         r_plus = 14
-        vgap = 58
-        vh = 58    # box height per row (slightly larger for text)
-        vw = 140   # box width (centered)
+        vgap = 130   # vertical gap between sections
+        vh = 90     # box height per row (LARGE for clear text)
+        vw = 160    # box width
 
     # ── build diagram ───────────────────────────────────────────────────
     if _JOURNAL_MODE:
         cx = W_px / 2
         skip_x = 42          # left-side x for skip connection routing
-        y = 40
+        y = 55               # top margin so "Input Tokens" isn't cut off
 
         # ── Input Tokens ────────────────────────────────────────────
-        bw, bh_v = 110, vh
-        draw_box(cx - bw/2, y, bw, bh_v, C_INPUT, 'Input\nTokens', f'({batch_size},{block_size})', fs=9, sub_fs=7)
+        bw, bh_v = 130, vh
+        draw_box(cx - bw/2, y, bw, bh_v, C_INPUT, 'Input\nTokens', f'({batch_size},{block_size})', fs=10, sub_fs=8, gap=16)
         y_inp_b = y + bh_v
-        y += bh_v + vgap * 0.8
+        y += bh_v + vgap * 1.4
 
         # ── Token Emb + Position Emb (side by side) ────────────────
-        eb_w, eb_h = 80, 46
-        te_x = cx - eb_w - 10           # left edge of Token Emb
-        pe_x = cx + 10                   # left edge of Position Emb
-        draw_box(te_x, y, eb_w, eb_h, C_EMBED, 'Token Emb', f'({vocab_size},{n_embd})', fs=8, sub_fs=6)
-        draw_box(pe_x, y, eb_w, eb_h, C_EMBED, 'Position Emb', f'({block_size},{n_embd})', fs=8, sub_fs=6)
-        draw_arrow(cx, y_inp_b, te_x + eb_w/2, y, shrinkB=0)
-        draw_arrow(cx, y_inp_b, pe_x + eb_w/2, y, shrinkB=0)
+        eb_w, eb_h = 95, 72
+        te_x = cx - eb_w - 15
+        pe_x = cx + 15
+        draw_box(te_x, y, eb_w, eb_h, C_EMBED, 'Token Emb', f'({vocab_size},{n_embd})', fs=10, sub_fs=8, gap=16)
+        draw_box(pe_x, y, eb_w, eb_h, C_EMBED, 'Position Emb', f'({block_size},{n_embd})', fs=10, sub_fs=8, gap=16)
+        draw_arrow_vertical_path(cx, y_inp_b, te_x + eb_w/2, y)
+        draw_arrow_vertical_path(cx, y_inp_b, pe_x + eb_w/2, y)
         y_emb_b = y + eb_h
-        y += eb_h + vgap * 0.6
+        y += eb_h + vgap * 1.3
 
         # ── Add embeddings (+) ─────────────────────────────────────
         plus_cx, plus_y = cx, y + r_plus
         draw_circle(plus_cx, plus_y, r_plus)
-        draw_arrow(te_x + eb_w/2, y_emb_b, plus_cx - 6, plus_y - r_plus)
-        draw_arrow(pe_x + eb_w/2, y_emb_b, plus_cx + 6, plus_y - r_plus)
+        draw_arrow_vertical_path(te_x + eb_w/2, y_emb_b, plus_cx - 6, plus_y - r_plus)
+        draw_arrow_vertical_path(pe_x + eb_w/2, y_emb_b, plus_cx + 6, plus_y - r_plus)
         ax.text(plus_cx + r_plus + 8, plus_y, f'x: ({batch_size},{block_size},{n_embd})',
                 ha='left', va='center', fontsize=7, color='#555', fontfamily='sans-serif')
         y_add_b = plus_y + r_plus
-        y += 2 * r_plus + vgap * 1.1
+        y += 2 * r_plus + vgap * 1.7
 
-        # ── Self-Attention: Q, K, V with clear W labels ───────────────────
-        qkv_w, qkv_h = 52, 34
-        qkv_gap = 32
+        # ── Self-Attention: Q, K, V (LARGE boxes, clear text) ─────────────────────
+        qkv_w, qkv_h = 70, 88
+        qkv_gap = 44
         total_qkv_w = 3 * qkv_w + 2 * qkv_gap
         qkv_x0 = cx - total_qkv_w / 2
         qkv_cx = []
         for i, lbl in enumerate(['Q', 'K', 'V']):
             bx = qkv_x0 + i * (qkv_w + qkv_gap)
-            draw_box(bx, y, qkv_w, qkv_h, C_ATTN, lbl, f'{n_embd}\u2192{head_size}', fs=8, sub_fs=6)
+            draw_box(bx, y, qkv_w, qkv_h, C_ATTN, lbl, f'{n_embd}\u2192{head_size}', fs=11, sub_fs=9, gap=18)
             qkv_cx.append(bx + qkv_w / 2)
-        # Fan-out from (+): vertical trunk then horizontal branches
-        fan_y = y - 44
+        # Vertical trunk from + down, then branch; vertical arrows into each Q/K/V box
+        fan_y = y - 55
         ax.plot([cx, cx], [y_add_b, fan_y], color=C_STROKE, lw=_arrow_lw, zorder=5, solid_capstyle='round')
         for i, qc in enumerate(qkv_cx):
             ax.plot([cx, qc], [fan_y, fan_y], color=C_STROKE, lw=_arrow_lw, zorder=5, solid_capstyle='round')
             draw_arrow(qc, fan_y, qc, y, shrinkA=0, shrinkB=0)
-        # W_Q, W_K, W_V labels: centered above each vertical arrow segment
-        _wlabel_fs = 9
         for i, qc in enumerate(qkv_cx):
-            label_y = fan_y + 4
-            ax.text(qc, label_y, f'$W_{["Q","K","V"][i]}$', ha='center', va='top',
-                    fontsize=_wlabel_fs, color=C_STROKE, fontweight='bold', fontfamily='sans-serif', zorder=6,
+            ax.text(qc, fan_y + 4, f'$W_{["Q","K","V"][i]}$', ha='center', va='top',
+                    fontsize=9, color=C_STROKE, fontweight='bold', fontfamily='sans-serif', zorder=6,
                     bbox=dict(boxstyle='round,pad=0.2', facecolor='white', edgecolor='none', alpha=0.9))
         y_qkv_b = y + qkv_h
-        y += qkv_h + 18
+        y += qkv_h + 70
 
         # ── Attention: vertical flow ─────────────────────────────────
         # Box A: QK^T / √d_k → Mask → Softmax
-        score_w, score_h = 180, 36
+        score_w, score_h = 220, 62
         score_x = cx - score_w / 2
         draw_box(score_x, y, score_w, score_h, C_ATTN,
-                 'QK\u1d40 / \u221Ad\u2096  \u2192  Mask  \u2192  Softmax', fs=7)
+                 'QK\u1d40 / \u221Ad\u2096  \u2192  Mask  \u2192  Softmax', fs=10, gap=18)
         score_cx = cx
-        # Q → left of score box, K → right of score box
-        draw_arrow(qkv_cx[0], y_qkv_b, score_cx - 30, y, shrinkB=0)
-        draw_arrow(qkv_cx[1], y_qkv_b, score_cx + 30, y, shrinkB=0)
+        # Q → left of score box, K → right of score box (vertical paths, no diagonals)
+        draw_arrow_vertical_path(qkv_cx[0], y_qkv_b, score_cx - 30, y)
+        draw_arrow_vertical_path(qkv_cx[1], y_qkv_b, score_cx + 30, y)
         y_score_b = y + score_h
-        y += score_h + 28
+        y += score_h + 75   # large gap for "Attention Weights" label
 
-        # Arrow from Box A with "Attention Weights" label on it
-        att_label_y = y_score_b + (y - y_score_b) * 0.35
-        draw_arrow(score_cx, y_score_b, score_cx, y, shrinkA=0, shrinkB=0)
-        ax.text(score_cx + 6, att_label_y, 'Attention Weights', ha='left', va='center',
-                fontsize=7.5, fontweight='bold', fontstyle='italic', color='#555',
+        # Arrow from Box A: vertical line, tip at end pointing down into Weights×V
+        att_label_y = y_score_b + 30
+        ax.plot([score_cx, score_cx], [y_score_b, y], color=C_STROKE, lw=_arrow_lw, zorder=5, solid_capstyle='round')
+        draw_arrow(score_cx, y - 1, score_cx, y, shrinkA=0, shrinkB=0)
+        ax.text(score_cx + 10, att_label_y, 'Attention Weights', ha='left', va='center',
+                fontsize=8, fontweight='bold', fontstyle='italic', color='#555',
                 fontfamily='sans-serif', zorder=6,
-                bbox=dict(boxstyle='round,pad=0.2', facecolor='white', edgecolor='none', alpha=0.95))
+                bbox=dict(boxstyle='round,pad=0.25', facecolor='white', edgecolor='none', alpha=0.95))
 
         # Box B: Weights × V
-        mulv_w, mulv_h = 100, 36
+        mulv_w, mulv_h = 140, 65
         mulv_x = cx - mulv_w / 2
         mulv_cx = cx
-        draw_box(mulv_x, y, mulv_w, mulv_h, C_ATTN, 'Weights \u00d7 V', fs=8)
+        draw_box(mulv_x, y, mulv_w, mulv_h, C_ATTN, 'Weights \u00d7 V', fs=11, gap=18)
 
-        # V → Box B: straight down from V, then right-angle turn left into box
-        v_turn_y = y + mulv_h / 2
-        ax.plot([qkv_cx[2], qkv_cx[2]], [y_qkv_b, v_turn_y],
+        # V → Box B: vertical down from V, horizontal to center, vertical arrow down (tip at top of box)
+        ax.plot([qkv_cx[2], qkv_cx[2]], [y_qkv_b, y],
                 color=C_STROKE, lw=_arrow_lw, zorder=5, solid_capstyle='round')
-        ax.plot([qkv_cx[2], mulv_x + mulv_w + 2], [v_turn_y, v_turn_y],
+        ax.plot([qkv_cx[2], cx], [y, y],
                 color=C_STROKE, lw=_arrow_lw, zorder=5, solid_capstyle='round')
-        draw_arrow(mulv_x + mulv_w + 2, v_turn_y, mulv_x + mulv_w, v_turn_y, shrinkA=0, shrinkB=0)
+        draw_arrow(cx, y - 40, cx, y, shrinkA=0, shrinkB=0)
 
         y_mulv_b = y + mulv_h
         attnv_cx = mulv_cx
-        y += mulv_h + vgap * 0.8
+        y += mulv_h + vgap * 1.5
 
         # ── Residual add #1 (+) ────────────────────────────────────
         plus1_cx, plus1_y = cx, y + r_plus
         draw_circle(plus1_cx, plus1_y, r_plus)
-        # Arrow from Box B to (+) with "Attention Output" label
-        draw_arrow(attnv_cx, y_mulv_b, plus1_cx, plus1_y - r_plus, shrinkB=0)
+        # Arrow from Box B to (+): vertical line, arrow tip at end pointing down
+        ax.plot([attnv_cx, attnv_cx], [y_mulv_b, plus1_y - r_plus - 2], color=C_STROKE, lw=_arrow_lw, zorder=5, solid_capstyle='round')
+        draw_arrow(attnv_cx, plus1_y - r_plus - 2, attnv_cx, plus1_y - r_plus, shrinkA=0, shrinkB=0)
         out_label_y = y_mulv_b + (plus1_y - r_plus - y_mulv_b) * 0.4
-        ax.text(attnv_cx + 6, out_label_y, 'Attention Output', ha='left', va='center',
-                fontsize=7.5, fontweight='bold', fontstyle='italic', color='#555',
+        ax.text(attnv_cx + 12, out_label_y, 'Attention Output', ha='left', va='center',
+                fontsize=8, fontweight='bold', fontstyle='italic', color='#555',
                 fontfamily='sans-serif', zorder=6,
-                bbox=dict(boxstyle='round,pad=0.2', facecolor='white', edgecolor='none', alpha=0.95))
-        # Skip connection: route down the LEFT side (around attention)
+                bbox=dict(boxstyle='round,pad=0.25', facecolor='white', edgecolor='none', alpha=0.95))
+        # Skip connection: route down the LEFT side (around attention), then vertical into +
         ax.plot([plus_cx - r_plus, skip_x], [plus_y, plus_y],
                 color=C_RESID, lw=_resid_lw, linestyle='--', zorder=2, clip_on=False)
-        ax.plot([skip_x, skip_x], [plus_y, plus1_y],
+        ax.plot([skip_x, skip_x], [plus_y, plus1_y + r_plus],
                 color=C_RESID, lw=_resid_lw, linestyle='--', zorder=2, clip_on=False)
-        draw_arrow(skip_x, plus1_y, plus1_cx - r_plus, plus1_y, color=C_RESID, lw=_resid_lw)
+        ax.plot([skip_x, plus1_cx], [plus1_y + r_plus, plus1_y + r_plus],
+                color=C_RESID, lw=_resid_lw, linestyle='--', zorder=2, clip_on=False)
+        draw_arrow(plus1_cx, plus1_y + r_plus, plus1_cx, plus1_y - r_plus, color=C_RESID, lw=_resid_lw, shrinkA=0, shrinkB=0)
         ax.text(skip_x - 4, (plus_y + plus1_y) / 2, 'skip', ha='right', va='center',
                 fontsize=_resid_fs, color=C_RESID, fontfamily='sans-serif', fontstyle='italic', zorder=4)
         y_plus1_b = plus1_y + r_plus
-        y += 2 * r_plus + vgap * 0.85
+        y += 2 * r_plus + vgap * 1.5
 
         # ── Feed-Forward ───────────────────────────────────────────
-        ff_w, ff_h = 140, vh + 10
+        ff_w, ff_h = 180, vh + 24
         draw_box(cx - ff_w/2, y, ff_w, ff_h, C_LINEAR, 'Feed-Forward',
-                 f'Linear({n_embd},{ffwd_hidden_dim})\nReLU\u2192Linear({ffwd_hidden_dim},{n_embd})', fs=8, sub_fs=6, gap=18, sub_lh=12)
-        draw_arrow(plus1_cx, y_plus1_b, cx, y, shrinkB=0)
+                 f'Linear({n_embd},{ffwd_hidden_dim})\nReLU\u2192Linear({ffwd_hidden_dim},{n_embd})', fs=10, sub_fs=9, gap=20, sub_lh=16)
+        ax.plot([plus1_cx, plus1_cx], [y_plus1_b, y - 2], color=C_STROKE, lw=_arrow_lw, zorder=5, solid_capstyle='round')
+        draw_arrow(plus1_cx, y - 2, plus1_cx, y, shrinkA=0, shrinkB=0)
         y_ff_b = y + ff_h
-        y += ff_h + vgap * 0.85
+        y += ff_h + vgap * 1.5
 
         # ── Residual add #2 (+) ────────────────────────────────────
         plus2_cx, plus2_y = cx, y + r_plus
         draw_circle(plus2_cx, plus2_y, r_plus)
-        draw_arrow(cx, y_ff_b, plus2_cx, plus2_y - r_plus, shrinkB=0)
-        # Skip connection: route down the LEFT side (around FFN)
+        ax.plot([cx, cx], [y_ff_b, plus2_y - r_plus - 2], color=C_STROKE, lw=_arrow_lw, zorder=5, solid_capstyle='round')
+        draw_arrow(cx, plus2_y - r_plus - 2, cx, plus2_y - r_plus, shrinkA=0, shrinkB=0)
+        # Skip connection: route down the LEFT side (around FFN), then vertical into +
         ax.plot([plus1_cx - r_plus, skip_x], [plus1_y, plus1_y],
                 color=C_RESID, lw=_resid_lw, linestyle='--', zorder=2, clip_on=False)
-        ax.plot([skip_x, skip_x], [plus1_y, plus2_y],
+        ax.plot([skip_x, skip_x], [plus1_y, plus2_y + r_plus],
                 color=C_RESID, lw=_resid_lw, linestyle='--', zorder=2, clip_on=False)
-        draw_arrow(skip_x, plus2_y, plus2_cx - r_plus, plus2_y, color=C_RESID, lw=_resid_lw)
+        ax.plot([skip_x, plus2_cx], [plus2_y + r_plus, plus2_y + r_plus],
+                color=C_RESID, lw=_resid_lw, linestyle='--', zorder=2, clip_on=False)
+        draw_arrow(plus2_cx, plus2_y + r_plus, plus2_cx, plus2_y - r_plus, color=C_RESID, lw=_resid_lw, shrinkA=0, shrinkB=0)
         ax.text(skip_x - 4, (plus1_y + plus2_y) / 2, 'skip', ha='right', va='center',
                 fontsize=_resid_fs, color=C_RESID, fontfamily='sans-serif', fontstyle='italic', zorder=4)
         y_plus2_b = plus2_y + r_plus
-        y += 2 * r_plus + vgap * 0.85
+        y += 2 * r_plus + vgap * 1.5
 
         # ── LM Head ───────────────────────────────────────────────
-        lm_w, lm_h = 100, vh + 6
+        lm_w, lm_h = 140, vh + 16
         y_lm_top = y
-        draw_box(cx - lm_w/2, y, lm_w, lm_h, C_OUTPUT, 'LM Head', f'Linear({n_embd},{vocab_size})', fs=8, sub_fs=6, gap=20)
-        draw_arrow(plus2_cx, y_plus2_b, cx, y, shrinkB=0)
+        draw_box(cx - lm_w/2, y, lm_w, lm_h, C_OUTPUT, 'LM Head', f'Linear({n_embd},{vocab_size})', fs=10, sub_fs=9, gap=20)
+        ax.plot([plus2_cx, plus2_cx], [y_plus2_b, y - 2], color=C_STROKE, lw=_arrow_lw, zorder=5, solid_capstyle='round')
+        draw_arrow(plus2_cx, y - 2, plus2_cx, y, shrinkA=0, shrinkB=0)
         y_lm_b = y + lm_h
-        y += lm_h + vgap * 0.5
+        y += lm_h + vgap * 1.3
 
         # ── Softmax → P(next) ─────────────────────────────────────
-        sm_w, sm_h = 60, vh
-        draw_box(cx - sm_w - 6, y, sm_w, sm_h, C_OUTPUT, 'Softmax', fs=8)
-        draw_box(cx + 6, y, sm_w, sm_h, C_OUTPUT, 'P(next)', f'({batch_size},{block_size},{vocab_size})', fs=8, sub_fs=6)
-        draw_arrow(cx, y_lm_b, cx - sm_w/2 - 6, y, shrinkB=0)
+        sm_w, sm_h = 85, vh + 8
+        draw_box(cx - sm_w - 8, y, sm_w, sm_h, C_OUTPUT, 'Softmax', fs=10)
+        draw_box(cx + 8, y, sm_w, sm_h, C_OUTPUT, 'P(next)', f'({batch_size},{block_size},{vocab_size})', fs=10, sub_fs=8, gap=16)
+        draw_arrow_vertical_path(cx, y_lm_b, cx - sm_w/2 - 6, y)
         draw_arrow(cx - 6, y + sm_h/2, cx + 6, y + sm_h/2, shrinkA=0, shrinkB=0)
 
         # ── Notation (top-right) ──────────────────────────────────
