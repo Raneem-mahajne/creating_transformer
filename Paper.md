@@ -7,7 +7,7 @@
 
 ## 1. Introduction
 
-Understanding how transformers process sequences remains a central challenge in mechanistic interpretability. Large-scale models achieve strong performance but their internal representations are high-dimensional and opaque: one can probe attention or activations, but a *complete* picture of information flow from input to output remains elusive. 
+Understanding how transformers process sequences remains a central challenge in mechanistic interpretability. Large-scale models achieve strong performance but their internal representations are high-dimensional and opaque: one can probe attention or activations, but a complete picture of information flow from input to output remains elusive. 
 
 We bridge this gap with **minimal transformers**: models that retain the full structure of a decoder-only transformer (token and positional embeddings, single-head causal self-attention, residual connections, a feedforward layer, and an LM head) but are constrained to two-dimensional embeddings and head dimension. Every internal state — embeddings, queries, keys, values, attention outputs, residual sums, and pre-softmax logit vectors — lives in $\mathbb{R}^2$. No PCA, t-SNE, or UMAP is required; the model's geometry is directly visible in the plane.
 
@@ -56,33 +56,7 @@ The task is defined over a vocabulary $\mathcal{V}$ of 12 tokens: the integers $
        last even = 8     last even = 4
 ```
 
-#### 2.1.2 Algorithmic Requirements
-
-Solving this task requires the model to implement three operations:
-
-1. **Parity identification:** Discriminate target-eligible tokens (even integers) from non-target tokens (odd integers).
-2. **Recency tracking:** Maintain an internal representation of the most recently observed even integer.
-3. **Conditional prediction:** Map the internal state to an output token only when the current position immediately follows $+$; otherwise, predict from the full vocabulary.
-
-Since the model operates in $\mathbb{R}^2$, this retrieval procedure must be realized as two-dimensional linear transformations, rendering the learned algorithm directly interpretable in the embedding geometry.
-
-<!-- 
-Positions not immediately following `+` are unconstrained — any token may appear. The rule constrains only a fraction of positions; the remainder serve as context. The model must learn to (1) identify when the current position follows `+`, (2) scan backward through the context to locate the most recent even number, and (3) output that number with high probability. This is a non-trivial attention task: it requires routing information from a variable, content-dependent past position to the present. -->
-
-<!-- #### 2.1.3 Additional Rules
-
-The framework supports multiple rules beyond plus-last-even. Each is specified by a procedural `generate_sequence` function and a `verify_sequence` function for evaluation:
-
-| Rule | Description |
-|------|-------------|
-| `plus_last_even` | After `+`, output the most recent even number |
-| `lucky7` | After `7`, output the token that appeared before the `7` |
-| `step_back` | Each token is one less than the previous |
-| `copy_modulo` | Copy with modular arithmetic |
-| `plus_max_of_two` | After `+`, output the maximum of the two preceding numbers |
-| `plus_means_even` | After `+`, output any even number |
-
-See `configs/` for the full list of available rules.
+Positions not immediately following `+` are unconstrained — any token may appear. The rule constrains only a fraction of positions; the remainder serve as context. The model must learn to (1) identify when the current position follows `+`, (2) scan backward through the context to locate the most recent even number, and (3) output that number with high probability. This is a non-trivial attention task: it requires routing information from a variable, content-dependent past position to the present.
 
 --- -->
 
@@ -104,60 +78,61 @@ The model is a single-layer, single-head decoder-only causal transformer:
 Input → [E + P] → x → Self-Attention → + residual → FFN → + residual → LM Head → softmax → P(next token)
 ```
 
-**Token embedding** $E \in \mathbb{R}^{V \times 2}$ maps each token to a point in $\mathbb{R}^2$. **Positional embedding** $P \in \mathbb{R}^{T \times 2}$ maps each position to a point in $\mathbb{R}^2$. The input representation at position $i$ is $\mathbf{x}_i = E_{t_i} + P_i$.
+**Token embedding:** $E \in \mathbb{R}^{V \times 2}$; the embedding of token $t$ is the row vector $\mathbf{e}_t \in \mathbb{R}^2$. **Positional embedding:** $P \in \mathbb{R}^{T \times 2}$; the embedding of position $i$ is $\mathbf{p}_i \in \mathbb{R}^2$. The input representation at position $i$ is $\mathbf{x}_i = \mathbf{e}_{t_i} + \mathbf{p}_i$.
 
-**Self-attention** computes queries $\mathbf{q}_i = W_Q \cdot \mathbf{x}_i$, keys $\mathbf{k}_i = W_K \cdot \mathbf{x}_i$, and values $\mathbf{v}_i = W_V \cdot \mathbf{x}_i$, with $W_Q, W_K, W_V \in \mathbb{R}^{2 \times 2}$. Attention weights are computed as:
+**Self-attention** computes queries $\mathbf{q}_i = W_Q \cdot \mathbf{x}_i$, keys $\mathbf{k}_i = W_K \cdot \mathbf{x}_i$, and values $\mathbf{v}_i = W_V \cdot \mathbf{x}_i$, with $W_Q, W_K, W_V \in \mathbb{R}^{2 \times 2}$. Attention weights at position $i$ (over $j \leq i$, causal mask) are:
 
 $$
-\alpha_{ij} = \frac{\exp(\mathbf{q}_i \cdot \mathbf{k}_j / \sqrt{d_k})}{\sum_{j' \leq i} \exp(\mathbf{q}_i \cdot \mathbf{k}_{j'} / \sqrt{d_k})}
+\boldsymbol{\alpha}_i = \mathrm{softmax}\left(\frac{\mathbf{q}_i^\top \mathbf{K}_{1:i}}{\sqrt{d_k}}\right),
 $$
+where $\mathbf{q}_i, \mathbf{k}_j \in \mathbb{R}^2$ (column vectors), $\mathbf{K}_{1:i} = [\mathbf{k}_1 \, \cdots \, \mathbf{k}_i] \in \mathbb{R}^{2 \times i}$, so $\mathbf{q}_i^\top \mathbf{K}_{1:i}$ is a row vector of length $i$ (one score per $j \leq i$; causal masking is implicit in the index range).
 
-with a causal mask zeroing out $j > i$. The attention output at position $i$ is $\sum_j \alpha_{ij} \mathbf{v}_j$ (a weighted sum of value vectors).
+The attention output at position $i$ is $\sum_j \alpha_{ij} \mathbf{v}_j$ (a weighted sum of value vectors).
 
 **Residual connection.** The block output is $\mathbf{x}_i + \mathrm{Attn}(\mathbf{x})_i$, updating the state by adding the attention output to the current embedding.
 
 **LM head.** A linear map $\mathbf{x} \mapsto \mathbf{x} \cdot W_{\mathrm{lm}}^\top + \mathbf{b}$ produces logits over the vocabulary, followed by softmax.
 
-With $n_{\mathrm{embed}} = 2$ and $d_k = 2$, every vector in this pipeline lives in $\mathbb{R}^2$. This is the key design choice: the model's full geometry is directly visible without dimensionality reduction.
+With $n_{\mathrm{embed}} = 2$ and $d_k = 2$, every vector in this pipeline lives in $\mathbb{R}^2$. This is the critical design choice: the model's full geometry is directly visible without dimensionality reduction.
 
 ---
 
 ### 2.3 Training
 
-Training data consists of 2,000 sequences of length 20–50, generated by the plus-last-even rule with an operator probability of 0.3. The model is trained for 20,000 steps with batch size 8 and learning rate 0.001 using standard next-token cross-entropy loss. Checkpoints are saved every 100 steps (200 total), enabling the construction of training-evolution animations.
+Training data consists of 2,000 sequences of length 20–50, generated by the plus-last-even rule. At each position, the next token is drawn as follows. With probability 0.3 the token is `+`; with probability 0.7 it is a digit chosen uniformly from $\{0, \ldots, 10\}$. The one exception is the position immediately after `+`: there the next token is fixed to the most recent even number in the prefix (the rule target). Thus in the training distribution, `+` has marginal probability 0.3, each digit has marginal probability $0.7 / 11 \approx 0.064$, and every position following `+` is a constrained label. The model is trained for 20,000 steps with batch size 8 and learning rate 0.001 using standard next-token cross-entropy loss. Checkpoints are saved every 100 steps (200 total), enabling the construction of training-evolution animations.
 
 ---
 
 ## 3. Results
 
-The full computation graph of the minimal transformer is shown in Figure 1. Every component — token and position embeddings, the single-head attention block with its $W_Q$, $W_K$, $W_V$ projections, the causal mask, residual connections, feed-forward network, and LM head — operates entirely in $\mathbb{R}^2$, making it possible to visualize each stage of the pipeline without any dimensionality reduction. All figures are located in `plus_last_even/plots/a4/` (A4 journal-sized).
+The full computation graph of the minimal transformer is shown in Figure 1. Every component — token and position embeddings, the single-head attention block with its $W_Q$, $W_K$, $W_V$ projections, the causal mask, residual connections, feed-forward network, and LM head — operates entirely in $\mathbb{R}^2$, making it possible to visualize each stage of the pipeline without any dimensionality reduction.
 
 ![Architecture Overview](plus_last_even/plots/a4/01_architecture_overview.png)
 ***Figure 1.** Architecture of the minimal transformer.*
 
 ### 3.1 The Model Learns the Rule
 
-We first verify that training succeeds. We examine both the training data and the model's own generations, then the learning curve. Figure 2 displays four sample training sequences as heatmaps, where green marks constrained positions with the correct label, red marks incorrect, and gray marks unconstrained (free) positions. All constrained positions are green, verifying the data generator. Figure 3 shows the training dynamics over 20,000 steps. Cross-entropy loss drops steeply in the first ~2,000 steps as the model learns basic token frequencies, then continues to decrease more gradually as it acquires the conditional structure of the rule. More informatively, the rule error — the fraction of constrained positions (those immediately following `+`) where the model's top prediction is wrong — drops from approximately 90% (chance level for a 12-token vocabulary) to near 0%. The model has not merely memorized the training data; it has learned the underlying rule. Figure 4 then compares sequences generated by the model before and after training. At initialization (step 0), predictions at constrained positions are essentially random — most cells are red. After training, nearly all constrained positions are green: the model reliably outputs the most recent even number after every `+`. The model works. The question now is *how*.
+We first verify that training succeeds. We examine both the training data and the model's own generations, then the learning curve. Figure 2 displays four sample training sequences as heatmaps. **Color convention:** at each position we show whether the next-token label is correct (green), wrong (red), or unconstrained (gray). A position is *constrained* if it immediately follows `+` (the rule then requires the next token to be the most recent even number); *unconstrained* positions may have any next token. Green = correct at constrained positions; red = incorrect at constrained positions; gray = unconstrained (no single "correct" label). All constrained positions in the training data are green, verifying the data generator. Figure 3 shows the training dynamics over 20,000 steps. Cross-entropy loss drops steeply in the first ~2,000 steps, then continues to decrease more gradually. **Rule error** is the fraction of constrained positions (those immediately following `+`) where the model's top prediction is wrong; it drops from ~90% (chance for a 12-token vocabulary) to near 0%, indicating that the model has learned the rule. Figure 4 then compares sequences generated by the model before and after training. The same color convention applies: at initialization (step 0), predictions at constrained positions are essentially random — most cells are red. After training, nearly all constrained positions are green: the model reliably outputs the most recent even number after every `+`. We now proceed to show how the model implements this rule.
 
 ![Training Data](plus_last_even/plots/a4/02_training_data.png)
-***Figure 2.** Sample training sequences. Green = correct at constrained positions.*
+***Figure 2.** Sample training sequences as heatmaps. Green: constrained position (immediately after `+`) with the correct next token (the most recent even number). Gray: unconstrained position (any token is valid). 
 
 ![Learning Curve](plus_last_even/plots/a4/03_learning_curve.png)
-***Figure 3.** Training loss and rule error over 20,000 steps.*
+***Figure 3.** Training dynamics over 20,000 steps. Left axis: cross-entropy loss. Right axis: rule error — the fraction of positions immediately following `+` where the model's top predicted token is not the target (the most recent even number). Rule error near 90% is chance level; near 0% indicates the rule is learned.*
 
 ![Generated Sequences](plus_last_even/plots/a4/04_generated_sequences.png)
-***Figure 4.** Model-generated sequences at initialization (top) vs. after training (bottom).*
+***Figure 4.** Model-generated sequences at initialization (top) vs. after training (bottom). green = correct at constrained positions (after `+`), red = wrong at constrained positions, gray = unconstrained. Top: at step 0, constrained positions are mostly red (random predictions). Bottom: after training, constrained positions are mostly green (correct "last even" outputs).*
 
 ### 3.2 The Embedding Space: How the Model Encodes Its Vocabulary
 
-The first stage of the transformer maps each input token and position to a 2D vector. Figure 5 reveals that the learned embedding layer has already done significant organizational work before any attention occurs. In the token embedding scatter plot (bottom-left), the six even numbers (0, 2, 4, 6, 8, 10) cluster together in one region of the plane, the five odd numbers (1, 3, 5, 7, 9) cluster separately, and the `+` operator sits far from both groups as an isolated outlier. The model has discovered, without supervision, that the categories relevant to the rule — even numbers, odd numbers, and the operator — should occupy geometrically distinct regions.
+The first stage of the transformer maps each input token and position to a 2D vector. Figure 5 reveals that the learned embedding layer has already done significant organizational work before any attention occurs. In the token embedding scatter plot (Figure 5a), the six even numbers (0, 2, 4, 6, 8, 10) sit in a spaced formation at the top of the plane, the five odd numbers (1, 3, 5, 7, 9) bunch together in the center of the plane, and the `+` operator sits far from both groups as an isolated outlier. The model has discovered that the categories relevant to the rule — even numbers, odd numbers, and the operator — should occupy geometrically distinct regions. Moreover, the 'personal space' given to the even-digit tokens, as opposed to the bunched formation of the odd tokens, indicates that the distinct identity of the even tokens is more important for solving this task.
 
-The position embeddings (bottom-center) form a near-linear vertical ladder, with $p_0$ at the bottom and $p_7$ at the top. This orderly arrangement allows the model to encode "how far back" a token is, which is essential for the "most recent" aspect of the rule. When token and position embeddings are summed (bottom-right), each token fans out into eight copies — one per position — shifted vertically by the position embedding. Crucially, even-number groups remain clearly separable from odd-number groups at every position, meaning the model can distinguish even from odd regardless of where in the context window a token appears.
+The position embeddings (Figure 5b) form a ladder structure, with $p_0$ at the bottom, $p_7$ at the top, and the other positions arranged in ascending order in between. This orderly arrangement allows the model to encode "how far back" a token is, which is essential for the "most recent" aspect of the rule. When token and position embeddings are summed (Figure 5g), each token fans out into eight copies — one per position — shifted vertically by the position embedding. Because the range of values of the position embeddings is smaller than the range of the token embbeddings, the 'macro'-level geometry of the summed token+position embeddings retains the odd/even/'+' organization of the token embeddings, while the 'micro'-level geometry preserves the ladder structure of the position embeddings.
 
 ![Token Embeddings](plus_last_even/plots/a4/05_token_embeddings.png)
-***Figure 5.** Learned embeddings. Bottom row: 2D scatter of token (left), position (center), and combined (right) embeddings.*
+***Figure 5.** Learned embeddings. (a) Token embeddings. (b) Position embeddings. (c) Combined token+position embeddings.*
 
-This structure does not exist at initialization. Movie 1 shows the embedding space at every checkpoint across training. At step 0, all points are randomly scattered. Within the first few thousand steps, the `+` token rapidly migrates away from the number tokens. The even/odd split solidifies between steps 5,000 and 10,000, and the position ladder organizes gradually throughout training. The embedding geometry is not hand-designed; it is the structure that gradient descent discovers in service of the rule.
+We note that this geometric does not exist at initialization; it is learned. Movie 1 shows the embedding space at every checkpoint across training. At step 0, all points are randomly scattered. Within the first few thousand steps, the `+` token rapidly migrates away from the number tokens. The even/odd split solidifies between steps 5,000 and 10,000, and the position embedding ladder organizes gradually throughout training. 
 
 ### 3.3 The Output Landscape: Where Representations Need to Land
 
@@ -174,12 +149,12 @@ The output landscape and the embedding positions co-evolve during training (Movi
 
 ### 3.4 The Attention Mechanism: Query, Key, and Value Projections
 
-The bridge between the starting embeddings and the output landscape is self-attention. The model applies three learned $2 \times 2$ linear transformations — $W_Q$, $W_K$, $W_V$ — to every token+position embedding, producing query, key, and value vectors respectively. Figure 7 shows these transformations and their effect. The original embedding space (top-left) is transformed into three distinct spaces: the query space (blue), the key space (red), and the value space (green). Each transformation stretches, rotates, and rearranges the points differently, reflecting the different roles these vectors play.
+The bridge between the starting embeddings and the output landscape is self-attention. The model applies three learned $2 \times 2$ linear transformations — $W_Q$, $W_K$, $W_V$ — to every token+position embedding, producing query, key, and value vectors respectively. Figure 7 shows these transformations and their effect. The embedding space (Figure 5c) is transformed by the three projections into three distinct spaces (Figure 7d–f): the query space (Figure 7d, blue), the key space (Figure 7e, red), and the value space (Figure 7f, green). Each transformation stretches, rotates, and rearranges the points differently, reflecting the different roles these vectors play.
 
 The query and key transformations jointly determine *who attends to whom*: the dot product between a query and a key controls the attention weight. The value transformation determines *what information gets routed*: the attention-weighted sum of value vectors is what actually gets added to the residual stream. These three spaces must be coordinated — the Q/K geometry must select the right positions, and the V geometry must carry the right information to those positions. Movie 3 shows that early in training, all three projections produce nearly identical spaces, but they progressively specialize as the model learns to implement the rule.
 
 ![QKV Transformations](plus_last_even/plots/a4/08_qkv_transforms.png)
-***Figure 7.** QKV projections. Top: weight matrices as heatmaps. Bottom: all 96 token+position embeddings after each projection.*
+***Figure 7.** QKV projections. (a) $W_Q$, (b) $W_K$, (c) $W_V$ weight matrices as heatmaps. (d) Query-space embeddings, (e) key-space embeddings, (f) value-space embeddings (all 96 token+position points after each projection).*
 
 ### 3.5 Who Attends to Whom: The Query–Key Geometry
 
