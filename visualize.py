@@ -369,6 +369,19 @@ def visualize_from_checkpoint(
     X_consistent = seq_tensor
     X_list = [X_consistent, X_consistent, X_consistent]  # Use same sequence 3 times for multi-sequence plots
 
+    # Hardcoded demo sequence for figures 13–17, 18, and frozen_output supp (length 8): final token is '+' and NOT immediately after another '+'
+    _demo_decoded = [4, 1, "+", 4, 6, 9, 5, "+"]
+    _stoi = stoi if stoi is not None else {str(itos[i]): i for i in range(len(itos))}
+    demo_sequence = None
+    try:
+        _demo_ids = [_stoi[str(t)] for t in _demo_decoded]
+        demo_sequence = _demo_ids[:block_size]
+        X_demo = torch.tensor(demo_sequence, dtype=torch.long).unsqueeze(0)
+        X_list_demo = [X_demo, X_demo, X_demo]
+    except KeyError:
+        X_list_demo = X_list
+        X_demo = X_consistent
+
     # When using a subfolder, write architecture there too so the folder is self-contained
     base_plots_dir = str(get_plots_dir(config_name_actual, step, subfolder=plots_subfolder))
     arch_path = _plot_path("architecture.png", base_dir=base_plots_dir)
@@ -376,13 +389,13 @@ def visualize_from_checkpoint(
         plot_architecture_diagram(config, save_path=arch_path, model=model, vocab_size=vocab_size, batch_size=training_config.get('batch_size', 4))
 
     plot_weights_qkv_two_sequences(
-        model, X_list, itos, save_path=_plot_path("qkv_query_key_attention.png"), num_sequences=1
+        model, X_list_demo, itos, save_path=_plot_path("qkv_query_key_attention.png"), num_sequences=1
     )
     plot_q_dot_product_gradients(
-        model, X_list, itos, save_path=_plot_path("q_dot_product_gradients.png"), num_sequences=1
+        model, X_list_demo, itos, save_path=_plot_path("q_dot_product_gradients.png"), num_sequences=1
     )
     plot_residuals(
-        model, X_list, itos, save_path=_plot_path("residuals.png"), num_sequences=1
+        model, X_list_demo, itos, save_path=_plot_path("residuals.png"), num_sequences=1
     )
     plot_embeddings_pca(model, itos, save_path=_plot_path("embeddings.png"))
     # plot_embeddings_scatterplots_only removed — redundant with bottom row of embeddings.png (Figure 05)
@@ -402,9 +415,9 @@ def visualize_from_checkpoint(
         model, itos, token_str="+", position=5,
         save_path=_plot_path("qk_embedding_space_plus5_focus.png"),
     )
-    # Plot embeddings for a specific sequence (using consistent sequence)
+    # Plot embeddings for demo sequence (fig 13: final is + not after +)
     plot_sequence_embeddings(
-        model, X_consistent, itos, save_path=_plot_path("sequence_embeddings.png")
+        model, X_demo, itos, save_path=_plot_path("sequence_embeddings.png")
     )
     if _is_journal_pass:
         plot_qk_full_attention_combined(
@@ -429,15 +442,16 @@ def visualize_from_checkpoint(
     plot_probability_heatmap_with_values(
         model, itos, save_path=_plot_path("probability_heatmap_with_values.png")
     )
-    # Final-on-output heatmap grid (one figure, same sequence, output units in grid)
-    if consistent_sequence:
+    # Final-on-output (18) and frozen_output supp: same demo sequence as figs 13–17
+    seq_for_18_and_supp = demo_sequence if demo_sequence is not None else consistent_sequence
+    if seq_for_18_and_supp:
         plot_final_on_output_heatmap_grid(
-            model, itos, consistent_sequence, save_path=_plot_path("final_on_output_heatmap_grid.png")
+            model, itos, seq_for_18_and_supp, save_path=_plot_path("final_on_output_heatmap_grid.png")
         )
         frozen_dir = os.path.join(plots_dir, "frozen_output")
         os.makedirs(frozen_dir, exist_ok=True)
         plot_per_token_frozen_output(
-            model, itos, consistent_sequence, save_dir=frozen_dir
+            model, itos, seq_for_18_and_supp, save_dir=frozen_dir
         )
 
     print(f"All visualizations saved to {plots_dir}")

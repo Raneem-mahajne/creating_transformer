@@ -5638,6 +5638,9 @@ def plot_final_on_output_heatmap_grid(
     """
     import matplotlib.cm as cm
     model.eval()
+    use_residual = getattr(model, "use_residual", True)
+    if not use_residual:
+        print("plot_final_on_output_heatmap_grid: model.use_residual is False; background uses ffwd(p) only (no skip).")
     vocab_size = model.token_embedding.weight.shape[0]
     block_size = model.block_size
     n_embd = model.lm_head.in_features
@@ -5690,7 +5693,7 @@ def plot_final_on_output_heatmap_grid(
     points = np.stack([xx.ravel(), yy.ravel()], axis=1)
     pts = torch.tensor(points, dtype=torch.float32, device=dev)
     with torch.no_grad():
-        h = pts + model.ffwd(pts)
+        h = (pts + model.ffwd(pts)) if use_residual else model.ffwd(pts)
         logits = model.lm_head(h).cpu().numpy()
     probs = np.exp(logits - logits.max(axis=1, keepdims=True))
     probs /= probs.sum(axis=1, keepdims=True)
@@ -5772,6 +5775,9 @@ def plot_per_token_frozen_output(
     Arrow from embedding to embed + attn_out.
     """
     model.eval()
+    use_residual = getattr(model, "use_residual", True)
+    if not use_residual:
+        print("plot_per_token_frozen_output: model.use_residual is False; background uses ffwd(p) only (no skip).")
     vocab_size = model.token_embedding.weight.shape[0]
     block_size = model.block_size
     n_embd = model.lm_head.in_features
@@ -5792,27 +5798,28 @@ def plot_per_token_frozen_output(
     n_cols = min(3 if _JOURNAL_MODE else 6, vocab_size)
     n_rows = (vocab_size + n_cols - 1) // n_cols
 
-    # Shared value-space extent (same window size for all tokens)
+    # Shared value-space extent (same axis range for all tokens)
     v_absmax = np.abs(v_after).max() + extent_margin
     v_absmax = max(v_absmax, 1.5)
     v_min, v_max = -v_absmax, v_absmax
-
     vs = np.linspace(v_min, v_max, grid_resolution)
     vv0, vv1 = np.meshgrid(vs, vs)
-    v_grid = np.stack([vv0.ravel(), vv1.ravel()], axis=1)  # (N, 2)
+    v_grid = np.stack([vv0.ravel(), vv1.ravel()], axis=1)
 
     for t_idx in range(T):
         token_str = itos[seq[t_idx]]
         e = x_np[t_idx]
-        fr = first_resid[t_idx]
         actual_v = v_after[t_idx]
 
-        # Per-embedding background: g_e(v) = softmax(lm_head((e+v) + ffwd(e+v)))
+        # Background = g_e(v) = softmax(lm_head((e+v) + ffwd(e+v))).
+        # Different per token because the second residual acts on (e+v); ffwd is nonlinear so the
+        # map v -> output depends on e. First residual (e, v -> e+v) is the input; second residual
+        # is part of the function.
         with torch.no_grad():
             e_t = torch.tensor(e, dtype=torch.float32, device=dev)
             v_t = torch.tensor(v_grid, dtype=torch.float32, device=dev)
-            p = e_t.unsqueeze(0) + v_t  # (N, 2): absolute position e+v
-            h = p + model.ffwd(p)
+            p = e_t.unsqueeze(0) + v_t  # first-residual position e+v
+            h = (p + model.ffwd(p)) if use_residual else model.ffwd(p)
             logits = model.lm_head(h).cpu().numpy()
         probs = np.exp(logits - logits.max(axis=1, keepdims=True))
         probs /= probs.sum(axis=1, keepdims=True)
@@ -5829,7 +5836,6 @@ def plot_per_token_frozen_output(
             axes = axes.reshape(-1, 1)
 
         lbl = _token_pos_label(token_str, t_idx)
-
         arrow_len = np.hypot(actual_v[0], actual_v[1])
 
         for d in range(vocab_size):
@@ -5840,22 +5846,21 @@ def plot_per_token_frozen_output(
             ax.set_xlim(v_min, v_max)
             ax.set_ylim(v_min, v_max)
             ax.set_aspect('equal')
-            # Label at embedding position
-            ax.text(e[0], e[1], lbl, fontsize=8, ha='center', va='bottom',
+            # Origin = embedding (input start); arrow = attention value to first residual
+            ax.text(0, 0, lbl, fontsize=8, ha='center', va='bottom',
                     color='white', fontweight='bold', zorder=7,
                     path_effects=[pe.withStroke(linewidth=2, foreground='black')])
-            # Arrow from embedding to embedding + attention value
             if arrow_len > 1e-6:
                 hw = max(0.08, min(0.25, arrow_len * 0.12))
-                ax.arrow(e[0], e[1], actual_v[0], actual_v[1],
+                ax.arrow(0, 0, actual_v[0], actual_v[1],
                          head_width=hw, head_length=hw, fc='red', ec='black',
                          linewidth=0.6, length_includes_head=True, width=0.04,
                          alpha=0.95, zorder=6)
             ax.set_title(f"P(next = {itos[d]})", fontsize=10)
             if row == n_rows - 1:
-                ax.set_xlabel("attention value dim 0", fontsize=9)
+                ax.set_xlabel("embed + attn dim 0", fontsize=9)
             if col == 0:
-                ax.set_ylabel("attention value dim 1", fontsize=9)
+                ax.set_ylabel("embed + attn dim 1", fontsize=9)
 
         for j in range(vocab_size, n_rows * n_cols):
             row, col = j // n_cols, j % n_cols
