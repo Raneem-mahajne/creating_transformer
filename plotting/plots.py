@@ -5782,6 +5782,7 @@ def plot_per_token_frozen_output(
         return
     seq = sequence[:block_size]
     T = len(seq)
+    seq_str = " ".join(str(itos[t]) for t in seq)
 
     dev = next(model.parameters()).device
     idx = torch.tensor([seq], dtype=torch.long, device=dev)
@@ -5791,28 +5792,27 @@ def plot_per_token_frozen_output(
     n_cols = min(3 if _JOURNAL_MODE else 6, vocab_size)
     n_rows = (vocab_size + n_cols - 1) // n_cols
 
+    # Shared value-space extent (same window size for all tokens)
+    v_absmax = np.abs(v_after).max() + extent_margin
+    v_absmax = max(v_absmax, 1.5)
+    v_min, v_max = -v_absmax, v_absmax
+
+    vs = np.linspace(v_min, v_max, grid_resolution)
+    vv0, vv1 = np.meshgrid(vs, vs)
+    v_grid = np.stack([vv0.ravel(), vv1.ravel()], axis=1)  # (N, 2)
+
     for t_idx in range(T):
         token_str = itos[seq[t_idx]]
-        e = x_np[t_idx]           # (2,)
-        fr = first_resid[t_idx]   # (2,)
+        e = x_np[t_idx]
+        fr = first_resid[t_idx]
+        actual_v = v_after[t_idx]
 
-        # Zoom: square extent covering both e and fr with margin
-        pts = np.array([e, fr])
-        cx = (pts[:, 0].min() + pts[:, 0].max()) / 2
-        cy = (pts[:, 1].min() + pts[:, 1].max()) / 2
-        half = max(np.ptp(pts[:, 0]), np.ptp(pts[:, 1])) / 2 + extent_margin
-        half = max(half, 1.5)  # minimum half-width
-        x_min, x_max = cx - half, cx + half
-        y_min, y_max = cy - half, cy + half
-
-        # Background: p -> softmax(lm_head(p + ffwd(p)))
-        xs = np.linspace(x_min, x_max, grid_resolution)
-        ys = np.linspace(y_min, y_max, grid_resolution)
-        xx, yy = np.meshgrid(xs, ys)
-        points = np.stack([xx.ravel(), yy.ravel()], axis=1)
+        # Per-embedding background: g_e(v) = softmax(lm_head((e+v) + ffwd(e+v)))
         with torch.no_grad():
-            pts_t = torch.tensor(points, dtype=torch.float32, device=dev)
-            h = pts_t + model.ffwd(pts_t)
+            e_t = torch.tensor(e, dtype=torch.float32, device=dev)
+            v_t = torch.tensor(v_grid, dtype=torch.float32, device=dev)
+            p = e_t.unsqueeze(0) + v_t  # (N, 2): absolute position e+v
+            h = p + model.ffwd(p)
             logits = model.lm_head(h).cpu().numpy()
         probs = np.exp(logits - logits.max(axis=1, keepdims=True))
         probs /= probs.sum(axis=1, keepdims=True)
@@ -5830,39 +5830,45 @@ def plot_per_token_frozen_output(
 
         lbl = _token_pos_label(token_str, t_idx)
 
+        arrow_len = np.hypot(actual_v[0], actual_v[1])
+
         for d in range(vocab_size):
             row, col = d // n_cols, d % n_cols
             ax = axes[row, col]
             Z = probs[:, d].reshape(grid_resolution, grid_resolution)
-            ax.pcolormesh(xx, yy, Z, cmap='viridis', vmin=0, vmax=1, shading='auto', zorder=0)
-            ax.set_xlim(x_min, x_max)
-            ax.set_ylim(y_min, y_max)
+            ax.pcolormesh(vv0, vv1, Z, cmap='viridis', vmin=0, vmax=1, shading='auto', zorder=0)
+            ax.set_xlim(v_min, v_max)
+            ax.set_ylim(v_min, v_max)
             ax.set_aspect('equal')
             # Label at embedding position
-            ax.text(e[0], e[1], lbl, fontsize=12, ha='center', va='center',
+            ax.text(e[0], e[1], lbl, fontsize=8, ha='center', va='bottom',
                     color='white', fontweight='bold', zorder=7,
                     path_effects=[pe.withStroke(linewidth=2, foreground='black')])
-            # Arrow from embedding to first-residual
-            dx, dy = fr[0] - e[0], fr[1] - e[1]
-            length = np.hypot(dx, dy)
-            if length > 1e-6:
-                hw = max(0.08, min(0.25, length * 0.12))
-                ax.arrow(e[0], e[1], dx, dy,
+            # Arrow from embedding to embedding + attention value
+            if arrow_len > 1e-6:
+                hw = max(0.08, min(0.25, arrow_len * 0.12))
+                ax.arrow(e[0], e[1], actual_v[0], actual_v[1],
                          head_width=hw, head_length=hw, fc='red', ec='black',
                          linewidth=0.6, length_includes_head=True, width=0.04,
                          alpha=0.95, zorder=6)
             ax.set_title(f"P(next = {itos[d]})", fontsize=10)
             if row == n_rows - 1:
-                ax.set_xlabel("dim 0", fontsize=9)
+                ax.set_xlabel("attention value dim 0", fontsize=9)
             if col == 0:
-                ax.set_ylabel("dim 1", fontsize=9)
+                ax.set_ylabel("attention value dim 1", fontsize=9)
 
         for j in range(vocab_size, n_rows * n_cols):
             row, col = j // n_cols, j % n_cols
             axes[row, col].axis('off')
 
+        tokens_with_highlight = []
+        for i, t in enumerate(seq):
+            s = str(itos[t])
+            tokens_with_highlight.append(f"[{s}]" if i == t_idx else s)
+        seq_highlight = " ".join(tokens_with_highlight)
         fig.suptitle(
-            f"Output landscape around {lbl}", fontsize=11, fontweight='bold', y=1.01,
+            f"Output landscape for {lbl} (e=[{e[0]:.2f},{e[1]:.2f}])  |  {seq_highlight}",
+            fontsize=10, fontweight='bold', y=1.01,
         )
         plt.tight_layout()
         if _JOURNAL_MODE:
