@@ -363,7 +363,7 @@ def plot_learning_curve(steps, train_losses, val_losses, rule_error_history=None
     Uses dual y-axes: left for loss, right for error (both should decrease).
     """
     fig, ax1 = plt.subplots(figsize=(12, 6))
-    
+
     # Left y-axis: Loss
     color1 = 'tab:blue'
     ax1.set_xlabel(f"Training Steps{' (evaluated every ' + str(eval_interval) + ' steps)' if eval_interval else ''}", fontsize=11)
@@ -372,7 +372,7 @@ def plot_learning_curve(steps, train_losses, val_losses, rule_error_history=None
     line2 = ax1.plot(steps, val_losses, label="Validation Loss", color='tab:orange', linewidth=2)
     ax1.tick_params(axis='y', labelcolor=color1)
     ax1.grid(True, alpha=0.3)
-    
+
     # Right y-axis: Rule Error (if provided)
     if rule_error_history is not None:
         ax2 = ax1.twinx()

@@ -65,7 +65,6 @@ class BigramLanguageModel(nn.Module):
         self.token_embedding = nn.Embedding(vocab_size, n_embd)           # (vocab, n_embd)
         self.position_embedding_table = nn.Embedding(block_size, n_embd)  # (block_size, n_embd)
         self.sa_heads = MultiHeadAttention(num_heads, n_embd, head_size, block_size)
-        # Projection removed: with single head and head_size=n_embd, attention output already matches n_embd
         self.ffwd = FeedForward(n_embd, ffwd_mult=16)
         self.lm_head = nn.Linear(n_embd, vocab_size)
         self.block_size = block_size
@@ -80,14 +79,12 @@ class BigramLanguageModel(nn.Module):
 
         x = token_emb + pos_emb  # (B,T,n_embd)
 
-        attn_out, wei = self.sa_heads(x)  # (B,T,n_embd)
+        attn_out, wei = self.sa_heads(x)
         if self.use_residual:
             x = x + attn_out
             x = self.ffwd(x)  # no second residual
         else:
-            # No residuals: just pass through attention then FFN
-            x = attn_out
-            x = self.ffwd(x)
+            x = self.ffwd(attn_out)
 
         logits = self.lm_head(x)  # (B,T,vocab)
 

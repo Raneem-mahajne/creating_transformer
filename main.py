@@ -47,7 +47,7 @@ from plotting import (
 )
 
 
-def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualize_only: bool = False, step: int = None, visualize_all: bool = False):
+def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualize_only: bool = False, step: int = None, visualize_all: bool = False, seed: int | None = None):
     """
     Main training function.
     
@@ -57,11 +57,11 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
         visualize_only: If True, only generate visualizations (no training)
         step: If visualize_only=True, visualize this specific step. If None, visualize final checkpoint.
         visualize_all: If True, visualize all available checkpoints
+        seed: Random seed for data and training (default 18)
     """
     print(f"Starting with config: {config_name}")
-    # Set seeds for reproducibility
-    seed = 18
-    #8898  # Fixed seed for all random operations
+    seed = seed if seed is not None else 18
+    print(f"Random seed: {seed}")
     torch.manual_seed(seed)
     random.seed(seed)
     np.random.seed(seed)
@@ -432,5 +432,14 @@ if __name__ == "__main__":
     
     if "--force-retrain" in sys.argv:
         force_retrain = True
-    
-    main(config_name=config_name, force_retrain=force_retrain, visualize_only=visualize_only, step=step, visualize_all=visualize_all)
+
+    seed = None
+    if "--seed" in sys.argv:
+        sidx = sys.argv.index("--seed")
+        if sidx + 1 < len(sys.argv):
+            try:
+                seed = int(sys.argv[sidx + 1])
+            except ValueError:
+                pass
+
+    main(config_name=config_name, force_retrain=force_retrain, visualize_only=visualize_only, step=step, visualize_all=visualize_all, seed=seed)
