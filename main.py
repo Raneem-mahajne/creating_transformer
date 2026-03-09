@@ -396,8 +396,8 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
     
     batch_size = training_config.get('batch_size', 4)  # For getting batches for visualization
     
-    # Generate visualizations for final checkpoint
-    visualize_from_checkpoint(config_name_actual, checkpoint_data, config, step=None, generate_journal=journal)
+    # Generate visualizations for final checkpoint (include A4 journal figures)
+    visualize_from_checkpoint(config_name_actual, checkpoint_data, config, step=None, generate_journal=journal or True)
 
 
 if __name__ == "__main__":

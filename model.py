@@ -83,7 +83,7 @@ class BigramLanguageModel(nn.Module):
         attn_out, wei = self.sa_heads(x)  # (B,T,n_embd)
         if self.use_residual:
             x = x + attn_out
-            x = x + self.ffwd(x)
+            x = self.ffwd(x)  # no second residual
         else:
             # No residuals: just pass through attention then FFN
             x = attn_out

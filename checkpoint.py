@@ -105,6 +105,19 @@ def save_checkpoint(
 
 
 def load_checkpoint(config_name_actual: str, step: int | None = None) -> dict | None:
+    # When step is None, load from the latest step checkpoint so we fully reload from last save
+    use_latest_step = False
+    if step is None:
+        available = list_available_checkpoints(config_name_actual)
+        if available:
+            for s in reversed(sorted(available)):
+                d = get_checkpoint_dir(config_name_actual, s)
+                if (d / "model.pt").exists() and (d / "metadata.json").exists():
+                    step = s
+                    use_latest_step = True
+                    break
+            else:
+                step = None  # no step dir had model.pt; will try base dir
     checkpoint_dir = get_checkpoint_dir(config_name_actual, step)
     if not checkpoint_dir.exists():
         return None
@@ -138,6 +151,23 @@ def load_checkpoint(config_name_actual: str, step: int | None = None) -> dict | 
         print(f"Warning: checkpoint missing keys (e.g. ln1/ln2); retrain for LayerNorm. Missing: {load_result.missing_keys}")
     model.eval()
     step_loaded = metadata.get("step")
+    steps_for_plot = metadata["steps_for_plot"]
+    train_loss_history = metadata["train_loss_history"]
+    val_loss_history = metadata["val_loss_history"]
+    rule_error_history = metadata.get("rule_error_history", [])
+    eval_interval = metadata.get("eval_interval")
+    # When we loaded from a step dir, use full training history from base (final) metadata for learning curve
+    if use_latest_step and main_dir != checkpoint_dir and (main_dir / "metadata.json").exists():
+        with open(main_dir / "metadata.json", "r") as f:
+            main_meta = json.load(f)
+        if main_meta.get("step") is None:
+            main_steps = main_meta.get("steps_for_plot") or []
+            if len(main_steps) > len(steps_for_plot):
+                steps_for_plot = main_steps
+                train_loss_history = main_meta.get("train_loss_history", train_loss_history)
+                val_loss_history = main_meta.get("val_loss_history", val_loss_history)
+                rule_error_history = main_meta.get("rule_error_history", rule_error_history)
+                eval_interval = main_meta.get("eval_interval", eval_interval)
     print(f"Checkpoint loaded from {checkpoint_dir} (step: {step_loaded})")
     return {
         "model": model,
@@ -148,13 +178,13 @@ def load_checkpoint(config_name_actual: str, step: int | None = None) -> dict | 
         "decode": decode,
         "vocab_size": metadata["vocab_size"],
         "step": step_loaded,
-        "steps_for_plot": metadata["steps_for_plot"],
-        "train_loss_history": metadata["train_loss_history"],
-        "val_loss_history": metadata["val_loss_history"],
-        "rule_error_history": metadata.get("rule_error_history", []),
+        "steps_for_plot": steps_for_plot,
+        "train_loss_history": train_loss_history,
+        "val_loss_history": val_loss_history,
+        "rule_error_history": rule_error_history,
         "generated_sequences_e0": metadata.get("generated_sequences_e0"),
         "model_config": mc,
-        "eval_interval": metadata.get("eval_interval"),
+        "eval_interval": eval_interval,
     }
 
 
