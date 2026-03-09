@@ -5798,7 +5798,7 @@ def plot_per_token_frozen_output(
     n_cols = min(3 if _JOURNAL_MODE else 6, vocab_size)
     n_rows = (vocab_size + n_cols - 1) // n_cols
 
-    # Shared value-space extent (same axis range for all tokens)
+    # Shared value-space extent (same axis range for all tokens). Origin (0,0) = no attn.
     v_absmax = np.abs(v_after).max() + extent_margin
     v_absmax = max(v_absmax, 1.5)
     v_min, v_max = -v_absmax, v_absmax
@@ -5811,14 +5811,12 @@ def plot_per_token_frozen_output(
         e = x_np[t_idx]
         actual_v = v_after[t_idx]
 
-        # Background = g_e(v) = softmax(lm_head((e+v) + ffwd(e+v))).
-        # Different per token because the second residual acts on (e+v); ffwd is nonlinear so the
-        # map v -> output depends on e. First residual (e, v -> e+v) is the input; second residual
-        # is part of the function.
+        # Per-token background: g_e(v) = softmax(lm_head((e+v) + ffwd(e+v))). Different for each e
+        # because the second residual acts on (e+v); ffwd is nonlinear so the map v -> output depends on e.
         with torch.no_grad():
             e_t = torch.tensor(e, dtype=torch.float32, device=dev)
             v_t = torch.tensor(v_grid, dtype=torch.float32, device=dev)
-            p = e_t.unsqueeze(0) + v_t  # first-residual position e+v
+            p = e_t.unsqueeze(0) + v_t
             h = (p + model.ffwd(p)) if use_residual else model.ffwd(p)
             logits = model.lm_head(h).cpu().numpy()
         probs = np.exp(logits - logits.max(axis=1, keepdims=True))
@@ -5846,7 +5844,7 @@ def plot_per_token_frozen_output(
             ax.set_xlim(v_min, v_max)
             ax.set_ylim(v_min, v_max)
             ax.set_aspect('equal')
-            # Origin = embedding (input start); arrow = attention value to first residual
+            # Embedding in value space is at v=0 (origin). Annotation there; arrow to actual_v.
             ax.text(0, 0, lbl, fontsize=8, ha='center', va='bottom',
                     color='white', fontweight='bold', zorder=7,
                     path_effects=[pe.withStroke(linewidth=2, foreground='black')])
@@ -5858,9 +5856,9 @@ def plot_per_token_frozen_output(
                          alpha=0.95, zorder=6)
             ax.set_title(f"P(next = {itos[d]})", fontsize=10)
             if row == n_rows - 1:
-                ax.set_xlabel("embed + attn dim 0", fontsize=9)
+                ax.set_xlabel("value dim 0", fontsize=9)
             if col == 0:
-                ax.set_ylabel("embed + attn dim 1", fontsize=9)
+                ax.set_ylabel("value dim 1", fontsize=9)
 
         for j in range(vocab_size, n_rows * n_cols):
             row, col = j // n_cols, j % n_cols
