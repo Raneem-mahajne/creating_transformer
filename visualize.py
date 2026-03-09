@@ -41,6 +41,7 @@ from plotting import (
     plot_probability_heatmap,
     plot_probability_heatmap_with_embeddings,
     plot_probability_heatmap_with_values,
+    plot_per_token_frozen_output,
 )
 
 
@@ -432,6 +433,11 @@ def visualize_from_checkpoint(
     if consistent_sequence:
         plot_final_on_output_heatmap_grid(
             model, itos, consistent_sequence, save_path=_plot_path("final_on_output_heatmap_grid.png")
+        )
+        frozen_dir = os.path.join(plots_dir, "frozen_output")
+        os.makedirs(frozen_dir, exist_ok=True)
+        plot_per_token_frozen_output(
+            model, itos, consistent_sequence, save_dir=frozen_dir
         )
 
     print(f"All visualizations saved to {plots_dir}")

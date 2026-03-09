@@ -5632,8 +5632,9 @@ def plot_final_on_output_heatmap_grid(
     model, itos, sequence, save_path=None, grid_resolution=60, extent_margin=0.5
 ):
     """
-    One figure for the given sequence: output-token probability heatmaps in a grid (not one column per token).
-    Overlay only the *final* (embed + V_transformed) positions with labels; colors by (token, position) as in residuals plot.
+    Domain = embedding space. Background = P(next token) at that embedding after the second
+    residual (skip + FFN). Overlay = for the given sequence: embeddings and arrows to
+    first-residual (embed + attn_out) positions.
     """
     import matplotlib.cm as cm
     model.eval()
@@ -5663,15 +5664,25 @@ def plot_final_on_output_heatmap_grid(
         pos_emb = model.position_embedding_table.weight.detach().cpu().numpy()
         combined = token_emb[:, None, :] + pos_emb[None, :, :]
         flat = combined.reshape(-1, 2)
-        x_min = min(flat[:, 0].min(), final_x[:, 0].min()) - extent_margin
-        x_max = max(flat[:, 0].max(), final_x[:, 0].max()) + extent_margin
-        y_min = min(flat[:, 1].min(), final_x[:, 1].min()) - extent_margin
-        y_max = max(flat[:, 1].max(), final_x[:, 1].max()) + extent_margin
-    # Force square extent so heatmaps are square
-    x_c, y_c = (x_min + x_max) / 2, (y_min + y_max) / 2
-    half = max(x_max - x_min, y_max - y_min) / 2
-    x_min, x_max = x_c - half, x_c + half
-    y_min, y_max = y_c - half, y_c + half
+        # Grid domain = embedding space only (background)
+        x_min_g = flat[:, 0].min() - extent_margin
+        x_max_g = flat[:, 0].max() + extent_margin
+        y_min_g = flat[:, 1].min() - extent_margin
+        y_max_g = flat[:, 1].max() + extent_margin
+    x_c, y_c = (x_min_g + x_max_g) / 2, (y_min_g + y_max_g) / 2
+    half = max(x_max_g - x_min_g, y_max_g - y_min_g) / 2
+    x_min_g, x_max_g = x_c - half, x_c + half
+    y_min_g, y_max_g = y_c - half, y_c + half
+    # Axis limits: include first-residual positions so all arrows are visible
+    all_xy = np.vstack([flat, final_x])
+    x_min = min(x_min_g, all_xy[:, 0].min()) - extent_margin
+    x_max = max(x_max_g, all_xy[:, 0].max()) + extent_margin
+    y_min = min(y_min_g, all_xy[:, 1].min()) - extent_margin
+    y_max = max(y_max_g, all_xy[:, 1].max()) + extent_margin
+    x_c2, y_c2 = (x_min + x_max) / 2, (y_min + y_max) / 2
+    half2 = max(x_max - x_min, y_max - y_min) / 2
+    x_min, x_max = x_c2 - half2, x_c2 + half2
+    y_min, y_max = y_c2 - half2, y_c2 + half2
 
     xs = np.linspace(x_min, x_max, grid_resolution)
     ys = np.linspace(y_min, y_max, grid_resolution)
@@ -5705,6 +5716,7 @@ def plot_final_on_output_heatmap_grid(
         ax = axes[row, col]
         Z = probs[:, d].reshape(grid_resolution, grid_resolution)
         ax.pcolormesh(xx, yy, Z, cmap='viridis', vmin=0, vmax=1, shading='auto', zorder=0)
+        # Limits include first-residual positions so all arrows are visible
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(y_min, y_max)
         ax.set_aspect('equal')
@@ -5714,11 +5726,16 @@ def plot_final_on_output_heatmap_grid(
             fx, fy = final_x[i, 0], final_x[i, 1]
             color = token_pos_to_color[(itos[seq[i]], i)]
             ax.text(ex, ey, lbl, fontsize=_emb_fs, ha='center', va='center',
-                    color=color, alpha=0.7, zorder=3,
-                    path_effects=[pe.withStroke(linewidth=1.0, foreground='black')])
-            ax.annotate('', xy=(fx, fy), xytext=(ex, ey),
-                        arrowprops=dict(arrowstyle='->', color=color, lw=1.0, alpha=0.6),
-                        zorder=4)
+                    color=color, alpha=0.9, zorder=7,
+                    path_effects=[pe.withStroke(linewidth=2, foreground='black')])
+            dx, dy = fx - ex, fy - ey
+            length = np.hypot(dx, dy)
+            if length > 1e-6:
+                hw = max(0.15, min(0.35, length * 0.12))
+                ax.arrow(ex, ey, dx, dy,
+                         head_width=hw, head_length=hw, fc=color, ec='black',
+                         linewidth=0.8, length_includes_head=True, width=0.06,
+                         alpha=0.9, zorder=6)
         ax.set_title(f"P(next = {itos[d]})", fontsize=10)
         if row == n_rows - 1:
             ax.set_xlabel("dim 0", fontsize=9)
@@ -5732,7 +5749,7 @@ def plot_final_on_output_heatmap_grid(
     seq_str = " ".join(str(itos[t]) for t in seq[:20])
     if len(seq) > 20:
         seq_str += "..."
-    fig.suptitle(f"Final (embed+V_transformed) on output heatmaps  |  {seq_str}", fontsize=11, fontweight='bold', y=1.01)
+    fig.suptitle(f"Output after second residual  |  {seq_str}", fontsize=11, fontweight='bold', y=1.01)
     plt.tight_layout()
     if _JOURNAL_MODE:
         plt.subplots_adjust(hspace=0.15, wspace=0.08)
@@ -5745,20 +5762,129 @@ def plot_final_on_output_heatmap_grid(
     model.train()
 
 
+def plot_per_token_frozen_output(
+    model, itos, sequence, save_dir=None, grid_resolution=60, extent_margin=1.0,
+):
+    """
+    Per-token supplementary: for each token in the sequence, one figure (grid of
+    output-token subplots). Background = softmax(lm_head(p + ffwd(p))) in absolute
+    coordinates, zoomed to show the embedding and its first-residual destination.
+    Arrow from embedding to embed + attn_out.
+    """
+    model.eval()
+    vocab_size = model.token_embedding.weight.shape[0]
+    block_size = model.block_size
+    n_embd = model.lm_head.in_features
+    if n_embd != 2:
+        print("plot_per_token_frozen_output: n_embd != 2. Skipping.")
+        return
+    if len(sequence) < 2:
+        return
+    seq = sequence[:block_size]
+    T = len(seq)
+
+    dev = next(model.parameters()).device
+    idx = torch.tensor([seq], dtype=torch.long, device=dev)
+    x_np, v_before, v_after = _get_v_before_after_for_sequence(model, idx)
+    first_resid = x_np + v_after  # (T, 2)
+
+    n_cols = min(3 if _JOURNAL_MODE else 6, vocab_size)
+    n_rows = (vocab_size + n_cols - 1) // n_cols
+
+    for t_idx in range(T):
+        token_str = itos[seq[t_idx]]
+        e = x_np[t_idx]           # (2,)
+        fr = first_resid[t_idx]   # (2,)
+
+        # Zoom: square extent covering both e and fr with margin
+        pts = np.array([e, fr])
+        cx = (pts[:, 0].min() + pts[:, 0].max()) / 2
+        cy = (pts[:, 1].min() + pts[:, 1].max()) / 2
+        half = max(np.ptp(pts[:, 0]), np.ptp(pts[:, 1])) / 2 + extent_margin
+        half = max(half, 1.5)  # minimum half-width
+        x_min, x_max = cx - half, cx + half
+        y_min, y_max = cy - half, cy + half
+
+        # Background: p -> softmax(lm_head(p + ffwd(p)))
+        xs = np.linspace(x_min, x_max, grid_resolution)
+        ys = np.linspace(y_min, y_max, grid_resolution)
+        xx, yy = np.meshgrid(xs, ys)
+        points = np.stack([xx.ravel(), yy.ravel()], axis=1)
+        with torch.no_grad():
+            pts_t = torch.tensor(points, dtype=torch.float32, device=dev)
+            h = pts_t + model.ffwd(pts_t)
+            logits = model.lm_head(h).cpu().numpy()
+        probs = np.exp(logits - logits.max(axis=1, keepdims=True))
+        probs /= probs.sum(axis=1, keepdims=True)
+
+        if _JOURNAL_MODE:
+            fig, axes = plt.subplots(n_rows, n_cols, figsize=(7.0, 8.0), sharex=True, sharey=True)
+        else:
+            fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
+        if n_rows == 1 and n_cols == 1:
+            axes = np.array([[axes]])
+        elif n_rows == 1:
+            axes = axes.reshape(1, -1)
+        elif n_cols == 1:
+            axes = axes.reshape(-1, 1)
+
+        lbl = _token_pos_label(token_str, t_idx)
+
+        for d in range(vocab_size):
+            row, col = d // n_cols, d % n_cols
+            ax = axes[row, col]
+            Z = probs[:, d].reshape(grid_resolution, grid_resolution)
+            ax.pcolormesh(xx, yy, Z, cmap='viridis', vmin=0, vmax=1, shading='auto', zorder=0)
+            ax.set_xlim(x_min, x_max)
+            ax.set_ylim(y_min, y_max)
+            ax.set_aspect('equal')
+            # Label at embedding position
+            ax.text(e[0], e[1], lbl, fontsize=12, ha='center', va='center',
+                    color='white', fontweight='bold', zorder=7,
+                    path_effects=[pe.withStroke(linewidth=2, foreground='black')])
+            # Arrow from embedding to first-residual
+            dx, dy = fr[0] - e[0], fr[1] - e[1]
+            length = np.hypot(dx, dy)
+            if length > 1e-6:
+                hw = max(0.08, min(0.25, length * 0.12))
+                ax.arrow(e[0], e[1], dx, dy,
+                         head_width=hw, head_length=hw, fc='red', ec='black',
+                         linewidth=0.6, length_includes_head=True, width=0.04,
+                         alpha=0.95, zorder=6)
+            ax.set_title(f"P(next = {itos[d]})", fontsize=10)
+            if row == n_rows - 1:
+                ax.set_xlabel("dim 0", fontsize=9)
+            if col == 0:
+                ax.set_ylabel("dim 1", fontsize=9)
+
+        for j in range(vocab_size, n_rows * n_cols):
+            row, col = j // n_cols, j % n_cols
+            axes[row, col].axis('off')
+
+        fig.suptitle(
+            f"Output landscape around {lbl}", fontsize=11, fontweight='bold', y=1.01,
+        )
+        plt.tight_layout()
+        if _JOURNAL_MODE:
+            plt.subplots_adjust(hspace=0.15, wspace=0.08)
+        if save_dir:
+            path = os.path.join(save_dir, f"frozen_output_pos{t_idx}_{token_str}.png")
+            plt.savefig(path, bbox_inches='tight', dpi=150, facecolor='white')
+            plt.close()
+        else:
+            plt.show()
+
+    model.train()
+
+
 @torch.no_grad()
 def plot_probability_heatmap_with_embeddings(
     model, itos, save_path=None, grid_resolution=80, extent_margin=0.5, step_label: int | None = None
 ):
     """
-    Plot probability heatmaps for each token with all token+position combinations from
-    the original embedding space overlaid on top.
-    
-    Args:
-        model: Trained model (BigramLanguageModel)
-        itos: Index-to-string mapping for tokens
-        save_path: Path to save the figure
-        grid_resolution: Number of points per axis (default 80)
-        extent_margin: Extra margin around embedding extent (default 0.5)
+    Domain = embedding space. Background = P(next token) at that embedding after the
+    second residual (skip + FFN). Overlay = all token+position embeddings at their
+    embedding coordinates.
     """
     model.eval()
     vocab_size = model.token_embedding.weight.shape[0]
@@ -5857,9 +5983,9 @@ def plot_probability_heatmap_with_embeddings(
         
         ax.set_title(f"P(next = {itos[token_idx]})", fontsize=10)
         if row == n_rows - 1:
-            ax.set_xlabel("dim 0", fontsize=9)
+            ax.set_xlabel("embedding dim 0", fontsize=9)
         if col == 0:
-            ax.set_ylabel("dim 1", fontsize=9)
+            ax.set_ylabel("embedding dim 1", fontsize=9)
 
     # Hide unused subplots
     for token_idx in range(vocab_size, n_rows * n_cols):
@@ -5880,20 +6006,216 @@ def plot_probability_heatmap_with_embeddings(
     model.train()
 
 
+def plot_ffn_second_residual_arrows(
+    model, itos, save_path=None, extent_margin=0.5,
+):
+    """
+    Two panels showing how the FFN and second residual transform each
+    token+position embedding in 2D space:
+      Left:  x → ffwd(x)          (FFN alone)
+      Right: x → x + ffwd(x)      (second residual = skip + FFN)
+    """
+    model.eval()
+    vocab_size = model.token_embedding.weight.shape[0]
+    block_size = model.position_embedding_table.weight.shape[0]
+    n_embd = model.lm_head.in_features
+    if n_embd != 2:
+        print(f"plot_ffn_second_residual_arrows: n_embd={n_embd}, need 2. Skipping.")
+        return
+
+    with torch.no_grad():
+        token_emb = model.token_embedding.weight.detach().cpu().numpy()
+        pos_emb = model.position_embedding_table.weight.detach().cpu().numpy()
+
+    all_emb, all_labels, all_ti = [], [], []
+    for ti in range(vocab_size):
+        for pi in range(block_size):
+            all_emb.append(token_emb[ti] + pos_emb[pi])
+            all_labels.append(_token_pos_label(itos[ti], pi))
+            all_ti.append(ti)
+    all_emb = np.array(all_emb)
+
+    dev = next(model.parameters()).device
+    with torch.no_grad():
+        emb_t = torch.tensor(all_emb, dtype=torch.float32, device=dev)
+        ffn_out = model.ffwd(emb_t).cpu().numpy()
+
+    ffn_dest = ffn_out
+    resid_dest = all_emb + ffn_out
+
+    # Shared square extent encompassing all points and destinations
+    all_pts = np.vstack([all_emb, ffn_dest, resid_dest])
+    x_min = all_pts[:, 0].min() - extent_margin
+    x_max = all_pts[:, 0].max() + extent_margin
+    y_min = all_pts[:, 1].min() - extent_margin
+    y_max = all_pts[:, 1].max() + extent_margin
+    x_c, y_c = (x_min + x_max) / 2, (y_min + y_max) / 2
+    half = max(x_max - x_min, y_max - y_min) / 2
+    x_min, x_max = x_c - half, x_c + half
+    y_min, y_max = y_c - half, y_c + half
+
+    import matplotlib.cm as cm
+    cmap = cm.get_cmap('tab20')
+
+    if _JOURNAL_MODE:
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.0, 3.8), sharex=True, sharey=True)
+    else:
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5), sharex=True, sharey=True)
+
+    _lbl_fs = 7 if _JOURNAL_MODE else 8
+
+    for ax, dest, title in [
+        (ax1, ffn_dest, "FFN: x → ffwd(x)"),
+        (ax2, resid_dest, "Skip + FFN: x → x + ffwd(x)"),
+    ]:
+        ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.5, alpha=0.3)
+        ax.axvline(x=0, color='gray', linestyle='--', linewidth=0.5, alpha=0.3)
+        for i in range(len(all_emb)):
+            color = cmap(all_ti[i] % 20)
+            ax.annotate(
+                '', xy=(dest[i, 0], dest[i, 1]),
+                xytext=(all_emb[i, 0], all_emb[i, 1]),
+                arrowprops=dict(arrowstyle='->', color=color, lw=0.8, alpha=0.6),
+                zorder=4,
+            )
+            ax.text(
+                all_emb[i, 0], all_emb[i, 1], all_labels[i],
+                fontsize=_lbl_fs, ha='center', va='center',
+                color=color, fontweight='bold', zorder=6,
+            )
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
+        ax.set_aspect('equal')
+        ax.set_title(title, fontsize=10)
+        ax.set_xlabel("dim 0", fontsize=9)
+        ax.grid(True, alpha=0.15)
+
+    ax1.set_ylabel("dim 1", fontsize=9)
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')
+        plt.close()
+        print(f"FFN + second residual arrows saved to {save_path}")
+    else:
+        plt.show()
+    model.train()
+
+
+def plot_probability_heatmap_with_ffn_positions(
+    model, itos, save_path=None, grid_resolution=80, extent_margin=0.5,
+):
+    """
+    Domain = embedding space. Background = P(next) at that embedding after the second
+    residual (skip + FFN). Overlay = final positions (emb + ffwd(emb)) for each
+    token+position embedding.
+    """
+    model.eval()
+    vocab_size = model.token_embedding.weight.shape[0]
+    block_size = model.position_embedding_table.weight.shape[0]
+    n_embd = model.lm_head.in_features
+    if n_embd != 2:
+        print(f"plot_probability_heatmap_with_ffn_positions: n_embd={n_embd}, need 2. Skipping.")
+        return
+
+    with torch.no_grad():
+        token_emb = model.token_embedding.weight.detach().cpu().numpy()
+        pos_emb = model.position_embedding_table.weight.detach().cpu().numpy()
+        combined = token_emb[:, None, :] + pos_emb[None, :, :]
+        flat = combined.reshape(-1, 2)
+
+    # All embeddings and their FFN+skip destinations
+    all_emb, labels = [], []
+    for ti in range(vocab_size):
+        for pi in range(block_size):
+            all_emb.append(token_emb[ti] + pos_emb[pi])
+            labels.append(_token_pos_label(itos[ti], pi))
+    all_emb = np.array(all_emb)
+
+    dev = next(model.parameters()).device
+    with torch.no_grad():
+        emb_t = torch.tensor(all_emb, dtype=torch.float32, device=dev)
+        final_pos = (emb_t + model.ffwd(emb_t)).cpu().numpy()
+
+    # Domain = embedding space only
+    x_min, x_max = flat[:, 0].min() - extent_margin, flat[:, 0].max() + extent_margin
+    y_min, y_max = flat[:, 1].min() - extent_margin, flat[:, 1].max() + extent_margin
+    x_c, y_c = (x_min + x_max) / 2, (y_min + y_max) / 2
+    half = max(x_max - x_min, y_max - y_min) / 2
+    x_min, x_max = x_c - half, x_c + half
+    y_min, y_max = y_c - half, y_c + half
+
+    # Background = output at each embedding after second residual
+    xs = np.linspace(x_min, x_max, grid_resolution)
+    ys = np.linspace(y_min, y_max, grid_resolution)
+    xx, yy = np.meshgrid(xs, ys)
+    points = np.stack([xx.ravel(), yy.ravel()], axis=1)
+    with torch.no_grad():
+        pts = torch.tensor(points, dtype=torch.float32, device=dev)
+        h = pts + model.ffwd(pts)
+        logits = model.lm_head(h).cpu().numpy()
+    probs = np.exp(logits - logits.max(axis=1, keepdims=True))
+    probs /= probs.sum(axis=1, keepdims=True)
+
+    n_cols = min(3 if _JOURNAL_MODE else 6, vocab_size)
+    n_rows = (vocab_size + n_cols - 1) // n_cols
+    if _JOURNAL_MODE:
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(7.0, 8.0), sharex=True, sharey=True)
+    else:
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex=True, sharey=True)
+    if n_rows == 1 and n_cols == 1:
+        axes = np.array([[axes]])
+    elif n_rows == 1:
+        axes = axes.reshape(1, -1)
+    elif n_cols == 1:
+        axes = axes.reshape(-1, 1)
+
+    _lbl_fs = 9 if _JOURNAL_MODE else 7
+    for token_idx in range(vocab_size):
+        row, col = token_idx // n_cols, token_idx % n_cols
+        ax = axes[row, col]
+        Z = probs[:, token_idx].reshape(grid_resolution, grid_resolution)
+        ax.pcolormesh(xx, yy, Z, cmap='viridis', vmin=0, vmax=1, shading='auto', zorder=0)
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
+        ax.set_aspect('equal')
+        if vocab_size * block_size <= 200:
+            for fp, label in zip(final_pos, labels):
+                ax.text(
+                    fp[0], fp[1], label, fontsize=_lbl_fs,
+                    ha='center', va='center', color='white',
+                    weight='bold', zorder=6,
+                )
+        ax.set_title(f"P(next = {itos[token_idx]})", fontsize=10)
+        if row == n_rows - 1:
+            ax.set_xlabel("embedding dim 0", fontsize=9)
+        if col == 0:
+            ax.set_ylabel("embedding dim 1", fontsize=9)
+
+    for token_idx in range(vocab_size, n_rows * n_cols):
+        row, col = token_idx // n_cols, token_idx % n_cols
+        axes[row, col].axis('off')
+
+    plt.tight_layout()
+    if _JOURNAL_MODE:
+        plt.subplots_adjust(hspace=0.12, wspace=0.08)
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')
+        plt.close()
+        print(f"Probability heatmap with FFN positions saved to {save_path}")
+    else:
+        plt.show()
+    model.train()
+
+
 @torch.no_grad()
 def plot_probability_heatmap(
     model, itos, save_path=None, grid_resolution=80, extent_margin=0.5, step_label: int | None = None
 ):
     """
     Plot probability heatmaps for each token WITHOUT token overlays.
-    Shows only the probability distributions P(next = token) over the 2D space.
-    
-    Args:
-        model: Trained model (BigramLanguageModel)
-        itos: Index-to-string mapping for tokens
-        save_path: Path to save the figure
-        grid_resolution: Number of points per axis (default 80)
-        extent_margin: Extra margin around embedding extent (default 0.5)
+    Domain = embedding space (axes are embedding coordinates). At each point,
+    background = P(next token) after the second residual (skip + FFN), i.e.
+    softmax(lm_head(embedding + ffwd(embedding))).
     """
     model.eval()
     vocab_size = model.token_embedding.weight.shape[0]
@@ -5964,9 +6286,9 @@ def plot_probability_heatmap(
         ax.set_aspect('equal')
         ax.set_title(f"P(next = {itos[token_idx]})", fontsize=10)
         if row == n_rows - 1:
-            ax.set_xlabel("dim 0", fontsize=9)
+            ax.set_xlabel("embedding dim 0", fontsize=9)
         if col == 0:
-            ax.set_ylabel("dim 1", fontsize=9)
+            ax.set_ylabel("embedding dim 1", fontsize=9)
 
     # Hide unused subplots
     for token_idx in range(vocab_size, n_rows * n_cols):
@@ -5992,15 +6314,8 @@ def plot_probability_heatmap_with_values(
     model, itos, save_path=None, grid_resolution=80, extent_margin=0.5, step_label: int | None = None
 ):
     """
-    Plot probability heatmaps for each token with all token+position V values
-    (W_V @ embedding) overlaid on top, analogous to plot_probability_heatmap_with_embeddings.
-    
-    Args:
-        model: Trained model (BigramLanguageModel)
-        itos: Index-to-string mapping for tokens
-        save_path: Path to save the figure
-        grid_resolution: Number of points per axis (default 80)
-        extent_margin: Extra margin around extent (default 0.5)
+    Domain = embedding space. Background = P(next) at that embedding after second residual.
+    Overlay = V values (W_V @ embedding) for reference (may fall outside embedding extent).
     """
     model.eval()
     vocab_size = model.token_embedding.weight.shape[0]
@@ -6034,15 +6349,17 @@ def plot_probability_heatmap_with_values(
             labels.append(_token_pos_label(itos[token_idx], pos_idx))
     all_V = np.array(all_V)  # (vocab_size * block_size, 2)
 
-    # Grid extent: union of embedding and V extents (so both are visible)
-    v_x_min, v_x_max = all_V[:, 0].min(), all_V[:, 0].max()
-    v_y_min, v_y_max = all_V[:, 1].min(), all_V[:, 1].max()
-    x_min = min(emb_x_min, v_x_min) - extent_margin
-    x_max = max(emb_x_max, v_x_max) + extent_margin
-    y_min = min(emb_y_min, v_y_min) - extent_margin
-    y_max = max(emb_y_max, v_y_max) + extent_margin
+    # Grid extent: embedding space only (domain = embedding)
+    x_min = emb_x_min - extent_margin
+    x_max = emb_x_max + extent_margin
+    y_min = emb_y_min - extent_margin
+    y_max = emb_y_max + extent_margin
+    x_c, y_c = (x_min + x_max) / 2, (y_min + y_max) / 2
+    half = max(x_max - x_min, y_max - y_min) / 2
+    x_min, x_max = x_c - half, x_c + half
+    y_min, y_max = y_c - half, y_c + half
 
-    # Create probability grid
+    # Create probability grid (output at each embedding point = after second residual)
     xs = np.linspace(x_min, x_max, grid_resolution)
     ys = np.linspace(y_min, y_max, grid_resolution)
     xx, yy = np.meshgrid(xs, ys)
@@ -6093,9 +6410,9 @@ def plot_probability_heatmap_with_values(
 
         ax.set_title(f"P(next = {itos[token_idx]})", fontsize=10)
         if row == n_rows - 1:
-            ax.set_xlabel("dim 0", fontsize=9)
+            ax.set_xlabel("embedding dim 0", fontsize=9)
         if col == 0:
-            ax.set_ylabel("dim 1", fontsize=9)
+            ax.set_ylabel("embedding dim 1", fontsize=9)
 
     for token_idx in range(vocab_size, n_rows * n_cols):
         row = token_idx // n_cols
