@@ -2426,89 +2426,73 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax.set_ylim(np.clip(ymin - ym, -max_range, max_range), np.clip(ymax + ym, -max_range, max_range))
     
     # Create figure
-    # Journal: 1 row × 3 cols — each panel = same original embeddings (embedding space), gray annotations; weight as inset
-    # Standard: 2 rows × 4 cols (original layout with Tok+Pos in row 0 col 0, then weights + Q,K,V)
+    # Journal: 1 row × 4 cols — (a) original embeddings, (b) Q, (c) K, (d) V; weight as inset in b/c/d
+    # Standard: 2 rows × 4 cols (original layout)
     if _JOURNAL_MODE:
-        fig = plt.figure(figsize=(7.0, 3.2))
-        gs = GridSpec(1, 3, figure=fig, wspace=0.35, left=0.07, right=0.97, top=0.88, bottom=0.14)
+        fig = plt.figure(figsize=(7.0, 3.6))
+        gs = GridSpec(1, 4, figure=fig, wspace=0.35, left=0.06, right=0.97, top=0.88, bottom=0.14)
     else:
         fig = plt.figure(figsize=(20, 10))
         gs = GridSpec(2, 4, figure=fig, hspace=0.35, wspace=0.3)
     
     _lbl_fs = 6 if _JOURNAL_MODE else 9
-    _step = 4 if _JOURNAL_MODE and num_combinations > 48 else 1
-    _step_1d = _step
     _pe = [pe.withStroke(linewidth=2, foreground='white')] if _JOURNAL_MODE else []
     _panel_fs = 10 if _JOURNAL_MODE else 12
     x_labels = list(range(n_embd))
     y_labels_local = list(range(head_size))
 
-    # Journal: single row of 3 panels; each has (1) SAME original embeddings in light gray (identical), (2) Q/K/V in blue/red/green
+    # Journal: 4 panels — original + Q + K + V, each in own space; weight inset in Q/K/V
     if _JOURNAL_MODE and n_embd >= 2 and head_size >= 2:
         X_orig = all_combinations[:, [0, 1]]
         Q_2d = Q_transformed[:, [0, 1]]
         K_2d = K_transformed[:, [0, 1]]
         V_2d = V_transformed[:, [0, 1]]
-        _emb_lo = X_orig.min(axis=0) - 0.15 * (X_orig.max(axis=0) - X_orig.min(axis=0))
-        _emb_hi = X_orig.max(axis=0) + 0.15 * (X_orig.max(axis=0) - X_orig.min(axis=0))
-        # Make limits square so panels are square with equal aspect
-        _cx = 0.5 * (_emb_lo[0] + _emb_hi[0])
-        _cy = 0.5 * (_emb_lo[1] + _emb_hi[1])
-        _half = 0.5 * max(_emb_hi[0] - _emb_lo[0], _emb_hi[1] - _emb_lo[1])
-        _xlo_emb, _xhi_emb = np.clip(_cx - _half, -8, 8), np.clip(_cx + _half, -8, 8)
-        _ylo_emb, _yhi_emb = np.clip(_cy - _half, -8, 8), np.clip(_cy + _half, -8, 8)
         _m = 0.12
-        def _lims(arr):
-            x, y = arr[:, 0], arr[:, 1]
-            s0, s1 = max(x.max() - x.min(), 0.5), max(y.max() - y.min(), 0.5)
-            return (np.clip(x.min() - _m * s0, -12, 12), np.clip(x.max() + _m * s0, -12, 12),
-                    np.clip(y.min() - _m * s1, -12, 12), np.clip(y.max() + _m * s1, -12, 12))
-        for col, (W, ttl_short, panel_label, ann_color, xyz_2d) in enumerate([
-            (W_Q, "W_Q", "(a)", "blue", Q_2d),
-            (W_K, "W_K", "(b)", "red", K_2d),
-            (W_V, "W_V", "(c)", "green", V_2d),
-        ]):
+        def _sq_lims(arr, max_r=12):
+            lo = arr.min(axis=0) - _m * np.maximum(arr.max(axis=0) - arr.min(axis=0), 0.5)
+            hi = arr.max(axis=0) + _m * np.maximum(arr.max(axis=0) - arr.min(axis=0), 0.5)
+            cx = 0.5 * (lo[0] + hi[0])
+            cy = 0.5 * (lo[1] + hi[1])
+            half = 0.5 * max(hi[0] - lo[0], hi[1] - lo[1])
+            return (np.clip(cx - half, -max_r, max_r), np.clip(cx + half, -max_r, max_r),
+                    np.clip(cy - half, -max_r, max_r), np.clip(cy + half, -max_r, max_r))
+        _panels = [
+            (None, "Original", "(a)", "black", X_orig),
+            (W_Q, "Q", "(b)", "blue", Q_2d),
+            (W_K, "K", "(c)", "red", K_2d),
+            (W_V, "V", "(d)", "green", V_2d),
+        ]
+        for col, (W, ttl, panel_label, ann_color, pts) in enumerate(_panels):
             ax = fig.add_subplot(gs[0, col])
-            ax.set_xlim(_xlo_emb, _xhi_emb)
-            ax.set_ylim(_ylo_emb, _yhi_emb)
+            xl, xr, yl, yr = _sq_lims(pts, max_r=8 if W is None else 12)
+            ax.set_xlim(xl, xr)
+            ax.set_ylim(yl, yr)
             ax.set_aspect('equal', adjustable='box')
-            ax.set_xlabel("Embedding Dim 0")
-            ax.set_ylabel("Embedding Dim 1" if col == 0 else "")
-            ax.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0)
-            ax.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0)
-            ax.grid(True, alpha=0.3)
-            ax.set_title(f"{ttl_short}: token+position embeddings", fontsize=9)
-            ax.tick_params(axis='both', labelsize=7)
-            ax.text(-0.08, 1.02, panel_label, transform=ax.transAxes, fontsize=_panel_fs, fontweight='bold', va='bottom')
-            # Layer 1: original token+position embeddings — light gray, identical on all three panels
-            for i in range(0, len(labels), _step):
-                ax.text(X_orig[i, 0], X_orig[i, 1], labels[i], fontsize=_lbl_fs, ha='center', va='center',
-                        color='0.7', alpha=0.7, zorder=0)
-            # Layer 2: Q (panel 1) / K (panel 2) / V (panel 3) in blue/red/green — overlay in own coords
-            ax2 = ax.inset_axes([0, 0, 1, 1])
-            ax2.patch.set_visible(False)
-            xl, xr, yl, yr = _lims(xyz_2d)
-            ax2.set_xlim(xl, xr)
-            ax2.set_ylim(yl, yr)
-            ax2.set_aspect('equal', adjustable='box')
-            ax2.set_xticks([])
-            ax2.set_yticks([])
-            for spine in ax2.spines.values():
-                spine.set_visible(False)
-            for i in range(0, len(labels), _step):
-                ax2.text(xyz_2d[i, 0], xyz_2d[i, 1], labels[i], fontsize=_lbl_fs, ha='center', va='center',
+            ax.set_xlabel("Dim 0", fontsize=7)
+            ax.set_ylabel("Dim 1" if col == 0 else "", fontsize=7)
+            ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.5, zorder=0)
+            ax.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.5, zorder=0)
+            ax.grid(True, alpha=0.2)
+            ax.set_title(ttl, fontsize=8)
+            ax.tick_params(axis='both', labelsize=6)
+            ax.text(-0.05, 1.02, panel_label, transform=ax.transAxes, fontsize=_panel_fs, fontweight='bold', va='bottom')
+            for i in range(len(labels)):
+                ax.text(pts[i, 0], pts[i, 1], labels[i], fontsize=_lbl_fs, ha='center', va='center',
                         color=ann_color, zorder=1)
-            # Inset: weight heatmap, upper right
-            inset = ax.inset_axes([0.72, 0.68, 0.26, 0.26])
-            sns.heatmap(W, cmap="viridis", xticklabels=['0', '1'], yticklabels=['0', '1'], cbar=False,
-                        ax=inset, annot=True, fmt='.1f', annot_kws={'size': 5})
-            for t in inset.texts:
-                t.set_backgroundcolor('none')
-            _sub = ttl_short.split("_")[-1]
-            inset.set_title(rf"$W_{{{_sub}}}$", fontsize=6, pad=2)
-            inset.set_xlabel("C", fontsize=5, labelpad=1)
-            inset.set_ylabel("hs", fontsize=5, labelpad=1)
-            inset.tick_params(axis='both', which='both', length=0, labelsize=4, pad=1)
+            # Weight inset for Q/K/V panels: W_Q, W_K, W_V; axis labels C, hs only (no spines/ticks); moved down to clear panel title
+            if W is not None:
+                inset = ax.inset_axes([0.66, 0.6, 0.30, 0.30])
+                sns.heatmap(W, cmap="viridis", xticklabels=False, yticklabels=False, cbar=False,
+                            ax=inset, annot=True, fmt='.1f', annot_kws={'size': 5})
+                for t in inset.texts:
+                    t.set_backgroundcolor('none')
+                inset.set_title(rf"$W_{{{ttl}}}$", fontsize=6, pad=2)
+                inset.set_xlabel("C", fontsize=5)
+                inset.set_ylabel("hs", fontsize=5)
+                inset.set_xticks([])
+                inset.set_yticks([])
+                for spine in inset.spines.values():
+                    spine.set_visible(False)
     else:
         # Standard (non-journal) or 1D: keep original two-row layout
         if not _JOURNAL_MODE:
@@ -2516,7 +2500,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
             if n_embd >= 2:
                 X_orig = all_combinations[:, [0, 1]]
                 ax0.scatter(X_orig[:, 0], X_orig[:, 1], s=0, alpha=0)
-                for i in range(0, len(labels), _step):
+                for i in range(len(labels)):
                     ax0.text(X_orig[i, 0], X_orig[i, 1], labels[i], fontsize=_lbl_fs, ha='center', va='center',
                              zorder=2, path_effects=_pe)
                 ax0.set_title(f"Original Token+Position Embeddings: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=12)
@@ -2530,7 +2514,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
             else:
                 X_orig_1d = all_combinations[:, 0]
                 ax0.scatter(X_orig_1d, np.zeros_like(X_orig_1d), s=0, alpha=0)
-                for i in range(0, len(labels), _step_1d):
+                for i in range(len(labels)):
                     ax0.text(X_orig_1d[i], 0, labels[i], fontsize=9, ha='center', va='center', rotation=90)
                 ax0.set_title(f"Original Token+Position Embeddings: Dim 0\n(All tokens, {num_combinations} combinations)", fontsize=12)
                 ax0.set_xlabel("Embedding Dim 0")
@@ -2574,7 +2558,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax4 = fig.add_subplot(gs[_wr2, _wc2])
         if head_size >= 2:
             ax4.scatter(Q_2d[:, 0], Q_2d[:, 1], s=0, alpha=0)
-            for i in range(0, len(labels), _step):
+            for i in range(len(labels)):
                 ax4.text(Q_2d[i, 0], Q_2d[i, 1], labels[i], fontsize=_lbl_fs, ha='center', va='center',
                          color='blue', zorder=2, path_effects=_pe)
             ax4.set_title(f"Q-Transformed: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=12)
@@ -2589,7 +2573,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         else:
             Q_1d = Q_transformed[:, 0]
             ax4.scatter(Q_1d, np.zeros_like(Q_1d), s=0, alpha=0)
-            for i in range(0, len(labels), _step_1d):
+            for i in range(len(labels)):
                 ax4.text(Q_1d[i], 0, labels[i], fontsize=_lbl_fs, ha='center', va='center', rotation=90, color='blue')
             ax4.set_title(f"Q-Transformed: Dim 0\n(All tokens, {num_combinations} combinations)", fontsize=12)
             ax4.set_xlabel("Head Dim 0")
@@ -2599,7 +2583,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax5 = fig.add_subplot(gs[_wr2, _wc2 + 1])
         if head_size >= 2:
             ax5.scatter(K_2d[:, 0], K_2d[:, 1], s=0, alpha=0)
-            for i in range(0, len(labels), _step):
+            for i in range(len(labels)):
                 ax5.text(K_2d[i, 0], K_2d[i, 1], labels[i], fontsize=_lbl_fs, ha='center', va='center',
                          color='red', zorder=2, path_effects=_pe)
             ax5.set_title(f"K-Transformed: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=12)
@@ -2614,7 +2598,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         else:
             K_1d = K_transformed[:, 0]
             ax5.scatter(K_1d, np.zeros_like(K_1d), s=0, alpha=0)
-            for i in range(0, len(labels), _step_1d):
+            for i in range(len(labels)):
                 ax5.text(K_1d[i], 0, labels[i], fontsize=_lbl_fs, ha='center', va='center', rotation=90, color='red')
             ax5.set_title(f"K-Transformed: Dim 0\n(All tokens, {num_combinations} combinations)", fontsize=12)
             ax5.set_xlabel("Head Dim 0")
@@ -2625,7 +2609,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
         v_color = 'green'
         if head_size >= 2:
             ax6.scatter(V_2d[:, 0], V_2d[:, 1], s=0, alpha=0)
-            for i in range(0, len(labels), _step):
+            for i in range(len(labels)):
                 ax6.text(V_2d[i, 0], V_2d[i, 1], labels[i], fontsize=_lbl_fs, ha='center', va='center',
                          color=v_color, zorder=2, path_effects=_pe)
             ax6.set_title(f"V-Transformed: Dim 0 vs Dim 1\n(All tokens, {num_combinations} combinations)", fontsize=12)
@@ -2642,7 +2626,7 @@ def plot_qkv_transformations(model, itos, save_path=None):
             margin = 0.15 * (V_1d.max() - V_1d.min())
             ax6.set_xlim(V_1d.min() - margin, V_1d.max() + margin)
             ax6.set_ylim(-0.5, 0.5)
-            for i in range(0, len(labels), _step_1d):
+            for i in range(len(labels)):
                 ax6.text(V_1d[i], 0, labels[i], fontsize=_lbl_fs, ha='center', va='center', color=v_color)
             ax6.set_title(f"V-Transformed: Dim 0\n(All tokens, {num_combinations} combinations)", fontsize=12)
             ax6.set_xlabel("Head Dim 0")
