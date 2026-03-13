@@ -1,7 +1,7 @@
 # Fully Interpretable Minimal Transformers: From Geometry to Algorithm
 
 > **Abstract.**
-> We present a framework for building and interpreting minimal transformer language models trained on procedurally-generated integer sequences. By constraining the embedding dimension to $n_{\mathrm{embed}} = 2$ and the head size to $d_k = 2$, we enable full two-dimensional visualization of every internal representation — embeddings, query/key/value transforms, attention outputs, residual streams, and the language-model head's decision boundaries. Our central claim is that **the learned geometry implies an algorithm**: the arrangement of points and boundaries in $\mathbb{R}^2$ can be read as a step-by-step procedure. Using a simple task where the model must produce the most recent even number whenever it sees the '+' operator, we show how the model embeds the tokens and their respective positions in the sequence, transforms them via the Q, K, and V matrices, uses the dot product between the Q and K representations to form the attention matrix, and uses the attention matrix to select values that move the representation of each input token to the region of the domain of the LM head that will correctly predict the next token. We introduce a suite of interpretability visualizations that make the  algorithmic interpretation of this procedure explicit, and provide training-evolution animations showing how the algorithmic geometry emerges during learning. The framework offers a pedagogical and experimental testbed where *seeing the geometry is seeing the algorithm*.
+> We present a framework for building and interpreting minimal transformer language models trained on procedurally-generated integer sequences. By constraining the embedding dimension to $n_{\mathrm{embed}} = 2$ and the head size to $d_k = 2$, we enable full two-dimensional visualization of every internal representation — embeddings, query/key/value transforms, attention outputs, residual streams, and the language-model head's decision boundaries. Our central claim is that **the learned geometry implies an algorithm**: the arrangement of points and boundaries in $\mathbb{R}^2$ can be read as a step-by-step procedure. Using a simple task where the model must produce the most recent even number whenever it sees the '+' operator, we show how the model embeds the tokens and their respective positions in the sequence, transforms them via the Q, K, and V matrices, uses the dot product between the Q and K representations to form the attention matrix, and uses the attention matrix to select values that move the representation of each input token to the region of the domain of the LM head that will correctly predict the next token. We introduce a suite of interpretability visualizations that make the  algorithmic interpretation of this procedure explicit, and provide training-evolution animations showing how the algorithmic geometry emerges during learning. The framework offers a pedagogical and experimental testbed to explore how transformers use informational geometry to solve tasks.
 
 ---
 
@@ -31,13 +31,6 @@ The task is defined over a vocabulary $\mathcal{V}$ of 12 tokens: the integers $
 **Rule.** Whenever `+` appears in the sequence, the *next* token must be the most recent even number that appeared before that `+`. -->
 
 
-
-
-
-
-
-
-
 ```
 5  3  8  7  +  8  10  2  4  +  4  ...
             ↑                 ↑
@@ -45,16 +38,6 @@ The task is defined over a vocabulary $\mathcal{V}$ of 12 tokens: the integers $
 ```
 
 Positions not immediately following `+` are unconstrained — any token may appear. The rule constrains only a fraction of positions; the remainder serve as context. The model must learn to (1) identify when the current position follows `+`, (2) scan backward through the context to locate the most recent even number, and (3) output that number with high probability. This is a non-trivial attention task: it requires routing information from a variable, content-dependent past position to the present.
-
-**Geometry implies an algorithm.** We argue that the model does not merely *use* geometry as an internal representation; the geometry *is* the algorithm. By "algorithm" we mean a step-by-step procedure that implements the task. For the *plus-last-even* rule — after seeing `+`, output the most recent even number — the procedure is:
-
-1. Detect the `+` token via its query representation.
-2. Search backward over the context to find the most recent even number via query–key dot products.
-3. Retrieve that number's value vector through attention.
-4. Add that value to the '+' token's combined embedding via the first residual to form $\mathbf{z}_i = \mathbf{e}_i + \mathrm{Attn}(\mathbf{e})_i$, which is then passed through the FFN and second residual to form $\mathbf{h}_i$, the input to the LM head.
-5. Map the resulting 2D point to the correct output token via the LM head's decision boundaries.
-
-Each step is directly legible from the layout of the learned 2D information geometry. The figures presented in this paper make each step explicit.
 
 --- -->
 
