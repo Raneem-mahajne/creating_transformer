@@ -197,8 +197,10 @@ def visualize_from_checkpoint(
     plots_subfolder: str | None = None, sequence_seed: int | None = None, sequence_index: int | None = None,
     fixed_sequence_decoded: list | None = None, require_odd_in_sequence: bool = False,
     generate_journal: bool = False, _is_journal_pass: bool = False,
+    only_figures: list[int] | None = None,
 ):
     """Generate all visualizations from checkpoint data.
+    If only_figures is set (e.g. [8]), only generate plots whose figure number is in the list.
     If plots_subfolder is set, save plots to that subfolder (do not overwrite main plots).
     If sequence_seed or sequence_index are set, use a different sequence for sequence-dependent plots.
     If fixed_sequence_decoded is set (and reseed params are not), use this sequence for plots (decoded form, e.g. [10, '+', 10, 6, '+', 6, 4, 8]).
@@ -231,6 +233,12 @@ def visualize_from_checkpoint(
     if plots_subfolder:
         print(f"Plots will be saved to subfolder: {plots_subfolder}")
 
+    # Deterministic defaults when no seed override: same generated/consistent sequence every run
+    _default_seed = 42
+    if sequence_seed is None:
+        random.seed(_default_seed)
+        torch.manual_seed(_default_seed)
+
     generator = get_generator_from_config(config)
 
     decoded_train_sequences = [decode(seq) for seq in train_sequences[:6]]
@@ -239,6 +247,10 @@ def visualize_from_checkpoint(
     def _plot_path(default_name: str, base_dir: str = plots_dir) -> str:
         mapped = _lookup_manifest_filename(manifest, config_name_actual, default_name)
         return os.path.join(base_dir, mapped)
+
+    def _plot(default_name: str) -> bool:
+        return _should_plot_figure(manifest, config_name_actual, default_name, only_figures)
+
     with open(os.path.join(plots_dir, "training_data_samples.txt"), "w", encoding="utf-8") as f:
         f.write(f"# Training Data Samples for: {config_name_actual}\n")
         f.write(f"# {len(decoded_train_sequences)} sample sequences (decoded from train_sequences)\n")
@@ -249,6 +261,7 @@ def visualize_from_checkpoint(
     num_sequences_to_generate = 5
     if sequence_seed is not None:
         random.seed(sequence_seed)
+        torch.manual_seed(sequence_seed)
     generated_sequences = []
     for _ in range(num_sequences_to_generate):
         seq_length = random.randint(data_config["min_length"], data_config["max_length"])
@@ -269,43 +282,46 @@ def visualize_from_checkpoint(
             f.write(" ".join(str(i) for i in seq) + "\n")
     print(f"Generated {num_sequences_to_generate} sequences for step {step}")
 
-    _train_acc, _train_correct, _train_incorrect = plot_training_data_heatmap(
-        decoded_train_sequences,
-        generator,
-        save_path=_plot_path("training_data_heatmap.png"),
-        num_sequences=min(4, len(decoded_train_sequences)),
-        max_length=20,
-    )
-
-    plot_learning_curve(
-        steps_for_plot,
-        train_loss_history,
-        val_loss_history,
-        rule_error_history=rule_error_history,
-        save_path=_plot_path("learning_curve.png"),
-        eval_interval=eval_interval,
-    )
-
-    if generated_sequences_e0:
-        (acc0, c0, i0), (accf, cf, inf) = plot_generated_sequences_heatmap_before_after(
-            generated_sequences_e0,
-            generated_sequences,
+    if _plot("training_data_heatmap.png"):
+        _train_acc, _train_correct, _train_incorrect = plot_training_data_heatmap(
+            decoded_train_sequences,
             generator,
-            save_path=_plot_path("generated_sequences_heatmap.png"),
-            num_sequences=3,
+            save_path=_plot_path("training_data_heatmap.png"),
+            num_sequences=min(4, len(decoded_train_sequences)),
             max_length=20,
         )
-        print(f"Generated sequences heatmap (E0): {c0} correct, {i0} incorrect positions ({acc0:.1%} accuracy)")
-        print(f"Generated sequences heatmap (Final): {cf} correct, {inf} incorrect positions ({accf:.1%} accuracy)")
-    else:
-        heatmap_accuracy, correct_count, incorrect_count = plot_generated_sequences_heatmap(
-            generated_sequences,
-            generator,
-            save_path=_plot_path("generated_sequences_heatmap.png"),
-            num_sequences=min(3, len(generated_sequences)),
-            max_length=20,
+
+    if _plot("learning_curve.png"):
+        plot_learning_curve(
+            steps_for_plot,
+            train_loss_history,
+            val_loss_history,
+            rule_error_history=rule_error_history,
+            save_path=_plot_path("learning_curve.png"),
+            eval_interval=eval_interval,
         )
-        print(f"Generated sequences heatmap: {correct_count} correct, {incorrect_count} incorrect positions ({heatmap_accuracy:.1%} accuracy)")
+
+    if _plot("generated_sequences_heatmap.png"):
+        if generated_sequences_e0:
+            (acc0, c0, i0), (accf, cf, inf) = plot_generated_sequences_heatmap_before_after(
+                generated_sequences_e0,
+                generated_sequences,
+                generator,
+                save_path=_plot_path("generated_sequences_heatmap.png"),
+                num_sequences=3,
+                max_length=20,
+            )
+            print(f"Generated sequences heatmap (E0): {c0} correct, {i0} incorrect positions ({acc0:.1%} accuracy)")
+            print(f"Generated sequences heatmap (Final): {cf} correct, {inf} incorrect positions ({accf:.1%} accuracy)")
+        else:
+            heatmap_accuracy, correct_count, incorrect_count = plot_generated_sequences_heatmap(
+                generated_sequences,
+                generator,
+                save_path=_plot_path("generated_sequences_heatmap.png"),
+                num_sequences=min(3, len(generated_sequences)),
+                max_length=20,
+            )
+            print(f"Generated sequences heatmap: {correct_count} correct, {incorrect_count} incorrect positions ({heatmap_accuracy:.1%} accuracy)")
 
     # Select a single consistent sequence for all sequence-dependent plots
     if fixed_sequence_decoded is not None and sequence_seed is None and sequence_index is None and stoi is not None:
@@ -318,10 +334,13 @@ def visualize_from_checkpoint(
     else:
         consistent_sequence = None
     if consistent_sequence is None:
-        # Seed for picking which train sequence to use (can be overridden by sequence_seed/sequence_index)
+        # Pick deterministically: sort so order does not depend on train_sequences iteration
         seed_for_seq = 43 if sequence_seed is None else sequence_seed
         random.seed(seed_for_seq)
-        valid_sequences = [seq for seq in train_sequences if len(seq) >= 7]  # Need at least 7 tokens for pattern with 2 plus signs
+        valid_sequences = sorted(
+            [seq for seq in train_sequences if len(seq) >= 7],
+            key=lambda s: tuple(s),
+        )  # Need at least 7 tokens for pattern with 2 plus signs
         if valid_sequences:
             # Try indices until we find a sequence with 2 plus signs, each followed by different even numbers
             start_idx = (sequence_index if sequence_index is not None else 0) % len(valid_sequences)
@@ -336,7 +355,10 @@ def visualize_from_checkpoint(
                     break
             else:
                 # Fallback: try the old pattern if new one doesn't match
-                valid_sequences_old = [seq for seq in train_sequences if len(seq) >= 3]
+                valid_sequences_old = sorted(
+                    [seq for seq in train_sequences if len(seq) >= 3],
+                    key=lambda s: tuple(s),
+                )
                 if valid_sequences_old:
                     for k in range(len(valid_sequences_old)):
                         idx = (start_idx + k) % len(valid_sequences_old)
@@ -385,66 +407,75 @@ def visualize_from_checkpoint(
     # When using a subfolder, write architecture there too so the folder is self-contained
     base_plots_dir = str(get_plots_dir(config_name_actual, step, subfolder=plots_subfolder))
     arch_path = _plot_path("architecture.png", base_dir=base_plots_dir)
-    if not os.path.exists(arch_path):
+    if _plot("architecture.png") and not os.path.exists(arch_path):
         plot_architecture_diagram(config, save_path=arch_path, model=model, vocab_size=vocab_size, batch_size=training_config.get('batch_size', 4))
 
-    plot_weights_qkv_two_sequences(
-        model, X_list_demo, itos, save_path=_plot_path("qkv_query_key_attention.png"), num_sequences=1
-    )
-    plot_q_dot_product_gradients(
-        model, X_list_demo, itos, save_path=_plot_path("q_dot_product_gradients.png"), num_sequences=1
-    )
-    plot_residuals(
-        model, X_list_demo, itos, save_path=_plot_path("residuals.png"), num_sequences=1
-    )
-    plot_embeddings_pca(model, itos, save_path=_plot_path("embeddings.png"))
+    if _plot("qkv_query_key_attention.png"):
+        plot_weights_qkv_two_sequences(
+            model, X_list_demo, itos, save_path=_plot_path("qkv_query_key_attention.png"), num_sequences=1
+        )
+    if _plot("q_dot_product_gradients.png"):
+        plot_q_dot_product_gradients(
+            model, X_list_demo, itos, save_path=_plot_path("q_dot_product_gradients.png"), num_sequences=1
+        )
+    if _plot("residuals.png"):
+        plot_residuals(
+            model, X_list_demo, itos, save_path=_plot_path("residuals.png"), num_sequences=1
+        )
+    if _plot("embeddings.png"):
+        plot_embeddings_pca(model, itos, save_path=_plot_path("embeddings.png"))
     # plot_embeddings_scatterplots_only removed — redundant with bottom row of embeddings.png (Figure 05)
     path_qkv_comp = _plot_path_if_in_manifest("embedding_qkv_comprehensive.png", manifest, config_name_actual, plots_dir)
-    if path_qkv_comp:
+    if path_qkv_comp and _plot("embedding_qkv_comprehensive.png"):
         plot_embedding_qkv_comprehensive(model, itos, save_path=path_qkv_comp)
-    plot_qkv_transformations(model, itos, save_path=_plot_path("qkv_transformations.png"))
+    if _plot("qkv_transformations.png"):
+        plot_qkv_transformations(model, itos, save_path=_plot_path("qkv_transformations.png"))
     path_tp_space = _plot_path_if_in_manifest("token_position_embedding_space.png", manifest, config_name_actual, plots_dir)
-    if path_tp_space:
+    if path_tp_space and _plot("token_position_embedding_space.png"):
         plot_token_position_embedding_space(model, itos, save_path=path_tp_space)
     # plot_attention_matrix moved to supplementary
-    # plot_attention_matrix(
-    #     model, X_list, itos, save_path=_plot_path("attention_matrix.png"), num_sequences=3
-    # )
-    plot_qk_embedding_space(model, itos, save_path=_plot_path("qk_embedding_space.png"))
-    plot_qk_embedding_space_focused_query(
-        model, itos, token_str="+", position=5,
-        save_path=_plot_path("qk_embedding_space_plus5_focus.png"),
-    )
+    if _plot("qk_embedding_space.png"):
+        plot_qk_embedding_space(model, itos, save_path=_plot_path("qk_embedding_space.png"))
+    if _plot("qk_embedding_space_plus5_focus.png"):
+        plot_qk_embedding_space_focused_query(
+            model, itos, token_str="+", position=5,
+            save_path=_plot_path("qk_embedding_space_plus5_focus.png"),
+        )
     # Plot embeddings for demo sequence (fig 13: final is + not after +)
-    plot_sequence_embeddings(
-        model, X_demo, itos, save_path=_plot_path("sequence_embeddings.png")
-    )
-    if _is_journal_pass:
-        plot_qk_full_attention_combined(
-            model, itos, save_path=_plot_path("qk_full_attention_heatmap.png")
+    if _plot("sequence_embeddings.png"):
+        plot_sequence_embeddings(
+            model, X_demo, itos, save_path=_plot_path("sequence_embeddings.png")
         )
-    else:
-        plot_qk_full_attention_heatmap(
-            model, itos, save_path=_plot_path("qk_full_attention_heatmap.png")
-        )
-        plot_qk_full_attention_heatmap_last_row(
-            model, itos, save_path=_plot_path("qk_full_attention_heatmap_last_row.png")
-        )
+    if _plot("qk_full_attention_heatmap.png"):
+        if _is_journal_pass:
+            plot_qk_full_attention_combined(
+                model, itos, save_path=_plot_path("qk_full_attention_heatmap.png")
+            )
+        else:
+            plot_qk_full_attention_heatmap(
+                model, itos, save_path=_plot_path("qk_full_attention_heatmap.png")
+            )
+            plot_qk_full_attention_heatmap_last_row(
+                model, itos, save_path=_plot_path("qk_full_attention_heatmap_last_row.png")
+            )
     path_lm_head = _plot_path_if_in_manifest("lm_head_probability_heatmaps.png", manifest, config_name_actual, plots_dir)
-    if path_lm_head:
+    if path_lm_head and _plot("lm_head_probability_heatmaps.png"):
         plot_lm_head_probability_heatmaps(model, itos, save_path=path_lm_head)
-    plot_probability_heatmap(
-        model, itos, save_path=_plot_path("probability_heatmap.png")
-    )
-    plot_probability_heatmap_with_embeddings(
-        model, itos, save_path=_plot_path("probability_heatmap_with_embeddings.png")
-    )
-    plot_probability_heatmap_with_values(
-        model, itos, save_path=_plot_path("probability_heatmap_with_values.png")
-    )
+    if _plot("probability_heatmap.png"):
+        plot_probability_heatmap(
+            model, itos, save_path=_plot_path("probability_heatmap.png")
+        )
+    if _plot("probability_heatmap_with_embeddings.png"):
+        plot_probability_heatmap_with_embeddings(
+            model, itos, save_path=_plot_path("probability_heatmap_with_embeddings.png")
+        )
+    if _plot("probability_heatmap_with_values.png"):
+        plot_probability_heatmap_with_values(
+            model, itos, save_path=_plot_path("probability_heatmap_with_values.png")
+        )
     # Final-on-output (18) and frozen_output supp: same demo sequence as figs 13–17
     seq_for_18_and_supp = demo_sequence if demo_sequence is not None else consistent_sequence
-    if seq_for_18_and_supp:
+    if seq_for_18_and_supp and _plot("final_on_output_heatmap_grid.png"):
         plot_final_on_output_heatmap_grid(
             model, itos, seq_for_18_and_supp, save_path=_plot_path("final_on_output_heatmap_grid.png")
         )
@@ -468,6 +499,7 @@ def visualize_from_checkpoint(
                 fixed_sequence_decoded=fixed_sequence_decoded,
                 require_odd_in_sequence=require_odd_in_sequence,
                 generate_journal=False, _is_journal_pass=True,
+                only_figures=only_figures,
             )
         finally:
             clear_journal_mode()
@@ -503,6 +535,28 @@ def _lookup_manifest_filename(manifest: list[dict], config_name: str, default_na
         if row["config"] == config_name and row["default_name"] == default_name:
             return row["filename"]
     return default_name
+
+
+def _lookup_manifest_number(manifest: list[dict], config_name: str, default_name: str) -> int | None:
+    """Return figure number (e.g. 8 for '08') for this config and default_name, or None."""
+    for row in manifest:
+        if row["config"] == config_name and row["default_name"] == default_name:
+            num_str = row.get("number", "")
+            try:
+                return int(str(num_str).split("_")[0])
+            except (ValueError, AttributeError):
+                return None
+    return None
+
+
+def _should_plot_figure(
+    manifest: list[dict], config_name: str, default_name: str, only_figures: list[int] | None
+) -> bool:
+    """If only_figures is None, return True. Else return True only if this plot's figure number is in only_figures."""
+    if only_figures is None:
+        return True
+    num = _lookup_manifest_number(manifest, config_name, default_name)
+    return num is not None and num in only_figures
 
 
 def _plot_path_if_in_manifest(

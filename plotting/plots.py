@@ -2426,18 +2426,18 @@ def plot_qkv_transformations(model, itos, save_path=None):
         ax.set_ylim(np.clip(ymin - ym, -max_range, max_range), np.clip(ymax + ym, -max_range, max_range))
     
     # Create figure
-    # Journal: 1 row × 4 cols — (a) original embeddings, (b) Q, (c) K, (d) V; weight as inset in b/c/d
+    # Journal: 2×2 — (a) original embeddings, (b) Q, (c) K, (d) V; weight as inset in b/c/d
     # Standard: 2 rows × 4 cols (original layout)
     if _JOURNAL_MODE:
-        fig = plt.figure(figsize=(7.0, 3.6))
-        gs = GridSpec(1, 4, figure=fig, wspace=0.35, left=0.06, right=0.97, top=0.88, bottom=0.14)
+        fig = plt.figure(figsize=(7.0, 6.2))
+        gs = GridSpec(2, 2, figure=fig, wspace=0.28, hspace=0.32, left=0.06, right=0.97, top=0.94, bottom=0.08)
     else:
         fig = plt.figure(figsize=(20, 10))
         gs = GridSpec(2, 4, figure=fig, hspace=0.35, wspace=0.3)
     
-    _lbl_fs = 6 if _JOURNAL_MODE else 9
+    _lbl_fs = 9 if _JOURNAL_MODE else 9
     _pe = [pe.withStroke(linewidth=2, foreground='white')] if _JOURNAL_MODE else []
-    _panel_fs = 10 if _JOURNAL_MODE else 12
+    _panel_fs = 13 if _JOURNAL_MODE else 12
     x_labels = list(range(n_embd))
     y_labels_local = list(range(head_size))
 
@@ -2462,19 +2462,20 @@ def plot_qkv_transformations(model, itos, save_path=None):
             (W_K, "K", "(c)", "red", K_2d),
             (W_V, "V", "(d)", "green", V_2d),
         ]
-        for col, (W, ttl, panel_label, ann_color, pts) in enumerate(_panels):
-            ax = fig.add_subplot(gs[0, col])
+        for idx, (W, ttl, panel_label, ann_color, pts) in enumerate(_panels):
+            row, col = idx // 2, idx % 2
+            ax = fig.add_subplot(gs[row, col])
             xl, xr, yl, yr = _sq_lims(pts, max_r=8 if W is None else 12)
             ax.set_xlim(xl, xr)
             ax.set_ylim(yl, yr)
             ax.set_aspect('equal', adjustable='box')
-            ax.set_xlabel("Dim 0", fontsize=7)
-            ax.set_ylabel("Dim 1" if col == 0 else "", fontsize=7)
+            ax.set_xlabel("Dim 0", fontsize=10)
+            ax.set_ylabel("Dim 1" if col == 0 else "", fontsize=10)
             ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.5, zorder=0)
             ax.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.5, zorder=0)
             ax.grid(True, alpha=0.2)
-            ax.set_title(ttl, fontsize=8)
-            ax.tick_params(axis='both', labelsize=6)
+            ax.set_title(ttl, fontsize=11)
+            ax.tick_params(axis='both', labelsize=9)
             ax.text(-0.05, 1.02, panel_label, transform=ax.transAxes, fontsize=_panel_fs, fontweight='bold', va='bottom')
             for i in range(len(labels)):
                 ax.text(pts[i, 0], pts[i, 1], labels[i], fontsize=_lbl_fs, ha='center', va='center',
@@ -2483,12 +2484,12 @@ def plot_qkv_transformations(model, itos, save_path=None):
             if W is not None:
                 inset = ax.inset_axes([0.66, 0.6, 0.30, 0.30])
                 sns.heatmap(W, cmap="viridis", xticklabels=False, yticklabels=False, cbar=False,
-                            ax=inset, annot=True, fmt='.1f', annot_kws={'size': 5})
+                            ax=inset, annot=True, fmt='.1f', annot_kws={'size': 8})
                 for t in inset.texts:
                     t.set_backgroundcolor('none')
-                inset.set_title(rf"$W_{{{ttl}}}$", fontsize=6, pad=2)
-                inset.set_xlabel("C", fontsize=5)
-                inset.set_ylabel("hs", fontsize=5)
+                inset.set_title(rf"$W_{{{ttl}}}$", fontsize=9, pad=2)
+                inset.set_xlabel("C", fontsize=8)
+                inset.set_ylabel("hs", fontsize=8)
                 inset.set_xticks([])
                 inset.set_yticks([])
                 for spine in inset.spines.values():

@@ -47,7 +47,7 @@ from plotting import (
 )
 
 
-def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualize_only: bool = False, step: int = None, visualize_all: bool = False):
+def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualize_only: bool = False, step: int = None, visualize_all: bool = False, only_figures: list[int] | None = None):
     """
     Main training function.
     
@@ -57,6 +57,7 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
         visualize_only: If True, only generate visualizations (no training)
         step: If visualize_only=True, visualize this specific step. If None, visualize final checkpoint.
         visualize_all: If True, visualize all available checkpoints
+        only_figures: If set (e.g. [8]), only generate these figure numbers when visualizing.
     """
     print(f"Starting with config: {config_name}")
     # Set seeds for reproducibility
@@ -177,21 +178,21 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
                     visualize_from_checkpoint(
                         config_name_actual, checkpoint_data, config, step=step,
                         plots_subfolder=subfolder, fixed_sequence_decoded=found_sequence,
-                        generate_journal=journal,
+                        generate_journal=journal, only_figures=only_figures,
                     )
                 else:
                     print(f"Warning: Could not find matching sequence after {max_attempts} attempts. Using default.")
                     visualize_from_checkpoint(
                         config_name_actual, checkpoint_data, config, step=step,
                         plots_subfolder=subfolder, fixed_sequence_decoded=[3, "+", 4, 1, 6, 6, "+", 6],
-                        generate_journal=journal,
+                        generate_journal=journal, only_figures=only_figures,
                     )
             else:
                 # Default run: use fixed sequence "4 9 + 4 5 1 + 4" for main plots
                 visualize_from_checkpoint(
                     config_name_actual, checkpoint_data, config, step=step,
                     fixed_sequence_decoded=[4, 9, "+", 4, 10, 7, "+", 10],  # from _try_seeds.py seed 20
-                    generate_journal=journal,
+                    generate_journal=journal, only_figures=only_figures,
                 )
         return
     
@@ -397,7 +398,7 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
     batch_size = training_config.get('batch_size', 4)  # For getting batches for visualization
     
     # Generate visualizations for final checkpoint
-    visualize_from_checkpoint(config_name_actual, checkpoint_data, config, step=None, generate_journal=journal)
+    visualize_from_checkpoint(config_name_actual, checkpoint_data, config, step=None, generate_journal=journal, only_figures=only_figures)
 
 
 if __name__ == "__main__":
@@ -406,6 +407,8 @@ if __name__ == "__main__":
     #   python main.py <config_name>                    # Train and visualize
     #   python main.py <config_name> --visualize       # Only visualize (final checkpoint)
     #   python main.py <config_name> --visualize --step <step_num>  # Visualize specific step
+    #   python main.py <config_name> --visualize --figure 8          # Only generate figure 8
+    #   python main.py <config_name> --visualize --figure 8 9 --journal  # Figures 8 and 9, including A4
     #   python main.py <config_name> --force-retrain    # Force retrain
     #   python main.py <config_name> --visualize --journal  # Also generate A4 journal-sized plots in a4/ subfolder
     
@@ -429,8 +432,21 @@ if __name__ == "__main__":
                 except ValueError:
                     print("Error: --step must be followed by an integer")
                     sys.exit(1)
+
+    only_figures = None
+    if "--figure" in sys.argv:
+        idx = sys.argv.index("--figure")
+        only_figures = []
+        i = idx + 1
+        while i < len(sys.argv) and sys.argv[i].lstrip("-").isdigit():
+            only_figures.append(int(sys.argv[i]))
+            i += 1
+        if not only_figures:
+            only_figures = None
+        else:
+            print(f"Only generating figure(s): {only_figures}")
     
     if "--force-retrain" in sys.argv:
         force_retrain = True
     
-    main(config_name=config_name, force_retrain=force_retrain, visualize_only=visualize_only, step=step, visualize_all=visualize_all)
+    main(config_name=config_name, force_retrain=force_retrain, visualize_only=visualize_only, step=step, visualize_all=visualize_all, only_figures=only_figures)
