@@ -11,18 +11,6 @@ Understanding how transformers process sequences remains a central challenge in 
 
 We bridge this gap with **minimal transformers**: models that retain the full structure of a decoder-only transformer (token and positional embeddings, single-head causal self-attention, residual connections, a feedforward layer, and an LM head) but are constrained to two-dimensional embeddings and head dimension. Every internal state — embeddings, queries, keys, values, attention outputs, residual sums, and pre-softmax logit vectors — lives in $\mathbb{R}^2$. No PCA, t-SNE, or UMAP is required; the model's geometry is directly visible in the plane.
 
-**Geometry implies an algorithm.** We argue that the model does not merely *use* geometry as an internal representation; the geometry *is* the algorithm. By "algorithm" we mean a step-by-step procedure that implements the task. For the *plus-last-even* rule — after seeing `+`, output the most recent even number — the procedure is:
-
-1. Detect the `+` token via its query representation.
-2. Search backward over the context to find the most recent even number via query–key dot products.
-3. Retrieve that number's value vector through attention.
-4. Add that value to the '+' token's combined embedding via the first residual to form $\mathbf{z}_i = \mathbf{e}_i + \mathrm{Attn}(\mathbf{e})_i$, which is then passed through the FFN and second residual to form $\mathbf{h}_i$, the input to the LM head.
-5. Map the resulting 2D point to the correct output token via the LM head's decision boundaries.
-
-Each step is directly legible from the layout of the learned 2D information geometry. The figures presented in this paper make each step explicit.
-
----
-
 ## 2. Methods
 
 ### 2.1 Task Definition
@@ -57,6 +45,16 @@ The task is defined over a vocabulary $\mathcal{V}$ of 12 tokens: the integers $
 ```
 
 Positions not immediately following `+` are unconstrained — any token may appear. The rule constrains only a fraction of positions; the remainder serve as context. The model must learn to (1) identify when the current position follows `+`, (2) scan backward through the context to locate the most recent even number, and (3) output that number with high probability. This is a non-trivial attention task: it requires routing information from a variable, content-dependent past position to the present.
+
+**Geometry implies an algorithm.** We argue that the model does not merely *use* geometry as an internal representation; the geometry *is* the algorithm. By "algorithm" we mean a step-by-step procedure that implements the task. For the *plus-last-even* rule — after seeing `+`, output the most recent even number — the procedure is:
+
+1. Detect the `+` token via its query representation.
+2. Search backward over the context to find the most recent even number via query–key dot products.
+3. Retrieve that number's value vector through attention.
+4. Add that value to the '+' token's combined embedding via the first residual to form $\mathbf{z}_i = \mathbf{e}_i + \mathrm{Attn}(\mathbf{e})_i$, which is then passed through the FFN and second residual to form $\mathbf{h}_i$, the input to the LM head.
+5. Map the resulting 2D point to the correct output token via the LM head's decision boundaries.
+
+Each step is directly legible from the layout of the learned 2D information geometry. The figures presented in this paper make each step explicit.
 
 --- -->
 
@@ -155,16 +153,16 @@ We emphasize that this geometric structure does not exist at initialization; it 
 
 Before examining the attention mechanism, we note that the combined embedding $\mathbf{e}_i$ is fed forward (via attention and residuals) to the feedforward network and LM head. It can thus be useful to understand how the geometry of the combined embeddings $\mathbf{e}_i$ relates to the input-output function determined by the output network.
 
-The output network (FFN, second residual, and LM head, as defined in §2.2) maps a point $\mathbf{z}_i \in \mathbb{R}^2$ to a probability distribution over the vocabulary: $\mathbf{z}_i \mapsto \mathrm{softmax}\!\bigl(\mathrm{LMHead}(\mathbf{z}_i + \mathrm{FFN}(\mathbf{z}_i))\bigr) \in \mathbb{R}^{12}$. Geometrically, this means that for each possible next token (the digits from 0 to 10 and the '+' operator), the 2D plane is partitioned into regions with different probabilities for predicting that token. (Because of the softmax, the probabilities across all tokens for a particular point in the 2D plane must sum to 1.) Figure 6 makes this partition explicit: each subplot shows the model's probability for a specific output token across the plane (yellow ≈ 1, purple ≈ 0).
+The output network (FFN, second residual, and LM head, as defined in §2.2) maps a point $\mathbf{z}_i \in \mathbb{R}^2$ to a probability distribution over the vocabulary: $\mathbf{z}_i \mapsto \mathrm{softmax}\!\bigl(\mathrm{LMHead}(\mathbf{z}_i + \mathrm{FFN}(\mathbf{z}_i))\bigr) \in \mathbb{R}^{12}$. Geometrically, this means that for each possible next token (the digits from 0 to 10 and the '+' operator), the 2D plane is partitioned into regions with different probabilities for predicting that token. (Because of the softmax, the probabilities across all tokens for a particular point in the 2D plane must sum to 1.) Figure 6 makes this partition explicit: each subplot shows the model's probability for a specific output token across the plane (yellow $\approx$ 1, purple $\approx$ 0).
 
 Recall that the true input to the output network is the first-residual state $\mathbf{z}_i = \mathbf{e}_i + \mathrm{Attn}(\mathbf{e})_i$, which depends on the attention mechanism — a component we have not yet analyzed. To build intuition for the output landscape *before* introducing attention, we overlay the 96 combined embeddings $\mathbf{e}_i$ (token $\mathbf{x}_i$ + position $\mathbf{p}_i$, 12 tokens $\times$ 8 positions) on Figure 6 instead. These embeddings represent each token's *starting position* in the plane — the point from which attention will later shift the representation. Comparing where the $\mathbf{e}_i$ sit relative to the output network's decision regions reveals what the attention mechanism must accomplish: it must move each $\mathbf{e}_i$ to the region where the correct next token has high probability.
 
-To understand how the model translates its internal 2D represenations ($\set {e_i}$) into discrete token predictions, we analyze the geometry of the output landscape.
+To understand how the model translates its internal 2D represenations ($\{e_i\}$) into discrete token predictions, we analyze the geometry of the output landscape.
 We observe a clear functional decomposition of the plane into different regions: 
 1. The indifference region (Large region in the upper half of the 2D plane for all units): The upper half-plane acts as a "default" zone where no single digit is strongly favored. Notably, the heatmap for the `+` operator unit shows the highest probability here. This reflects the training data: since the `+` token appears frequently (30%) and can follow almost any digit, the model learns to assign it a high baseline probability in this unspecialized area.
 2. The strong specific prediction region (Large region in the bottom half of the 2D plane for all units). The lower half-plane is divided into distinct target zones for each even integer. In each of these zones, most units have very low output probabilities with the exception of a single even number which has very high output probability. This region of the 2D space is thus effectively reserved by the model for the final retrieval of the correct even digit after the `+` sign.
 
-By overlaying all possible input-position embeddings $\set{e_i}$ (96 total embeddings, 12 tokens * 8 positions) onto these heatmaps, we can visualize how the model positions the embeddings with respect to the 2D landscape of the output network before the attention mechanism is applied. We observe a clear spatial structure with respect to how different embeddings are situated in this space:
+By overlaying all possible input-position embeddings $\{e_i\}$ (96 total embeddings, 12 tokens * 8 positions) onto these heatmaps, we can visualize how the model positions the embeddings with respect to the 2D landscape of the output network before the attention mechanism is applied. We observe a clear spatial structure with respect to how different embeddings are situated in this space:
 
 • All embeddings for the digits $\{0, \dots, 10\}$ are located in the upper half-plane. By landing in this "neutral" zone, these tokens do not trigger a specific retrieval; instead, they maintain a high-entropy state where any subsequent digit or operator remains a valid prediction.
 
@@ -184,10 +182,10 @@ The combined embeddings $\mathbf{e}_i$ alone are not sufficient for the model to
 
 To illustrate how the attention mechanism works, consider what happens when the model encounters a `+` token and needs to retrieve the most recent even number. Each combined embedding $\mathbf{e}_i$—including at each `+` and each number position—is linearly transformed into three vectors: a query ($Q$), a key ($K$), and a value ($V$). For example, when processing a `+`, the query vector represents the "search request" asking, "Where is the relevant even number?" Every other position in the sequence, including those with even numbers, supplies its own key and value vectors. The model computes the attention weights for the `+` token by taking the dot product between its query and every other token's key. This produces a score indicating how strongly the `+` should attend to each past token—ideally, giving the highest score to the key corresponding to the most recent even number. The value vectors determine what information can actually be retrieved—so the value for the most recent even number carries the identity of that number, which is then used to generate the correct output after `+`. In summary: the query and key machinery let the `+` "look back" specifically for even numbers (and, thanks to position information, for the most recent one), while the value machinery lets the model retrieve exactly which even number should be output.
 
- The model applies three learned $2 \times 2$ linear transformations — $W_Q$, $W_K$, $W_V$ — to every combined embedding $\mathbf{e}_i$, producing query, key, and value vectors respectively. Figure 7 shows these transformations and their effect. The embedding space (Figure 5c) is transformed by the three projections into three distinct spaces (Figure 7d–f): the query space (Figure 7d, blue), the key space (Figure 7 e, red), and the value space (Figure 7f, green). Each transformation stretches, rotates, and rearranges the points differently, reflecting the different roles these vectors play.
+The model applies three learned $2 \times 2$ linear transformations — $W_Q$, $W_K$, $W_V$ — to every combined embedding $\mathbf{e}_i$, producing query, key, and value vectors respectively. Figure 7 shows these transformations and their effect. Panel (a) displays the original combined token+position embeddings (all 96 points in embedding space). Panels (b), (c), and (d) show the same points after projection into query space (blue), key space (red), and value space (green), each in its own coordinate system; each of these panels includes a small inset of the corresponding weight matrix ($W_Q$, $W_K$, or $W_V$). The three projections stretch, rotate, and rearrange the points differently, reflecting the different roles these vectors play.
 
 ![QKV Transformations](plus_last_even/plots/a4/08_qkv_transforms.png)
-***Figure 7.** QKV projections. (a) $W_Q$, (b) $W_K$, (c) $W_V$ weight matrices as heatmaps. (d) Query-space embeddings, (e) key-space embeddings, (f) value-space embeddings (all 96 token+position points after each projection).*
+***Figure 7.** QKV projections. (a) Original combined token+position embeddings. (b) Query-space (blue), with $W_Q$ inset. (c) Key-space (red), with $W_K$ inset. (d) Value-space (green), with $W_V$ inset. All 96 token+position points in each panel.*
 
 ### 3.5 Who Attends to Whom: The Query–Key Geometry
 
