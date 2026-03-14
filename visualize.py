@@ -259,9 +259,13 @@ def visualize_from_checkpoint(
             f.write(" ".join(str(i) for i in seq) + "\n")
 
     num_sequences_to_generate = 5
+    # Reseed immediately before generation so sequences are identical every run (no drift from prior code)
     if sequence_seed is not None:
         random.seed(sequence_seed)
         torch.manual_seed(sequence_seed)
+    else:
+        random.seed(_default_seed)
+        torch.manual_seed(_default_seed)
     generated_sequences = []
     for _ in range(num_sequences_to_generate):
         seq_length = random.randint(data_config["min_length"], data_config["max_length"])

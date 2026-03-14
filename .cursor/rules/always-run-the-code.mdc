@@ -1,0 +1,16 @@
+---
+description: Always run the code — execute commands after changes; never skip.
+alwaysApply: true
+---
+
+# Always run the code
+
+**Always run the code.**
+
+After changing code, scripts, or config that affect build/test/visualization:
+
+- Run the relevant command yourself (e.g. tests, `main.py`, pandoc, pdflatex, `--visualize --figure N`).
+- Do not only suggest the command or say "you can run X" — execute it in the terminal.
+- Regenerate outputs (figures, PDF, etc.) when the code that produces them has changed.
+
+If a command fails, fix the issue and rerun; do not leave execution to the user unless they explicitly ask to run it themselves.

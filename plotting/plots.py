@@ -3285,8 +3285,8 @@ def plot_q_dot_product_gradients(model, X_list, itos, save_path=None, num_sequen
     grid_resolution = 150
 
     fig = plt.figure(figsize=(4 * n_cols, 2.8 * n_rows + 4.5))
-    # Four vertical blocks with explicit spacing between them
-    subfigs = fig.subfigures(4, 1, height_ratios=[0.14, 1.0, 0.10, 1.0], hspace=0.22)
+    # Four vertical blocks: title, two full-height rows of Q gradients, section title, heatmaps
+    subfigs = fig.subfigures(4, 1, height_ratios=[0.12, 1.25, 0.08, 1.0], hspace=0.18)
 
     # Block 1: Title only
     subfigs[0].text(0.5, 0.5, f"Dot Product Gradients for Each Query\nSequence: {seq_str}",
@@ -3348,16 +3348,19 @@ def plot_q_dot_product_gradients(model, X_list, itos, save_path=None, num_sequen
         
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(y_min, y_max)
-        ax.set_xlabel("Dim 1" + (" (PCA)" if Q.shape[1] > 2 else ""), fontsize=10)
-        ax.set_ylabel("Dim 2" + (" (PCA)" if Q.shape[1] > 2 else ""), fontsize=10, labelpad=14)
+        pca_suffix = " (PCA)" if Q.shape[1] > 2 else ""
+        if row == n_rows - 1:
+            ax.set_xlabel("Dim 0" + pca_suffix, fontsize=10)
+        if col == 0:
+            ax.set_ylabel("Dim 1" + pca_suffix, fontsize=10, labelpad=14)
         ax.set_title(f"Q: {_token_pos_label(tokens[idx], idx)}", fontsize=12, fontweight='bold', pad=8)
         ax.grid(True, alpha=0.3)
-        ax.set_aspect('equal', adjustable='box')
+        # ax.set_aspect('equal', adjustable='box')
         ax.tick_params(axis='y', left=True, right=False, labelleft=True, labelright=False)
 
-    # Block 3: Section title "Masked Q·K^T and Attention" only
+    # Block 3: Section title with proper superscript for transpose
     _row_title_fs = 10 if _JOURNAL_MODE else 12
-    subfigs[2].text(0.5, 0.5, "Masked Q\u00b7K^T and Attention", ha='center', va='center',
+    subfigs[2].text(0.5, 0.5, r"Masked Q$\cdot$K$^T$ and Attention", ha='center', va='center',
                     fontsize=_row_title_fs, fontweight='bold', transform=subfigs[2].transSubfigure)
 
     # Block 4: Heatmaps row
@@ -3372,12 +3375,13 @@ def plot_q_dot_product_gradients(model, X_list, itos, save_path=None, num_sequen
                 annot_mask[i, j] = ""
     finite_vals = Masked_QK_T[np.isfinite(Masked_QK_T)]
     lim = np.abs(finite_vals).max() if len(finite_vals) else 1
+    _annot_fs = 10 if _JOURNAL_MODE else 8
     sns.heatmap(Masked_QK_T, cmap="RdBu_r", center=0, xticklabels=tokens,
                yticklabels=tokens, cbar=True, ax=ax_masked, annot=annot_mask, fmt="",
-               vmin=-lim, vmax=lim, annot_kws={"fontsize": 6})
+               vmin=-lim, vmax=lim, annot_kws={"fontsize": _annot_fs})
     ax_masked.set_xlabel("T", fontsize=10)
     ax_masked.set_ylabel("T", fontsize=10)
-    ax_masked.set_title(f"Masked Q\u00b7K^T (T\u00d7T={T}\u00d7{T})", fontsize=11, pad=12)
+    ax_masked.set_title(r"Masked Q$\cdot$K$^T$ " + f"(T×T={T}×{T})", fontsize=11, pad=12)
 
     ax_att = subfigs[3].add_subplot(gs_heat[0, 1])
     sns.heatmap(Attention, cmap="jet", vmin=0.0, vmax=1.0,
@@ -3386,7 +3390,13 @@ def plot_q_dot_product_gradients(model, X_list, itos, save_path=None, num_sequen
     ax_att.set_ylabel("T", fontsize=10)
     ax_att.set_title(f"Attention (T\u00d7T={T}\u00d7{T})", fontsize=11, pad=18)
 
-    _label_panels(_grad_axes + [ax_masked, ax_att], fontsize=10)
+    _panel_fs = 11
+    _grad_axes[0].text(-0.02, 1.06, "(A)", transform=_grad_axes[0].transAxes,
+                       fontsize=_panel_fs, fontweight='bold', va='bottom', ha='left')
+    ax_masked.text(-0.02, 1.06, "(B)", transform=ax_masked.transAxes,
+                   fontsize=_panel_fs, fontweight='bold', va='bottom', ha='left')
+    ax_att.text(-0.02, 1.06, "(C)", transform=ax_att.transAxes,
+                fontsize=_panel_fs, fontweight='bold', va='bottom', ha='left')
 
     if save_path:
         plt.savefig(save_path, bbox_inches='tight', dpi=300, facecolor='white')
