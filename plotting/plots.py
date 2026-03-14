@@ -6351,6 +6351,90 @@ def plot_probability_heatmap(
     model.train()
 
 
+def plot_output_entropy_heatmap(
+    model, itos, save_path=None, grid_resolution=80, extent_margin=0.5, step_label: int | None = None
+):
+    """
+    Single-panel heatmap of the entropy of P(output | point) over the 2D output space.
+    Each (x, y) in embedding space is mapped through FFN residual + lm_head + softmax
+    to a probability distribution over vocab; the colour shows the Shannon entropy of
+    that distribution (in nats).
+    """
+    model.eval()
+    vocab_size = model.token_embedding.weight.shape[0]
+    n_embd = model.lm_head.in_features
+    if n_embd != 2:
+        print(f"plot_output_entropy_heatmap: n_embd={n_embd}, need 2. Skipping.")
+        return
+
+    with torch.no_grad():
+        token_emb = model.token_embedding.weight.detach().cpu().numpy()
+        pos_emb = model.position_embedding_table.weight.detach().cpu().numpy()
+        combined = token_emb[:, None, :] + pos_emb[None, :, :]
+        flat = combined.reshape(-1, 2)
+        x_min, x_max = flat[:, 0].min() - extent_margin, flat[:, 0].max() + extent_margin
+        y_min, y_max = flat[:, 1].min() - extent_margin, flat[:, 1].max() + extent_margin
+
+    x_c, y_c = (x_min + x_max) / 2, (y_min + y_max) / 2
+    half = max(x_max - x_min, y_max - y_min) / 2
+    x_min, x_max = x_c - half, x_c + half
+    y_min, y_max = y_c - half, y_c + half
+
+    xs = np.linspace(x_min, x_max, grid_resolution)
+    ys = np.linspace(y_min, y_max, grid_resolution)
+    xx, yy = np.meshgrid(xs, ys)
+    points = np.stack([xx.ravel(), yy.ravel()], axis=1)
+
+    dev = next(model.parameters()).device
+    with torch.no_grad():
+        pts = torch.tensor(points, dtype=torch.float32, device=dev)
+        h = pts + model.ffwd(pts)
+        logits = model.lm_head(h).cpu().numpy()
+
+    probs = np.exp(logits - logits.max(axis=1, keepdims=True))
+    probs /= probs.sum(axis=1, keepdims=True)
+
+    log_probs = np.log(probs + 1e-12)
+    entropy = -(probs * log_probs).sum(axis=1)
+    max_entropy = np.log(vocab_size)
+    Z = entropy.reshape(grid_resolution, grid_resolution)
+
+    if _JOURNAL_MODE:
+        fig, ax = plt.subplots(figsize=(4.5, 4.0))
+    else:
+        fig, ax = plt.subplots(figsize=(6, 5))
+
+    if step_label is not None:
+        fig.suptitle(f"Step: {step_label}", fontsize=14, fontweight="bold", y=0.98)
+
+    im = ax.pcolormesh(xx, yy, Z, cmap='magma_r', vmin=0, vmax=max_entropy, shading='auto')
+    ax.axhline(0, color='white', linestyle='--', linewidth=1, alpha=0.8)
+    ax.axvline(0, color='white', linestyle='--', linewidth=1, alpha=0.8)
+    ax.set_xlim(x_min, x_max)
+    ax.set_ylim(y_min, y_max)
+    ax.set_aspect('equal')
+    ax.set_xlabel("embedding dim 0", fontsize=10)
+    ax.set_ylabel("embedding dim 1", fontsize=10)
+    ax.set_title("Output entropy  H[P(token | x)]", fontsize=12, fontweight='bold')
+
+    cbar = plt.colorbar(im, ax=ax, shrink=0.88, fraction=0.046, pad=0.04)
+    cbar.set_label("entropy (nats)", fontsize=10)
+    uniform_ent = max_entropy
+    cbar.ax.axhline(y=uniform_ent, color='white', linewidth=1.0, linestyle='--')
+    cbar.ax.text(0.5, uniform_ent, f" uniform={uniform_ent:.2f}", color='white',
+                 fontsize=7, va='center', ha='left', transform=cbar.ax.get_yaxis_transform())
+
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')
+        plt.close()
+        print(f"Output entropy heatmap saved to {save_path}")
+    else:
+        plt.show()
+
+    model.train()
+
+
 @torch.no_grad()
 def plot_probability_heatmap_with_values(
     model, itos, save_path=None, grid_resolution=80, extent_margin=0.5, step_label: int | None = None

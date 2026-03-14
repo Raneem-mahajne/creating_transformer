@@ -41,6 +41,7 @@ from plotting import (
     plot_probability_heatmap,
     plot_probability_heatmap_with_embeddings,
     plot_probability_heatmap_with_values,
+    plot_output_entropy_heatmap,
     plot_per_token_frozen_output,
 )
 
@@ -476,6 +477,10 @@ def visualize_from_checkpoint(
     if _plot("probability_heatmap_with_values.png"):
         plot_probability_heatmap_with_values(
             model, itos, save_path=_plot_path("probability_heatmap_with_values.png")
+        )
+    if _plot("output_entropy_heatmap.png"):
+        plot_output_entropy_heatmap(
+            model, itos, save_path=_plot_path("output_entropy_heatmap.png")
         )
     # Final-on-output (18) and frozen_output supp: same demo sequence as figs 13–17
     seq_for_18_and_supp = demo_sequence if demo_sequence is not None else consistent_sequence

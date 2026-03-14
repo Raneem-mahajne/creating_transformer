@@ -12,6 +12,7 @@ plus_last_even,10,qk_embedding_space_plus5_focus.png,10_qk_space_focus.png
 plus_last_even,11,qk_full_attention_heatmap.png,11_qk_full_heatmap.png
 plus_last_even,11_1,qk_full_attention_heatmap_last_row.png,11_1_qk_full_heatmap_last_row.png
 plus_last_even,12,probability_heatmap_with_values.png,12_probability_heatmap_with_values.png
+plus_last_even,12_1,output_entropy_heatmap.png,12_1_output_entropy.png
 plus_last_even,13,sequence_embeddings.png,13_sequence_embeddings.png
 plus_last_even,14,qkv_query_key_attention.png,14_qk_attention.png
 plus_last_even,15,q_dot_product_gradients.png,15_q_dot_product_gradients.png
