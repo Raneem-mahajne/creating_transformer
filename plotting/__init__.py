@@ -47,6 +47,7 @@ from plotting.plots import (
     plot_probability_heatmap_with_embeddings,
     plot_probability_heatmap_with_values,
     plot_output_entropy_heatmap,
+    plot_output_entropy_and_argmax_heatmap,
     plot_per_token_frozen_output,
     plot_qk_space_and_attention_heatmap,
 )
@@ -99,6 +100,7 @@ __all__ = [
     "plot_probability_heatmap_with_embeddings",
     "plot_probability_heatmap_with_values",
     "plot_output_entropy_heatmap",
+    "plot_output_entropy_and_argmax_heatmap",
     "plot_per_token_frozen_output",
     "plot_qk_space_and_attention_heatmap",
 ]

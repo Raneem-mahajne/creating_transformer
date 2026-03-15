@@ -5,6 +5,7 @@ import torch
 from torch.nn import functional as F
 from scipy.spatial.distance import pdist
 from scipy.cluster.hierarchy import linkage, leaves_list, fcluster
+from scipy.ndimage import label as ndi_label, center_of_mass
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from matplotlib.patches import Patch
@@ -6429,6 +6430,153 @@ def plot_output_entropy_heatmap(
         plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')
         plt.close()
         print(f"Output entropy heatmap saved to {save_path}")
+    else:
+        plt.show()
+
+    model.train()
+
+
+def plot_output_entropy_and_argmax_heatmap(
+    model, itos, save_path=None, grid_resolution=80, extent_margin=0.5, step_label: int | None = None,
+    min_region_pixels: int = 60,
+):
+    """
+    Two-panel figure: (a) Output entropy H[P(token|x)] over the 2D output space.
+    (b) Hardmax (argmax) prediction: each pixel color-coded by highest-probability token,
+    with one annotation per connected region showing that token.
+    Regions with fewer than min_region_pixels pixels are not annotated.
+    """
+    model.eval()
+    vocab_size = model.token_embedding.weight.shape[0]
+    n_embd = model.lm_head.in_features
+    if n_embd != 2:
+        print(f"plot_output_entropy_and_argmax_heatmap: n_embd={n_embd}, need 2. Skipping.")
+        return
+
+    with torch.no_grad():
+        token_emb = model.token_embedding.weight.detach().cpu().numpy()
+        pos_emb = model.position_embedding_table.weight.detach().cpu().numpy()
+        combined = token_emb[:, None, :] + pos_emb[None, :, :]
+        flat = combined.reshape(-1, 2)
+        x_min, x_max = flat[:, 0].min() - extent_margin, flat[:, 0].max() + extent_margin
+        y_min, y_max = flat[:, 1].min() - extent_margin, flat[:, 1].max() + extent_margin
+
+    x_c, y_c = (x_min + x_max) / 2, (y_min + y_max) / 2
+    half = max(x_max - x_min, y_max - y_min) / 2
+    x_min, x_max = x_c - half, x_c + half
+    y_min, y_max = y_c - half, y_c + half
+
+    xs = np.linspace(x_min, x_max, grid_resolution)
+    ys = np.linspace(y_min, y_max, grid_resolution)
+    xx, yy = np.meshgrid(xs, ys)
+    points = np.stack([xx.ravel(), yy.ravel()], axis=1)
+
+    dev = next(model.parameters()).device
+    with torch.no_grad():
+        pts = torch.tensor(points, dtype=torch.float32, device=dev)
+        h = pts + model.ffwd(pts)
+        logits = model.lm_head(h).cpu().numpy()
+
+    probs = np.exp(logits - logits.max(axis=1, keepdims=True))
+    probs /= probs.sum(axis=1, keepdims=True)
+    log_probs = np.log(probs + 1e-12)
+    entropy = -(probs * log_probs).sum(axis=1)
+    max_entropy = np.log(vocab_size)
+    Z_entropy = entropy.reshape(grid_resolution, grid_resolution)
+
+    argmax_ids = np.argmax(logits, axis=1).reshape(grid_resolution, grid_resolution)
+
+    # Discrete colormap for tokens: one color per token that appears (or full vocab)
+    from matplotlib.colors import ListedColormap
+    n_colors = max(vocab_size, 1)
+    cmap_cycle = plt.cm.tab20
+    if n_colors <= 20:
+        colors = [cmap_cycle(i / 20) for i in range(n_colors)]
+    else:
+        colors = [cmap_cycle(i % 20 / 20) for i in range(n_colors)]
+    cmap_argmax = ListedColormap(colors)
+
+    if _JOURNAL_MODE:
+        fig, (ax_entropy, ax_argmax) = plt.subplots(1, 2, figsize=(9.0, 4.0))
+    else:
+        fig, (ax_entropy, ax_argmax) = plt.subplots(1, 2, figsize=(12, 5))
+
+    if step_label is not None:
+        fig.suptitle(f"Step: {step_label}", fontsize=14, fontweight="bold", y=0.98)
+
+    # ---- Left: entropy ----
+    im_ent = ax_entropy.pcolormesh(xx, yy, Z_entropy, cmap='magma_r', vmin=0, vmax=max_entropy, shading='auto')
+    ax_entropy.axhline(0, color='white', linestyle='--', linewidth=1, alpha=0.8)
+    ax_entropy.axvline(0, color='white', linestyle='--', linewidth=1, alpha=0.8)
+    ax_entropy.set_xlim(x_min, x_max)
+    ax_entropy.set_ylim(y_min, y_max)
+    ax_entropy.set_aspect('equal')
+    ax_entropy.set_xlabel("embedding dim 0", fontsize=10)
+    ax_entropy.set_ylabel("embedding dim 1", fontsize=10)
+    ax_entropy.set_title("Output entropy  H[P(token | x)]", fontsize=12, fontweight='bold')
+    cbar_ent = plt.colorbar(im_ent, ax=ax_entropy, shrink=0.88, fraction=0.046, pad=0.04)
+    cbar_ent.set_label("entropy (nats)", fontsize=10)
+
+    # ---- Right: argmax (hardmax) with one annotation per region ----
+    # pcolormesh with discrete token ids; use vmin/vmax so token id i maps to color i
+    im_arg = ax_argmax.pcolormesh(
+        xx, yy, argmax_ids, cmap=cmap_argmax,
+        vmin=-0.5, vmax=vocab_size - 0.5, shading='auto'
+    )
+    ax_argmax.axhline(0, color='white', linestyle='--', linewidth=1, alpha=0.8)
+    ax_argmax.axvline(0, color='white', linestyle='--', linewidth=1, alpha=0.8)
+    ax_argmax.set_xlim(x_min, x_max)
+    ax_argmax.set_ylim(y_min, y_max)
+    ax_argmax.set_aspect('equal')
+    ax_argmax.set_xlabel("embedding dim 0", fontsize=10)
+    ax_argmax.set_ylabel("embedding dim 1", fontsize=10)
+    ax_argmax.set_title("Highest-probability token (argmax)", fontsize=12, fontweight='bold')
+
+    # Connected components per token: collect (x, y, token_str) for regions above threshold
+    structure = np.ones((3, 3), dtype=int)  # 8-connectivity
+    annotations = []  # list of (x_ann, y_ann, token_str)
+    for token_id in np.unique(argmax_ids):
+        mask = (argmax_ids == token_id).astype(np.int32)
+        if mask.sum() == 0:
+            continue
+        labeled, num_comp = ndi_label(mask, structure=structure)
+        if num_comp == 0:
+            continue
+        token_str = itos[int(token_id)]
+        indices = np.arange(1, num_comp + 1)
+        try:
+            centroids = center_of_mass(mask, labeled, index=indices)
+            if np.isscalar(centroids[0]):
+                centroids = [centroids]
+        except Exception:
+            centroids = []
+        for i, idx in enumerate(indices):
+            region_size = (labeled == idx).sum()
+            if region_size < min_region_pixels:
+                continue
+            c = centroids[i]
+            row, col = c[0], c[1]
+            row_i = int(round(min(max(row, 0), grid_resolution - 1)))
+            col_i = int(round(min(max(col, 0), grid_resolution - 1)))
+            x_ann = xs[col_i]
+            y_ann = ys[row_i]
+            annotations.append((x_ann, y_ann, token_str))
+
+    # Draw annotations on both panels at the same positions
+    text_kw = dict(fontsize=8, fontweight='bold', ha='center', va='center', color='white',
+                   path_effects=[pe.withStroke(linewidth=2, foreground='black')])
+    for x_ann, y_ann, token_str in annotations:
+        ax_entropy.text(x_ann, y_ann, token_str, **text_kw)
+        ax_argmax.text(x_ann, y_ann, token_str, **text_kw)
+
+    plt.tight_layout()
+    if _JOURNAL_MODE:
+        plt.subplots_adjust(wspace=0.08)
+        _label_panels([ax_entropy, ax_argmax], fontsize=10, x=-0.02, y=1.06)
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')
+        plt.close()
+        print(f"Output entropy + argmax heatmap saved to {save_path}")
     else:
         plt.show()
 
