@@ -67,7 +67,7 @@ The model is a single-layer, single-head, decoder-only causal transformer — th
 : Model hyperparameters. {#tbl:hyperparams}
 
 
-**Token embedding:** $E \in \mathbb{R}^{V \times 2}$. At position $i$, the token has id $t_i$; we denote its **token embedding** (the row of $E$ for that token) by $\mathbf{x}_i \in \mathbb{R}^2$. **Positional embedding:** $P \in \mathbb{R}^{T \times 2}$; the embedding of position $i$ is $\mathbf{p}_i \in \mathbb{R}^2$. The **combined embedding** (input to attention) at position $i$ is
+**Token embedding:** $X \in \mathbb{R}^{V \times 2}$. At position $i$, the token has id $t_i$; we denote its **token embedding** (the row of $X$ for that token) by $\mathbf{x}_i \in \mathbb{R}^2$. **Positional embedding:** $P \in \mathbb{R}^{T \times 2}$; the embedding of position $i$ is $\mathbf{p}_i \in \mathbb{R}^2$. The **combined embedding** (input to attention) at position $i$ is
 $$
 \mathbf{e}_i = \mathbf{x}_i + \mathbf{p}_i.
 $$
@@ -97,15 +97,29 @@ $$
 \mathbf{h}_i = \mathbf{z}_i + \mathrm{FFN}(\mathbf{z}_i).
 $$
 
-**LM head.** The LM head maps $\mathbf{h}_i$ (not $\mathbf{e}_i$) to logits: $\mathbf{h}_i \mapsto \mathbf{h}_i W_{\mathrm{lm}}^\top + \mathbf{b}$, followed by softmax to produce $P(\text{next token})$.
+**LM head.** The LM head produces the next-token distribution from the hidden state $\mathbf{h}_i$ (not $\mathbf{e}_i$):
+$$
+P(t_{i+1} \mid \mathbf{h}_i) = \mathrm{softmax}\!\left(\mathbf{h}_i \, W_{\mathrm{lm}}^\top + \mathbf{b}\right),
+$$
+where $W_{\mathrm{lm}} \in \mathbb{R}^{V \times 2}$ and $\mathbf{b} \in \mathbb{R}^V$.
 
 The forward pass can be summarized as:
 
-```
-Input → [token emb x + pos emb p] → e →
-Self-Attention → z = e + Attn(e) → FFN → h = z + FFN(z) →
-LM Head → softmax → P(next token)
-```
+$$
+\begin{aligned}
+\mathbf{e}_i &= \mathbf{x}_i + \mathbf{p}_i, \\
+\mathbf{z}_i &= \mathbf{e}_i + \mathrm{Attn}(\mathbf{e})_i, \\
+\mathbf{h}_i &= \mathbf{z}_i + \mathrm{FFN}(\mathbf{z}_i), \\
+P(t_{i+1} \mid \mathbf{h}_i) &= \mathrm{softmax}\!\left(\mathbf{h}_i \, W_{\mathrm{lm}}^\top + \mathbf{b}\right).
+\end{aligned}
+$$
+
+
+\begin{center}
+\pandocbounded{\includegraphics[keepaspectratio,alt={Architecture Overview}]{plus_last_even/plots/a4/01_architecture_overview.png}}
+\end{center}
+***Figure 1.** Architecture of the minimal transformer. Every component operates entirely in $\mathbb{R}^2$.*
+
 ---
 
 ### 2.3 Training
