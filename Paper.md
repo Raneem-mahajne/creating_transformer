@@ -24,8 +24,7 @@ We can take advantage of this direct visibility to demonstrate how the informati
 ## 2. Methods
 
 ### 2.1 Task Definition
-<!-- 
-To evaluate the capacity of minimal transformers to learn legible geometric algorithms, we utilize a procedurally generated task: the plus-last-even rule. -->
+
 We adopt the plus-last-even rule as our primary task. This procedurally generated task isolates the core attention operations—conditional retrieval and recency—in a setting simple enough that all internal representations remain interpretable in $\mathbb{R}^2$.
 
 #### 2.1.1 The Plus-Last-Even Task
