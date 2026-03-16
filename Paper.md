@@ -181,7 +181,7 @@ We emphasize that this geometric structure does not exist at initialization; it 
 
 ### 3.3 The Output Landscape: Where Representations Need to Land
 
-Before examining the attention mechanism, we note that the combined embedding $\mathbf{e}_i$ is fed forward (via attention and residuals) to the feedforward network and LM head. It can thus be useful to understand how the geometry of the combined embeddings $\mathbf{e}_i$ relates to the input-output function determined by the output network.
+Before examining the attention mechanism, we note that the combined token+position embeddings $\mathbf{e}_i$ is fed forward (via attention and residuals) to the feedforward network and LM head. It can thus be useful to understand how the geometry of the token+position embeddings $\mathbf{e}_i$ relates to the input-output function determined by the output network.
 
 The output network (FFN, second residual, and LM head, as defined in §2.2) maps a point $\mathbf{z}_i \in \mathbb{R}^2$ to a probability distribution over the vocabulary: $\mathbf{z}_i \mapsto \mathrm{softmax}\!\bigl(\mathrm{LMHead}(\mathbf{z}_i + \mathrm{FFN}(\mathbf{z}_i))\bigr) \in \mathbb{R}^{12}$. Geometrically, this means that for each possible next token (the digits from 0 to 10 and the '+' operator), the 2D plane is partitioned into regions with different probabilities for predicting that token. (Because of the softmax, the probabilities across all tokens for a particular point in the 2D plane must sum to 1.) Figure 6 makes this partition explicit: each subplot shows the model's probability for a specific output token across the plane (yellow $\approx$ 1, purple $\approx$ 0).
 
