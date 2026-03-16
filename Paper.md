@@ -31,7 +31,7 @@ We adopt the plus-last-even rule as our primary task. This procedurally generate
 
 The task is defined over a vocabulary $\mathcal{V}$ of 12 tokens: the integers $\{0, \ldots, 10\}$ and a special operator $+$. Sequence generation obeys:
 
-- **Retrieval rule:** If $+$ occurs at position $t$, the output at $t+1$ must be the most recent even integer $x_i \in \{0, 2, 4, 6, 8, 10\}$ with $i < t$.
+- **Retrieval rule:** If $+$ occurs at position $t$, the output at $t+1$ must be the most recent even integer $x_i \in \{0, 2, 4, 6, 8, 10\}$ with $i < t$. (If there is no earlier even number, then any token can be chosen).
 - **Unconstrained positions:** All positions not immediately following $+$ are unconstrained; any token in $\mathcal{V}$ may appear. These positions provide context that the model must process without applying the retrieval rule.
 
 
@@ -48,9 +48,12 @@ The task is defined over a vocabulary $\mathcal{V}$ of 12 tokens: the integers $
 
 Positions not immediately following `+` are unconstrained — any token may appear. The rule constrains only a fraction of positions; the remainder serve as context. The model must learn to (1) identify when the current position follows `+`, (2) scan backward through the context to locate the most recent even number, and (3) output that number with high probability. This is a non-trivial attention task: it requires routing information from a variable, content-dependent past position to the present.
 
---- -->
 
 ### 2.2 Model Architecture
+
+The model is a single-layer, single-head, decoder-only causal transformer — the minimal instance of the architecture introduced by Radford et al. (GPT). It processes tokens autoregressively: at each position it conditions on the preceding tokens within a fixed context window of $T = 8$ and produces a distribution over the next token. The single transformer block contains one causal self-attention head and a feedforward network (a two-layer MLP applied independently to each position), with a residual connection around each sub-layer, followed by a linear language-model head that maps the final hidden state to vocabulary logits. Table 1 lists all hyperparameters.
+
+\newpage
 
 | Parameter | Value |
 |-----------|-------|
@@ -60,17 +63,9 @@ Positions not immediately following `+` are unconstrained — any token may appe
 | Head size ($d_k$) | 2 |
 | Vocabulary size ($V$) | 12 (integers 0–10, operator +) |
 | Feed-forward hidden size | $16 \times n_{\mathrm{embed}} = 32$ |
-| Residual connections | Yes |
 
-\newpage
+: Model hyperparameters. {#tbl:hyperparams}
 
-The model is a single-layer, single-head decoder-only causal transformer:
-
-```
-Input → [token emb x + pos emb p] → e →
-Self-Attention → z = e + Attn(e) → FFN → h = z + FFN(z) →
-LM Head → softmax → P(next token)
-```
 
 **Token embedding:** $E \in \mathbb{R}^{V \times 2}$. At position $i$, the token has id $t_i$; we denote its **token embedding** (the row of $E$ for that token) by $\mathbf{x}_i \in \mathbb{R}^2$. **Positional embedding:** $P \in \mathbb{R}^{T \times 2}$; the embedding of position $i$ is $\mathbf{p}_i \in \mathbb{R}^2$. The **combined embedding** (input to attention) at position $i$ is
 $$
@@ -83,7 +78,7 @@ $$
 $$
 \boldsymbol{\alpha}_i = \mathrm{softmax}\left(\frac{\mathbf{q}_i^\top \mathbf{K}_{1:i}}{\sqrt{d_k}}\right),
 $$
-where $\mathbf{q}_i, \mathbf{k}_j \in \mathbb{R}^2$ (column vectors), $\mathbf{K}_{1:i} = [\mathbf{k}_1 \, \cdots \, \mathbf{k}_i] \in \mathbb{R}^{2 \times i}$, so $\mathbf{q}_i^\top \mathbf{K}_{1:i}$ is a row vector of length $i$ (one score per $j \leq i$; causal masking is implicit in the index range).
+where $\mathbf{q}_i, \mathbf{k}_j \in \mathbb{R}^2$ (column vector of length 2), $\mathbf{K}_{1:i} = [\mathbf{k}_1 \, \cdots \, \mathbf{k}_i] \in \mathbb{R}^{2 \times i}$, so $\mathbf{q}_i^\top \mathbf{K}_{1:i}$ is a row vector of length $i$ (one score per $j \leq i$; causal masking is implicit in the index range).
 
 The **attention output** at position $i$, denoted $\mathrm{Attn}(\mathbf{e})_i \in \mathbb{R}^2$, is the weighted sum of value vectors over previous positions:
 $$
@@ -97,20 +92,39 @@ $$
 $$
 So $\mathbf{z}_i$ is the quantity that is passed into the feedforward network (and is what the LM head ultimately receives after the second residual).
 
-**Second residual.** The feedforward network (FFN) is applied to $\mathbf{z}_i$ and added back via the second residual. The resulting **hidden state** passed to the LM head is
+**Second residual.** The feedforward network (FFN) is applied to $\mathbf{z}_i$, and its output is added back to $\mathbf{z}_i$ (the second residual connection). The resulting **hidden state** passed to the LM head is
 $$
 \mathbf{h}_i = \mathbf{z}_i + \mathrm{FFN}(\mathbf{z}_i).
 $$
 
 **LM head.** The LM head maps $\mathbf{h}_i$ (not $\mathbf{e}_i$) to logits: $\mathbf{h}_i \mapsto \mathbf{h}_i W_{\mathrm{lm}}^\top + \mathbf{b}$, followed by softmax to produce $P(\text{next token})$.
 
-With $n_{\mathrm{embed}} = 2$ and $d_k = 2$, every vector in this pipeline lives in $\mathbb{R}^2$. This is the critical design choice: the model's full geometry is directly visible without dimensionality reduction.
+The forward pass can be summarized as:
 
+```
+Input → [token emb x + pos emb p] → e →
+Self-Attention → z = e + Attn(e) → FFN → h = z + FFN(z) →
+LM Head → softmax → P(next token)
+```
 ---
 
 ### 2.3 Training
 
-Training data consists of 2,000 sequences of length 20–50, generated by the plus-last-even rule. At each position, the next token is drawn as follows. With probability 0.3 the token is `+`; with probability 0.7 it is a digit chosen uniformly from $\{0, \ldots, 10\}$. The one exception is the position immediately after `+`: there the next token is fixed to the most recent even number in the prefix (the rule target). Thus in the training distribution, `+` has marginal probability 0.3, each digit has marginal probability $0.7 / 11 \approx 0.064$, and every position following `+` is a constrained label. The model is trained for 20,000 steps with batch size 8 and learning rate 0.001 using standard next-token cross-entropy loss. Checkpoints are saved every 100 steps (200 total), enabling the construction of training-evolution animations.
+Training data consists of 2,000 sequences of length 20–50, generated by the plus-last-even rule. At each position, the next token is drawn as follows. With probability 0.3 the token is `+`; with probability 0.7 it is a digit chosen uniformly from $\{0, \ldots, 10\}$. The one exception is the position immediately after `+`: there the next token is fixed to the most recent even number in the prefix (the rule target). Thus in the training distribution, `+` has marginal probability 0.3, each digit has marginal probability $0.7 / 11 \approx 0.064$, and every position following `+` is a constrained label.
+
+The model is optimized with AdamW ($\beta_1 = 0.9$, $\beta_2 = 0.999$, weight decay $10^{-2}$, PyTorch defaults) using standard next-token cross-entropy loss. Table 2 lists all training hyperparameters. Checkpoints are saved every 100 steps (200 total), enabling the construction of training-evolution animations.
+
+| Parameter | Value |
+|-----------|-------|
+| Optimizer | AdamW |
+| Learning rate | $10^{-3}$ |
+| Batch size | 8 |
+| Training steps | 20,000 |
+| Evaluation interval | every 200 steps |
+| Evaluation iterations | 50 batches |
+| Checkpoint interval | every 100 steps |
+
+: Training hyperparameters. {#tbl:training}
 
 ---
 
