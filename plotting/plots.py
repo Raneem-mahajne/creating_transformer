@@ -815,8 +815,9 @@ def plot_embeddings_pca(model, itos, save_path=None):
         ax.set_ylim(cy - h_y, cy + h_y)
 
     if _JOURNAL_MODE:
-        fig = plt.figure(figsize=(11.0, 14.0), constrained_layout=True)
-        gs = GridSpec(4, 2, figure=fig, height_ratios=[1, 1, 1.5, 1.5])
+        fig = plt.figure(figsize=(11.0, 13.0), constrained_layout=True)
+        fig.set_constrained_layout_pads(w_pad=2/72, h_pad=2/72, wspace=0.02, hspace=0.04)
+        gs = GridSpec(3, 2, figure=fig, height_ratios=[1, 1, 1.8])
         pos_display_labels = [f"P{i}" for i in range(block_size)]
     else:
         pos_display_labels = None
@@ -825,10 +826,8 @@ def plot_embeddings_pca(model, itos, save_path=None):
     pos_labels = [f"P{i}" for i in range(block_size)] if _JOURNAL_MODE else [_pos_only_label(i) for i in range(block_size)]
     ax1 = fig.add_subplot(gs[0, 0])
     x_labels = list(range(embeddings.shape[1]))
-    # For the journal layout, disable external colorbars so all rows share the
-    # same effective width; GridSpec alone controls alignment.
-    _use_cbar = not _JOURNAL_MODE
-    _cbar_kw = {'orientation': 'vertical', 'pad': 0.03, 'aspect': 20, 'shrink': 0.8} if _use_cbar else None
+    _cbar_kw_a = {'shrink': 0.6, 'aspect': 15, 'pad': 0.002} if _JOURNAL_MODE else {'orientation': 'vertical', 'pad': 0.03, 'aspect': 20, 'shrink': 0.8}
+    _cbar_kw_b = {'shrink': 0.6, 'aspect': 15, 'pad': 0.01} if _JOURNAL_MODE else {'orientation': 'vertical', 'pad': 0.03, 'aspect': 20, 'shrink': 0.8}
     sns.heatmap(
         embeddings,
         yticklabels=y_labels,
@@ -836,8 +835,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
         cmap="RdBu_r",
         center=0,
         ax=ax1,
-        cbar=_use_cbar,
-        cbar_kws=_cbar_kw or {},
+        cbar_kws=_cbar_kw_a,
     )
     if _JOURNAL_MODE:
         ax1.set_aspect('auto')
@@ -936,8 +934,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
         cmap="RdBu_r",
         center=0,
         ax=ax4,
-        cbar=_use_cbar,
-        cbar_kws=_cbar_kw or {},
+        cbar_kws=_cbar_kw_b,
     )
     if _JOURNAL_MODE:
         ax4.set_aspect('auto')
@@ -1063,7 +1060,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
             ax10b.set_xticklabels(ax10b.get_xticklabels(), rotation=0)
 
     # Token+Position scatter: journal rows 2–3 full width (2×2); standard row 1 cols 2–3.
-    ax12 = fig.add_subplot(gs[2:4, :] if _JOURNAL_MODE else gs[1, 2:4])
+    ax12 = fig.add_subplot(gs[2, :] if _JOURNAL_MODE else gs[1, 2:4])
     # Dynamic font size for token+position (usually more items)
     combo_fontsize = get_fontsize(num_combinations)
     if _JOURNAL_MODE:
