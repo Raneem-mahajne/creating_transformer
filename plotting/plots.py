@@ -137,12 +137,20 @@ def clear_journal_mode():
 
 
 def _label_panels(axes, fontsize=None, x=-0.02, y=1.06):
-    """Add (a), (b), (c)... panel labels to a list of axes (journal mode only)."""
+    """Add (a), (b), (c)... panel labels to a list of axes (journal mode only).
+
+    For figures with a tall bottom panel (e.g., embeddings figure where panel (e)
+    spans two columns), the last axis often needs a slightly lower label to
+    avoid overlapping the title. We therefore nudge the last label down a bit.
+    """
     if not _JOURNAL_MODE or len(axes) <= 1:
         return
     fs = fontsize or 11
+    n = len(axes)
     for i, ax in enumerate(axes):
         label = chr(ord('a') + i)
+        # Slightly lower label for the final, tall panel (e.g., panel (e)).
+        y_pos = y - 0.06 if i == n - 1 else y
         ax.text(x, y, f'({label})', transform=ax.transAxes,
                 fontsize=fs, fontweight='bold', va='bottom', ha='left')
 
@@ -807,11 +815,8 @@ def plot_embeddings_pca(model, itos, save_path=None):
         ax.set_ylim(cy - h_y, cy + h_y)
 
     if _JOURNAL_MODE:
-        # Match panel sizes to standard layout: standard cell ~4.75" wide × 4.5" tall
-        # Rows 2–3 (scatter c,d and heatmaps e,f) slightly taller so scatter panels are bigger
-        fig = plt.figure(figsize=(9.5, 18.0))
-        gs = GridSpec(4, 2, figure=fig, hspace=0.3, wspace=0.28,
-                      height_ratios=[1, 1.25, 1.25, 2])
+        fig = plt.figure(figsize=(11.0, 14.0), constrained_layout=True)
+        gs = GridSpec(4, 2, figure=fig, height_ratios=[1, 1, 1.5, 1.5])
         pos_display_labels = [f"P{i}" for i in range(block_size)]
     else:
         pos_display_labels = None
@@ -820,8 +825,20 @@ def plot_embeddings_pca(model, itos, save_path=None):
     pos_labels = [f"P{i}" for i in range(block_size)] if _JOURNAL_MODE else [_pos_only_label(i) for i in range(block_size)]
     ax1 = fig.add_subplot(gs[0, 0])
     x_labels = list(range(embeddings.shape[1]))
-    _cbar_kw = {'orientation': 'vertical', 'pad': 0.03, 'aspect': 20, 'shrink': 0.8} if _JOURNAL_MODE else {}
-    sns.heatmap(embeddings, yticklabels=y_labels, xticklabels=x_labels, cmap="RdBu_r", center=0, ax=ax1, cbar_kws=_cbar_kw)
+    # For the journal layout, disable external colorbars so all rows share the
+    # same effective width; GridSpec alone controls alignment.
+    _use_cbar = not _JOURNAL_MODE
+    _cbar_kw = {'orientation': 'vertical', 'pad': 0.03, 'aspect': 20, 'shrink': 0.8} if _use_cbar else None
+    sns.heatmap(
+        embeddings,
+        yticklabels=y_labels,
+        xticklabels=x_labels,
+        cmap="RdBu_r",
+        center=0,
+        ax=ax1,
+        cbar=_use_cbar,
+        cbar_kws=_cbar_kw or {},
+    )
     if _JOURNAL_MODE:
         ax1.set_aspect('auto')
     _title_fs = 8 if _JOURNAL_MODE else 11
@@ -851,7 +868,11 @@ def plot_embeddings_pca(model, itos, save_path=None):
         ax3.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
         ax3.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
         ax3.grid(True, alpha=0.3)
-        ax3.set_aspect('equal', adjustable='box')
+        # In journal mode, keep cell sizes consistent with heatmaps; avoid forcing equal aspect.
+        if _JOURNAL_MODE:
+            ax3.set_aspect('auto')
+        else:
+            ax3.set_aspect('equal', adjustable='box')
         token_fontsize = get_fontsize(vocab_size)
         if vocab_size <= 80:
             for i in range(vocab_size):
@@ -875,7 +896,10 @@ def plot_embeddings_pca(model, itos, save_path=None):
         ax3.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
         ax3.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
         ax3.grid(True, alpha=0.3)
-        ax3.set_aspect('equal', adjustable='box')
+        if _JOURNAL_MODE:
+            ax3.set_aspect('auto')
+        else:
+            ax3.set_aspect('equal', adjustable='box')
         token_fontsize = get_fontsize(vocab_size)
         if vocab_size <= 80:
             for i in range(vocab_size):
@@ -905,7 +929,16 @@ def plot_embeddings_pca(model, itos, save_path=None):
     # Row 0, Col 1: Position embeddings raw
     ax4 = fig.add_subplot(gs[0, 1])
     x_labels = list(range(pos_emb_all.shape[1]))
-    sns.heatmap(pos_emb_all, yticklabels=pos_labels, xticklabels=x_labels, cmap="RdBu_r", center=0, ax=ax4, cbar_kws=_cbar_kw)
+    sns.heatmap(
+        pos_emb_all,
+        yticklabels=pos_labels,
+        xticklabels=x_labels,
+        cmap="RdBu_r",
+        center=0,
+        ax=ax4,
+        cbar=_use_cbar,
+        cbar_kws=_cbar_kw or {},
+    )
     if _JOURNAL_MODE:
         ax4.set_aspect('auto')
     ax4.set_title(f"Position Embeddings (block_size×embd={block_size}×{n_embd})" if not _JOURNAL_MODE else f"Position Embeddings (block_size x embd={block_size}x{n_embd})", fontsize=_title_fs)
@@ -934,7 +967,10 @@ def plot_embeddings_pca(model, itos, save_path=None):
         ax6.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
         ax6.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
         ax6.grid(True, alpha=0.3)
-        ax6.set_aspect('equal', adjustable='box')
+        if _JOURNAL_MODE:
+            ax6.set_aspect('auto')
+        else:
+            ax6.set_aspect('equal', adjustable='box')
         pos_fontsize = get_fontsize(block_size)
         if block_size <= 80:
             for i in range(block_size):
@@ -958,7 +994,10 @@ def plot_embeddings_pca(model, itos, save_path=None):
         ax6.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
         ax6.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
         ax6.grid(True, alpha=0.3)
-        ax6.set_aspect('equal', adjustable='box')
+        if _JOURNAL_MODE:
+            ax6.set_aspect('auto')
+        else:
+            ax6.set_aspect('equal', adjustable='box')
         pos_fontsize = get_fontsize(block_size)
         if block_size <= 80:
             for i in range(block_size):
@@ -995,51 +1034,41 @@ def plot_embeddings_pca(model, itos, save_path=None):
     
     token_labels = [itos[i] for i in range(max_token_idx)]
 
-    # Token+Position Dim 0: journal row 2 col 0; standard row 0 col 2
-    ax10 = fig.add_subplot(gs[2, 0] if _JOURNAL_MODE else gs[0, 2])
-    dim0_heatmap = np.zeros((max_token_idx, block_size))
-    for token_idx in range(max_token_idx):
-        for pos_idx in range(block_size):
-            idx = token_idx * block_size + pos_idx
-            dim0_heatmap[token_idx, pos_idx] = all_combinations[idx, 0]
-    sns.heatmap(dim0_heatmap, yticklabels=token_labels, xticklabels=pos_labels, cmap="RdBu_r", center=0, ax=ax10, cbar_kws=_cbar_kw)
-    if _JOURNAL_MODE:
-        ax10.set_aspect('auto')
-    ax10.set_title("Token+Position: Dim 0 (tokens×positions)" if not _JOURNAL_MODE else "Token+Position: Dim 0 (tokens x positions)", fontsize=_title_fs)
-    ax10.set_xlabel("Position")
-    ax10.set_ylabel("Token")
-    ax10.set_xticklabels(ax10.get_xticklabels(), rotation=0)
-    if _JOURNAL_MODE:
-        ax10.tick_params(axis='both', labelsize=6)
-    
-    # Token+Position Dim 1: journal row 2 col 1; standard row 0 col 3 (only when n_embd >= 2)
-    if n_embd >= 2:
-        ax10b = fig.add_subplot(gs[2, 1] if _JOURNAL_MODE else gs[0, 3])
-        dim1_heatmap = np.zeros((max_token_idx, block_size))
+    if not _JOURNAL_MODE:
+        # Token+Position Dim 0 heatmap (standard layout only)
+        ax10 = fig.add_subplot(gs[0, 2])
+        dim0_heatmap = np.zeros((max_token_idx, block_size))
         for token_idx in range(max_token_idx):
             for pos_idx in range(block_size):
                 idx = token_idx * block_size + pos_idx
-                dim1_heatmap[token_idx, pos_idx] = all_combinations[idx, 1]
-        sns.heatmap(dim1_heatmap, yticklabels=token_labels, xticklabels=pos_labels, cmap="RdBu_r", center=0, ax=ax10b, cbar_kws=_cbar_kw)
-        if _JOURNAL_MODE:
-            ax10b.set_aspect('auto')
-        ax10b.set_title("Token+Position: Dim 1 (tokens×positions)" if not _JOURNAL_MODE else "Token+Position: Dim 1 (tokens x positions)", fontsize=_title_fs)
-        ax10b.set_xlabel("Position")
-        ax10b.set_ylabel("Token")
-        ax10b.set_xticklabels(ax10b.get_xticklabels(), rotation=0)
-        if _JOURNAL_MODE:
-            ax10b.tick_params(axis='both', labelsize=6)
-    
-    # Token+Position scatter: journal row 4 full width; standard row 1 cols 2-3
-    ax12 = fig.add_subplot(gs[3, :] if _JOURNAL_MODE else gs[1, 2:4])
-    if not _JOURNAL_MODE:
-        pos = ax12.get_position()
-        one_col = pos.width / 2
-        ax12.set_position([pos.x0 + pos.width / 4, pos.y0, one_col, pos.height])
+                dim0_heatmap[token_idx, pos_idx] = all_combinations[idx, 0]
+        sns.heatmap(dim0_heatmap, yticklabels=token_labels, xticklabels=pos_labels, cmap="RdBu_r", center=0, ax=ax10)
+        ax10.set_title("Token+Position: Dim 0 (tokens×positions)", fontsize=_title_fs)
+        ax10.set_xlabel("Position")
+        ax10.set_ylabel("Token")
+        ax10.set_xticklabels(ax10.get_xticklabels(), rotation=0)
+
+        # Token+Position Dim 1 heatmap (standard layout only)
+        if n_embd >= 2:
+            ax10b = fig.add_subplot(gs[0, 3])
+            dim1_heatmap = np.zeros((max_token_idx, block_size))
+            for token_idx in range(max_token_idx):
+                for pos_idx in range(block_size):
+                    idx = token_idx * block_size + pos_idx
+                    dim1_heatmap[token_idx, pos_idx] = all_combinations[idx, 1]
+            sns.heatmap(dim1_heatmap, yticklabels=token_labels, xticklabels=pos_labels, cmap="RdBu_r", center=0, ax=ax10b)
+            ax10b.set_title("Token+Position: Dim 1 (tokens×positions)", fontsize=_title_fs)
+            ax10b.set_xlabel("Position")
+            ax10b.set_ylabel("Token")
+            ax10b.set_xticklabels(ax10b.get_xticklabels(), rotation=0)
+
+    # Token+Position scatter: journal rows 2–3 full width (2×2); standard row 1 cols 2–3.
+    ax12 = fig.add_subplot(gs[2:4, :] if _JOURNAL_MODE else gs[1, 2:4])
     # Dynamic font size for token+position (usually more items)
     combo_fontsize = get_fontsize(num_combinations)
     if _JOURNAL_MODE:
-        combo_fontsize = max(combo_fontsize + 2, 7)
+        # Make token+position annotations more legible in the large bottom panel.
+        combo_fontsize = max(combo_fontsize + 6, 11)
     
     if n_embd > 2:
         # Do PCA for dimensions > 2
@@ -1072,7 +1101,10 @@ def plot_embeddings_pca(model, itos, save_path=None):
         ax12.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
         ax12.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
         ax12.grid(True, alpha=0.3)
-        ax12.set_aspect('equal', adjustable='box')
+        if _JOURNAL_MODE:
+            ax12.set_aspect('auto')
+        else:
+            ax12.set_aspect('equal', adjustable='box')
         if _JOURNAL_MODE:
             ax12.tick_params(axis='both', labelsize=6)
     elif n_embd == 2:
@@ -1103,7 +1135,10 @@ def plot_embeddings_pca(model, itos, save_path=None):
         ax12.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
         ax12.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=0.5)
         ax12.grid(True, alpha=0.3)
-        ax12.set_aspect('equal', adjustable='box')
+        if _JOURNAL_MODE:
+            ax12.set_aspect('auto')
+        else:
+            ax12.set_aspect('equal', adjustable='box')
         if _JOURNAL_MODE:
             ax12.tick_params(axis='both', labelsize=6)
     else:
@@ -1131,26 +1166,14 @@ def plot_embeddings_pca(model, itos, save_path=None):
         if _JOURNAL_MODE:
             ax12.tick_params(axis='both', labelsize=6)
     
-    _emb_axes = [ax1, ax4, ax3, ax6, ax10]
-    if n_embd >= 2:
-        _emb_axes.append(ax10b)
-    _emb_axes.append(ax12)
-    # In journal mode, make scatter panels (c, d) align with heatmaps (a, b): same width, then set limits to fill
-    if _JOURNAL_MODE and n_embd >= 2:
-        if fig.canvas is not None:
-            fig.canvas.draw()
-        pos1 = ax1.get_position()
-        pos4 = ax4.get_position()
-        pos3 = ax3.get_position()
-        pos6 = ax6.get_position()
-        ax3.set_position([pos1.x0, pos3.y0, pos1.width, pos3.height])
-        ax6.set_position([pos4.x0, pos6.y0, pos4.width, pos6.height])
-        if n_embd == 2:
-            _set_limits_to_match_box_aspect(ax3, X_emb[:, 0], X_emb[:, 1])
-            _set_limits_to_match_box_aspect(ax6, X_pos[:, 0], X_pos[:, 1])
-        else:
-            _set_limits_to_match_box_aspect(ax3, X2[:, 0], X2[:, 1])
-            _set_limits_to_match_box_aspect(ax6, X2_pos[:, 0], X2_pos[:, 1])
+    if _JOURNAL_MODE:
+        _emb_axes = [ax1, ax4, ax3, ax6, ax12]
+    else:
+        _emb_axes = [ax1, ax4, ax3, ax6, ax10]
+        if n_embd >= 2:
+            _emb_axes.append(ax10b)
+        _emb_axes.append(ax12)
+    # Grid layout is handled purely via GridSpec; no manual axis repositioning.
     _label_panels(_emb_axes, y=1.12)
 
     if not _JOURNAL_MODE:
