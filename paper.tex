@@ -1,3 +1,122 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\documentclass[
+]{article}
+\usepackage{xcolor}
+\usepackage{amsmath,amssymb}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\newenvironment{Shaded}{}{}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{1.00,0.00,0.00}{\textbf{#1}}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.49,0.56,0.16}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.25,0.63,0.44}{#1}}
+\newcommand{\BuiltInTok}[1]{\textcolor[rgb]{0.00,0.50,0.00}{#1}}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.53,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.00,0.44,0.13}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.56,0.13,0.00}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.25,0.63,0.44}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.73,0.13,0.13}{\textit{#1}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{1.00,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.25,0.63,0.44}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.02,0.16,0.49}{#1}}
+\newcommand{\ImportTok}[1]{\textcolor[rgb]{0.00,0.50,0.00}{\textbf{#1}}}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.00,0.44,0.13}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.40,0.40,0.40}{#1}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.00,0.44,0.13}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.74,0.48,0.00}{#1}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.73,0.40,0.53}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.10,0.09,0.49}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textbf{\textit{#1}}}}
+\usepackage{longtable,booktabs,array}
+\newcounter{none} % for unnumbered tables
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{% scales image to fit in text height/width
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi% select the smaller of both
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+% Set default figure placement to htbp
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{seqsplit}
+\usepackage{tabularx}
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\author{}
+\date{}
+
+\begin{document}
+
 \section{Fully Interpretable Minimal Transformers: From Geometry to
 Algorithm}\label{fully-interpretable-minimal-transformers-from-geometry-to-algorithm}
 
@@ -406,20 +525,17 @@ token+position embeddings. (b) Query-space (blue), with \(W_Q\) inset.
 \subsubsection{3.4 Who Attends to Whom: The Query--Key
 Geometry}\label{who-attends-to-whom-the-querykey-geometry}
 
-The question at the heart of the plus-last-even rule is: when the model
-encounters a \texttt{+}, how does it know to look back and find the most
-recent even number? The answer lies in the geometry of the query--key
-space. Figure 8 plots all 96 query vectors (blue) and all 96 key vectors
-(red) on common axes, so we can directly read off the attention pattern
-from the spatial relationships.
+When the model encounters a \texttt{+}, how does it know to look back
+and find the most recent even number? The answer lies in the geometry of
+the query--key space. Figure 8 plots all 96 query vectors (blue) and all
+96 key vectors (red) on common axes, so we can directly read off the
+attention pattern from the spatial relationships.
 
-The \texttt{+} queries form a tight, isolated cluster, well-separated
-from all number queries. More importantly, the direction from the origin
-to this \texttt{+} cluster is geometrically aligned with the keys of
-even-number tokens --- that is, the dot product between a \texttt{+}
-query and an even-number key is large, producing strong attention. In
-contrast, the dot product between a \texttt{+} query and an odd-number
-key is small, producing weak attention. This is the geometric encoding
+Figure 8 (Top) makes this geometry visible. The \texttt{+} queries form
+a tight single-file cluster well-separated from all number queries.
+Even-number keys are concentrated in the region closest to that
+\texttt{+} cluster, while odd-number keys lie in a distinctly different
+region, far from it. This spatial arrangement is the geometric encoding
 of the rule's core requirement: \texttt{+} should attend to even numbers
 and ignore odd numbers.
 
@@ -427,13 +543,20 @@ But the rule demands more than just ``attend to even numbers'' --- it
 requires attending to the \emph{most recent} one. This is encoded in the
 positional spread of each token's keys. Within the key cluster for any
 given even number, keys at later positions (closer to the query) are
-arranged so that they have slightly higher dot products with the
-\texttt{+} query than keys at earlier positions. After softmax
-normalization, this bias means the most recent even number receives the
-highest attention weight. The position embeddings' orderly ladder
-structure (Figure 5) feeds directly into this: position information is
-preserved through the key projection and manifests as a recency gradient
-in the Q/K dot products.
+arranged so that they are closer to the \texttt{+} queries than keys at
+earlier positions.
+
+If we focus on a single query \(\mathbf{+}_5\) (\texttt{+} at position
+5), we can see the dot product (green background) between that query and
+a key at any point in space (Figure 8 Bottom). In principle, the dot
+product is highest with even numbers at position 7, however, because of
+the causal masking, queries are only allowed to look at keys that come
+before it in the sequence, so we have greyed out all keys that come
+before position 5 (keys in positions 5 are also greyed out because if
+there's a plus in position 5, no other token could be in position 5).
+The \texttt{+} query thus acts as a selective filter that picks out
+even-number keys from the past context, with recency biasing the
+selection toward the most recent one.
 
 \pandocbounded{\includegraphics[keepaspectratio,alt={Q/K embedding space and focused query}]{plus_last_even/plots/a4/09_10_qk_space_combined.png}}
 \emph{\textbf{Figure 8.} Query--key geometry in Q/K space. \textbf{Top:}
@@ -447,53 +570,34 @@ Movie 4 reveals how this structure develops over the course of training.
 At initialization, queries and keys are intermingled with no meaningful
 separation. Over the first several thousand steps, the \texttt{+}
 queries begin migrating away from the number queries. Simultaneously,
-even-number keys separate from odd-number keys along the axis that
+even number keys separate from odd-number keys along the axis that
 aligns with the \texttt{+} query direction. By the end of training, the
 geometry has converged to the configuration described above: a clear
 \texttt{+} query cluster aligned with even-number keys and orthogonal to
 odd-number keys.
 
-To make the attention pattern even more concrete, the bottom panel of
-Figure 8 isolates a single query --- \texttt{+} at position 5 --- and
-colors the entire Q/K plane by its dot product with that query. The
-resulting gradient shows high values (green) concentrated at the
-locations of even-number keys at positions 0--4, and low values (white)
-at odd-number key locations. Keys at positions \(\geq 5\) are irrelevant
-due to the causal mask. This is the retrieval mechanism laid bare: the
-\texttt{+} query acts as a selective filter that picks out even-number
-keys from the past context, with recency biasing the selection toward
-the most recent one.
-
-Because Figure 9 is not tied to a specific input sequence, we do not
-plot an attention matrix (which would require applying a causal mask and
-a softmax). Instead, we plot the raw query--key scores \(QK^\top\): the
-dot product between every query vector and every key vector. To focus on
-the rule-relevant structure, Figure 9 shows only the blocks where the
-\textbf{query token is \texttt{+}}. Each subplot is an 8×8 grid: rows
-index the \textbf{position of the \texttt{+} query}, and columns index
-the \textbf{position of the key} for the indicated key token. Even-number
-key blocks are consistently higher than odd-number key blocks, showing
+Because Figure 9 is not tied to a specific input sequence, we can not
+prooduce a true attention matrix (which would require having only a
+single token in each position). However, we can calculate the raw
+query--key scores \(QK^T\): the dot product between every possible query
+vector and every possible key vector. To focus on the rule-relevant
+structure, Figure 9 shows only the blocks where the \textbf{query token
+is \texttt{+}}. Each subplot is an 8×8 grid: rows index the
+\textbf{position of the \texttt{+} query}, and columns index the
+\textbf{position of the key} for the indicated key token. Even-number
+key blocks score consistently higher than odd-number key blocks, showing
 that \texttt{+} queries score even keys more strongly across positions.
-(The full all-query \(QK^\top\) matrix is shown in \textbf{Supplementary
-Figure S1}.)
+(The full all-query \(QK^T\) matrix is included in the Supplementary
+Figures). Moreover, tokens at later positions recieve higher dot product
+scores than tokens at earlier positions. This confirms the observation
+from Figure 8 that the geometry of the key/query space allows the
+\texttt{+} tokens to attend to most recent even tokens.
 
 \pandocbounded{\includegraphics[keepaspectratio,alt={QK scores for + queries}]{plus_last_even/plots/a4/11_1_qk_full_heatmap_last_row.png}}
-\emph{\textbf{Figure 9.} Pre-softmax query--key scores \(QK^\top\),
-restricted to \texttt{+} queries. Each subplot shows an 8×8 matrix of dot
-products: \texttt{+} query positions (rows) vs.~key positions (columns)
-for a fixed key token.}
-
-For the sequence \texttt{10\ +\ 10\ 6\ +\ 6\ 4\ 8} (traced in full in
-§3.7 below), Figure 10 shows the dot-product gradient for each query
-position. Each panel visualizes that query's dor product with all keys
-across the Q/K plane, along with the masked \(Q \cdot K^\top\) scores
-and the resulting attention weights. This makes the retrieval pattern
-explicit per position (e.g.~Both \texttt{+} queries attend strongly to
-even-number keys).
-
-\pandocbounded{\includegraphics[keepaspectratio,alt={Q dot product gradients}]{plus_last_even/plots/a4/15_q_dot_product_gradients.png}}
-\emph{\textbf{Figure 10.} Dot-product gradients for each query in the
-demo sequence, with masked \(Q \cdot K^\top\) and attention heatmaps.}
+\emph{\textbf{Figure 9.} Pre-softmax query--key scores (QK\^{}\top),
+restricted to \texttt{+} queries. Each subplot shows an 8×8 matrix of
+dot products: \texttt{+} query positions (rows) vs.~key positions
+(columns) for a fixed key token.}
 
 \subsubsection{3.5 What Gets Retrieved: The Value
 Space}\label{what-gets-retrieved-the-value-space}
@@ -625,55 +729,60 @@ Pipeline}\label{tracing-a-sequence-through-the-pipeline}
 The preceding analysis characterized the model's learned parameters in
 the abstract --- all 96 possible token+position combinations. We now
 ground this analysis by tracing a single concrete sequence,
-\texttt{10\ +\ 10\ 6\ +\ 6\ 4\ 8}, through the complete inference
-pipeline and verifying that each step works as predicted.
+\texttt{4\ 1\ +\ 4\ 6\ 9\ 5\ +}, through the complete inference pipeline
+and verifying that each step works as predicted.
 
 \textbf{Embedding.} Figure 12 shows where each token in this specific
-sequence lands in embedding space. The \texttt{+} tokens at positions 1
-and 4 are located far from the number tokens, exactly as the global
+sequence lands in embedding space. The \texttt{+} tokens at positions 2
+and 7 are located far from the number tokens, exactly as the global
 structure predicts. The number tokens fan out according to their
-position offsets, with even numbers (10, 6, 4, 8) and odd numbers in
-their respective global clusters. This sequence contains two constrained
-positions: position 2 (which follows the first \texttt{+}, with the last
-even being 10) and position 5 (which follows the second \texttt{+}, with
-the last even being 6).
+position offsets, with even numbers (4, 6) and odd numbers (1, 9, 5) in
+their respective global clusters. In this length-8 window, there is one
+constrained position: position 3 (which follows the \texttt{+} at
+position 2, with the last even being 4).
 
 \pandocbounded{\includegraphics[keepaspectratio,alt={Sequence Embeddings}]{plus_last_even/plots/a4/13_sequence_embeddings.png}}
 \emph{\textbf{Figure 12.} Embeddings for the demo sequence
-\texttt{10\ +\ 10\ 6\ +\ 6\ 4\ 8}, shown as heatmaps (top) and 2D
-scatter (bottom).}
+\texttt{4\ 1\ +\ 4\ 6\ 9\ 5\ +}, shown as heatmaps (top) and 2D scatter
+(bottom).}
 
 \textbf{Attention.} Figure 13 displays the full attention computation
 for this sequence. The Q/K scatter (panel 3) shows the sequence's query
 and key vectors against the global backdrop --- the \texttt{+} queries
-at positions 1 and 4 are visibly isolated in the region that aligns with
+at positions 2 and 7 are visibly isolated in the region that aligns with
 even-number keys. The raw attention scores (panel 4, before softmax)
 show high values where \texttt{+} queries meet keys from positions
 containing even numbers, and the final attention matrix (panel 5, after
-softmax) confirms the expected pattern. At position 2 (the token after
-the first \texttt{+}), the model attends overwhelmingly to position 0,
-which contains 10 --- the most recent even number before that
-\texttt{+}. At position 5 (the token after the second \texttt{+}), the
-model attends most strongly to position 3, which contains 6 --- the most
-recent even number before the second \texttt{+}. The retrieval mechanism
-identified in the global analysis (Figures 8--10) is operating exactly
-as predicted on real inputs.
+softmax) confirms the expected retrieval. At position 3 (the token after
+the \texttt{+} at position 2), the model attends overwhelmingly to
+position 0, which contains 4 --- the most recent even number before that
+\texttt{+}.
 
 \pandocbounded{\includegraphics[keepaspectratio,alt={Q/K Attention}]{plus_last_even/plots/a4/14_qk_attention.png}}
 \emph{\textbf{Figure 13.} Attention computation for the demo sequence.
 Panels: Q heatmap, K heatmap, Q/K scatter, raw scores, attention
 weights.}
 
+Figure 10 shows the dot-product gradient for each query position in this
+sequence. Each panel visualizes that query's dot product with all keys
+across the Q/K plane, along with the masked \(Q \cdot K^\top\) scores
+and the resulting attention weights. This makes the retrieval pattern
+explicit per position (e.g.~both \texttt{+} queries attend strongly to
+even-number keys).
+
+\pandocbounded{\includegraphics[keepaspectratio,alt={Q dot product gradients}]{plus_last_even/plots/a4/15_q_dot_product_gradients.png}}
+\emph{\textbf{Figure 10.} Dot-product gradients for each query in the
+demo sequence, with masked \(Q \cdot K^\top\) and attention heatmaps.}
+
 \textbf{Value routing.} Figure 14 completes the attention story by
 showing what information is actually extracted. The attention-weighted
 sum of value vectors at each position (panel 3) represents the
-``message'' that attention delivers to the residual stream. At the two
-constrained positions, the attention output is dominated by the value
-vector of the attended even number --- token 10 and token 6,
-respectively. The attention-output scatter (panel 5) shows where these
-messages land in 2D space: they point toward the regions where the
-output landscape (Figure 6) assigns high probability to the correct
-answer.
+``message'' that attention delivers to the residual stream. At the
+constrained position, the attention output is dominated by the value
+vector of the attended even number --- token 4. The attention-output
+scatter (panel 5) shows where these messages land in 2D space: they
+point toward the regions where the output landscape (Figure 6) assigns
+high probability to the correct answer.
 
 \pandocbounded{\includegraphics[keepaspectratio,alt={Value Output}]{plus_last_even/plots/a4/16_value_output.png}}
 \emph{\textbf{Figure 14.} Value pathway for the demo sequence. Panels:
@@ -711,17 +820,14 @@ first-residual states \(\mathbf{z}_i\) (embedding + attention output) on
 the output probability heatmaps from Figure 6; the heatmap gives
 \(P(\text{next token})\) as a function of the 2D point that is passed
 through the second residual and LM head (i.e.~as a function of the
-pre--LM-head input). At every constrained position, \(\mathbf{z}_i\) ---
+pre--LM-head input). At the constrained position, \(\mathbf{z}_i\) ---
 after the second residual yields
 \(\mathbf{h}_i = \mathbf{z}_i + \mathrm{FFN}(\mathbf{z}_i)\) and the LM
 head maps \(\mathbf{h}_i\) to logits --- sits squarely inside the
-high-probability region for the correct even number. The \texttt{+} at
-position 1 has been moved into the region where \(P(\text{next} = 10)\)
-is maximal. The \texttt{+} at position 4 has been moved into the region
-where \(P(\text{next} = 6)\) is maximal. The geometry has executed the
-algorithm: detect \texttt{+}, retrieve the most recent even number, add
-its value to form \(\mathbf{z}_i\), and land in the correct output
-region.
+high-probability region for the correct even number. The geometry has
+executed the algorithm: detect \texttt{+}, retrieve the most recent even
+number, add its value to form \(\mathbf{z}_i\), and land in the correct
+output region.
 
 \pandocbounded{\includegraphics[keepaspectratio,alt={Final on Output Grid}]{plus_last_even/plots/a4/18_final_on_output_grid.png}}
 \emph{\textbf{Figure 16.} First-residual states \(\mathbf{z}_i\)
@@ -858,6 +964,7 @@ Additional static figures in
 \parbox[t]{3.2cm}{\raggedright\ttfamily\seqsplit{supplementary/14\_attention\_matrix.png}} & Per-sequence attention matrices alongside LM head linear input, logits, and output probabilities for three demo sequences. \\
 \parbox[t]{3.2cm}{\raggedright\ttfamily\seqsplit{supplementary/16\_value\_arrows.png}} & Value vectors (original, transformed, residual) for three demo sequences, with correctness indicated by green/red markers. \\
 \parbox[t]{3.2cm}{\raggedright\ttfamily\seqsplit{extended/08\_qkv\_transforms\_extended.png}} & Extended QKV figure with per-dimension heatmaps (tokens$\times$positions) for Q, K, and V. \\
+\parbox[t]{3.2cm}{\raggedright\ttfamily\seqsplit{a4/11\_qk\_full\_heatmap.png}} & Full 96×96 pre-softmax query–key score matrix \(QK^\top\) (dot products), covering all query tokens and positions vs. all key tokens and positions (no masking/softmax), organized as a 12×12 grid of token–token blocks. \\
 \bottomrule
 \end{tabularx}
 
@@ -939,3 +1046,5 @@ Additional static figures in
   computational power of finite precision RNNs for language recognition.
   \emph{ACL}.
 \end{itemize}
+
+\end{document}
