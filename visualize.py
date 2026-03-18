@@ -463,6 +463,9 @@ def visualize_from_checkpoint(
             plot_qk_full_attention_combined(
                 model, itos, save_path=_plot_path("qk_full_attention_heatmap.png")
             )
+            plot_qk_full_attention_heatmap_last_row(
+                model, itos, save_path=_plot_path("qk_full_attention_heatmap_last_row.png")
+            )
         else:
             plot_qk_full_attention_heatmap(
                 model, itos, save_path=_plot_path("qk_full_attention_heatmap.png")

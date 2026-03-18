@@ -245,9 +245,10 @@ def plot_qk_full_attention_heatmap_last_row(model, itos, save_path: str = None):
         # Set ticks to show positions - make them larger and clearer
         _tick_fs = 9 if _u._JOURNAL_MODE else 10
         ax.set_xticks(range(block_size))
-        ax.set_xticklabels([f"p{i}" for i in range(block_size)], fontsize=_tick_fs)
+        key_tok = str(itos[key_token_idx])
+        ax.set_xticklabels([_u._token_pos_label(key_tok, i) for i in range(block_size)], fontsize=_tick_fs)
         ax.set_yticks(range(block_size))
-        ax.set_yticklabels([f"p{i}" for i in range(block_size)], fontsize=_tick_fs)
+        ax.set_yticklabels([_u._token_pos_label("+", i) for i in range(block_size)], fontsize=_tick_fs)
         
         # Title shows the Key Token - make it larger
         ax.set_title(f"Key: {itos[key_token_idx]}", fontsize=13, fontweight='bold', pad=10)

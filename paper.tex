@@ -464,21 +464,24 @@ due to the causal mask. This is the retrieval mechanism laid bare: the
 keys from the past context, with recency biasing the selection toward
 the most recent one.
 
-The full 96×96 attention score matrix (Figure 9) confirms that this
-pattern generalizes across all token--position combinations. The matrix
-is organized as a 12×12 grid of blocks, where each block represents one
-query-token versus one key-token, with the 8 positions arranged within
-each block. The bottom row --- corresponding to \texttt{+} as the query
-token --- is the most informative: even-number key columns (0, 2, 4, 6,
-8, 10) show warm colors (high attention scores), while odd-number key
-columns show cool colors (low scores). The \texttt{+} operator attends
-selectively and strongly to even numbers, regardless of position. Movie
-5 shows this row sharpening from a diffuse pattern at initialization to
-the clean even/odd dichotomy observed in the final model.
+Because Figure 9 is not tied to a specific input sequence, we do not
+plot an attention matrix (which would require applying a causal mask and
+a softmax). Instead, we plot the raw query--key scores \(QK^\top\): the
+dot product between every query vector and every key vector. To focus on
+the rule-relevant structure, Figure 9 shows only the blocks where the
+\textbf{query token is \texttt{+}}. Each subplot is an 8×8 grid: rows
+index the \textbf{position of the \texttt{+} query}, and columns index
+the \textbf{position of the key} for the indicated key token. Even-number
+key blocks are consistently higher than odd-number key blocks, showing
+that \texttt{+} queries score even keys more strongly across positions.
+(The full all-query \(QK^\top\) matrix is shown in \textbf{Supplementary
+Figure S1}.)
 
-\pandocbounded{\includegraphics[keepaspectratio,alt={Full Attention Matrix}]{plus_last_even/plots/a4/11_qk_full_heatmap.png}}
-\emph{\textbf{Figure 9.} Full 96×96 attention score matrix, organized as
-a 12×12 grid of token--token blocks.}
+\pandocbounded{\includegraphics[keepaspectratio,alt={QK scores for + queries}]{plus_last_even/plots/a4/11_1_qk_full_heatmap_last_row.png}}
+\emph{\textbf{Figure 9.} Pre-softmax query--key scores \(QK^\top\),
+restricted to \texttt{+} queries. Each subplot shows an 8×8 matrix of dot
+products: \texttt{+} query positions (rows) vs.~key positions (columns)
+for a fixed key token.}
 
 For the sequence \texttt{10\ +\ 10\ 6\ +\ 6\ 4\ 8} (traced in full in
 §3.7 below), Figure 10 shows the dot-product gradient for each query

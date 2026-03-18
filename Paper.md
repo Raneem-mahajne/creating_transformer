@@ -206,10 +206,10 @@ Movie 4 reveals how this structure develops over the course of training. At init
 
 
 
-The full 96×96 attention score matrix (Figure 9) confirms that this pattern generalizes across all token–position combinations. The matrix is organized as a 12×12 grid of blocks, where each block represents one query-token versus one key-token, with the 8 positions arranged within each block. The bottom row — corresponding to `+` as the query token — is the most informative: even-number key columns (0, 2, 4, 6, 8, 10) show warm colors (high attention scores), while odd-number key columns show cool colors (low scores). The `+` operator attends selectively and strongly to even numbers, regardless of position. Movie 5 shows this row sharpening from a diffuse pattern at initialization to the clean even/odd dichotomy observed in the final model.
+Because Figure 9 is not tied to a specific input sequence, we can not prooduce a true attention matrix (which would require having only a single token in each position). However, we can calculate the raw query–key scores $QK^T$: the dot product between every possible query vector and every possible key vector. To focus on the rule-relevant structure, Figure 9 shows only the blocks where the **query token is `+`**. Each subplot is an 8×8 grid: rows index the **position of the `+` query**, and columns index the **position of the key** for the indicated key token. Even-number key blocks score consistently higher than odd-number key blocks, showing that `+` queries score even keys more strongly across positions. (The full all-query \(QK^\top\) matrix is included in the Supplementary Figures). Moreover, tokens at later positions recieve higher dot product scores than tokens at earlier positions. This confirms the observation from Figure 8 that the geometry of the key/query space allows the `+` tokens to attend to most recent even tokens.
 
-![Full Attention Matrix](plus_last_even/plots/a4/11_qk_full_heatmap.png)
-***Figure 9.** Full 96×96 attention score matrix, organized as a 12×12 grid of token–token blocks.*
+![QK scores for `+` queries](plus_last_even/plots/a4/11_1_qk_full_heatmap_last_row.png)
+***Figure 9.** Pre-softmax query–key scores \(QK^\top\), restricted to `+` queries. Each subplot shows an 8×8 matrix of dot products: `+` query positions (rows) vs. key positions (columns) for a fixed key token.*
 
 For the sequence `10 + 10 6 + 6 4 8` (traced in full in §3.7 below), Figure 10 shows the dot-product gradient for each query position. Each panel visualizes that query's dor product with all keys across the Q/K plane, along with the masked $Q \cdot K^\top$ scores and the resulting attention weights. This makes the retrieval pattern explicit per position (e.g. Both `+` queries attend strongly to even-number keys).
 
@@ -338,6 +338,7 @@ Additional static figures in `plus_last_even/plots/supplementary/` and `plus_las
 \parbox[t]{3.2cm}{\raggedright\ttfamily\seqsplit{supplementary/14\_attention\_matrix.png}} & Per-sequence attention matrices alongside LM head linear input, logits, and output probabilities for three demo sequences. \\
 \parbox[t]{3.2cm}{\raggedright\ttfamily\seqsplit{supplementary/16\_value\_arrows.png}} & Value vectors (original, transformed, residual) for three demo sequences, with correctness indicated by green/red markers. \\
 \parbox[t]{3.2cm}{\raggedright\ttfamily\seqsplit{extended/08\_qkv\_transforms\_extended.png}} & Extended QKV figure with per-dimension heatmaps (tokens$\times$positions) for Q, K, and V. \\
+\parbox[t]{3.2cm}{\raggedright\ttfamily\seqsplit{a4/11\_qk\_full\_heatmap.png}} & Full 96×96 pre-softmax query–key score matrix \(QK^\top\) (dot products), covering all query tokens and positions vs. all key tokens and positions (no masking/softmax), organized as a 12×12 grid of token–token blocks. \\
 \bottomrule
 \end{tabularx}
 
