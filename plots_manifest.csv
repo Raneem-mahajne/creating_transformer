@@ -9,6 +9,7 @@ plus_last_even,07,probability_heatmap_with_embeddings.png,07_output_probs_embed.
 plus_last_even,08,qkv_transformations.png,08_qkv_transforms.png
 plus_last_even,09,qk_embedding_space.png,09_qk_space.png
 plus_last_even,10,qk_embedding_space_plus5_focus.png,10_qk_space_focus.png
+plus_last_even,9_10,qk_embedding_space_combined.png,09_10_qk_space_combined.png
 plus_last_even,11,qk_full_attention_heatmap.png,11_qk_full_heatmap.png
 plus_last_even,11_1,qk_full_attention_heatmap_last_row.png,11_1_qk_full_heatmap_last_row.png
 plus_last_even,12,probability_heatmap_with_values.png,12_probability_heatmap_with_values.png

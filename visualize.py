@@ -30,6 +30,7 @@ from plotting import (
     plot_attention_matrix,
     plot_qk_embedding_space,
     plot_qk_embedding_space_focused_query,
+    plot_qk_embedding_space_combined,
     plot_sequence_embeddings,
     plot_qk_full_attention_heatmap,
     plot_qk_full_attention_heatmap_last_row,
@@ -444,6 +445,13 @@ def visualize_from_checkpoint(
         plot_qk_embedding_space_focused_query(
             model, itos, token_str="+", position=5,
             save_path=_plot_path("qk_embedding_space_plus5_focus.png"),
+        )
+    # Optional combined figure (09 + 10 as a single panel)
+    path_qk_combined = _plot_path_if_in_manifest("qk_embedding_space_combined.png", manifest, config_name_actual, plots_dir)
+    if path_qk_combined and _plot("qk_embedding_space_combined.png"):
+        plot_qk_embedding_space_combined(
+            model, itos, token_str="+", position=5,
+            save_path=path_qk_combined,
         )
     # Plot embeddings for demo sequence (fig 13: final is + not after +)
     if _plot("sequence_embeddings.png"):

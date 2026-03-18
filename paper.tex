@@ -395,14 +395,7 @@ Figure 7 shows these transformations and their effect. Panel (a)
 displays the original combined token+position embeddings (all 96 points
 in embedding space). Panels (b), (c), and (d) show the same points after
 projection into query space (blue), key space (red), and value space
-(green). Each of these panels includes a small inset of the
-corresponding weight matrix (\(W_Q\), \(W_K\), or \(W_V\)). Because each
-map is linear, it preserves the origin and sends every line through the
-origin to another line through the origin; geometrically, each
-\(2\times2\) matrix acts as a composition of rotation/reflection with
-anisotropic scaling and (in general) shear, thereby changing relative
-angles and distances between points in a way that supports the distinct
-roles of Q, K, and V.
+(green).
 
 \pandocbounded{\includegraphics[keepaspectratio,alt={QKV Transformations}]{plus_last_even/plots/a4/08_qkv_transforms.png}}
 \emph{\textbf{Figure 7.} QKV projections. (a) Original combined
@@ -442,9 +435,13 @@ structure (Figure 5) feeds directly into this: position information is
 preserved through the key projection and manifests as a recency gradient
 in the Q/K dot products.
 
-\pandocbounded{\includegraphics[keepaspectratio,alt={Q/K Embedding Space}]{plus_last_even/plots/a4/09_qk_space.png}}
-\emph{\textbf{Figure 8.} Joint query--key space. Blue: queries. Red:
-keys. Labels show token and position.}
+\pandocbounded{\includegraphics[keepaspectratio,alt={Q/K embedding space and focused query}]{plus_last_even/plots/a4/09_10_qk_space_combined.png}}
+\emph{\textbf{Figure 8.} Query--key geometry in Q/K space. \textbf{Top:}
+joint query--key space (blue: queries; red: keys; labels show token and
+position). \textbf{Bottom:} dot-product landscape for the query
+\texttt{+} at position 5; background color is
+\(\mathbf{q}_{+_5}^\top \mathbf{k}\), and keys with position \(\geq 5\)
+are grayed by the causal mask.}
 
 Movie 4 reveals how this structure develops over the course of training.
 At initialization, queries and keys are intermingled with no meaningful
@@ -456,21 +453,18 @@ geometry has converged to the configuration described above: a clear
 \texttt{+} query cluster aligned with even-number keys and orthogonal to
 odd-number keys.
 
-To make the attention pattern even more concrete, Figure 9 isolates a
-single query --- \texttt{+} at position 5 --- and colors the entire Q/K
-plane by its dot product with that query. The resulting gradient shows
-high values (green) concentrated at the locations of even-number keys at
-positions 0--4, and low values (white) at odd-number key locations. Keys
-at positions \(\geq 5\) are irrelevant due to the causal mask. This is
-the retrieval mechanism laid bare: the \texttt{+} query acts as a
-selective filter that picks out even-number keys from the past context,
-with recency biasing the selection toward the most recent one.
+To make the attention pattern even more concrete, the bottom panel of
+Figure 8 isolates a single query --- \texttt{+} at position 5 --- and
+colors the entire Q/K plane by its dot product with that query. The
+resulting gradient shows high values (green) concentrated at the
+locations of even-number keys at positions 0--4, and low values (white)
+at odd-number key locations. Keys at positions \(\geq 5\) are irrelevant
+due to the causal mask. This is the retrieval mechanism laid bare: the
+\texttt{+} query acts as a selective filter that picks out even-number
+keys from the past context, with recency biasing the selection toward
+the most recent one.
 
-\pandocbounded{\includegraphics[keepaspectratio,alt={Q/K Space Focus}]{plus_last_even/plots/a4/10_qk_space_focus.png}}
-\emph{\textbf{Figure 9.} Dot-product gradient for the query \texttt{+}
-at position 5. Green = high attention.}
-
-The full 96×96 attention score matrix (Figure 10) confirms that this
+The full 96×96 attention score matrix (Figure 9) confirms that this
 pattern generalizes across all token--position combinations. The matrix
 is organized as a 12×12 grid of blocks, where each block represents one
 query-token versus one key-token, with the 8 positions arranged within
@@ -483,11 +477,11 @@ selectively and strongly to even numbers, regardless of position. Movie
 the clean even/odd dichotomy observed in the final model.
 
 \pandocbounded{\includegraphics[keepaspectratio,alt={Full Attention Matrix}]{plus_last_even/plots/a4/11_qk_full_heatmap.png}}
-\emph{\textbf{Figure 10.} Full 96×96 attention score matrix, organized
-as a 12×12 grid of token--token blocks.}
+\emph{\textbf{Figure 9.} Full 96×96 attention score matrix, organized as
+a 12×12 grid of token--token blocks.}
 
 For the sequence \texttt{10\ +\ 10\ 6\ +\ 6\ 4\ 8} (traced in full in
-§3.7 below), Figure 11 shows the dot-product gradient for each query
+§3.7 below), Figure 10 shows the dot-product gradient for each query
 position. Each panel visualizes that query's dor product with all keys
 across the Q/K plane, along with the masked \(Q \cdot K^\top\) scores
 and the resulting attention weights. This makes the retrieval pattern
@@ -495,14 +489,14 @@ explicit per position (e.g.~Both \texttt{+} queries attend strongly to
 even-number keys).
 
 \pandocbounded{\includegraphics[keepaspectratio,alt={Q dot product gradients}]{plus_last_even/plots/a4/15_q_dot_product_gradients.png}}
-\emph{\textbf{Figure 11.} Dot-product gradients for each query in the
+\emph{\textbf{Figure 10.} Dot-product gradients for each query in the
 demo sequence, with masked \(Q \cdot K^\top\) and attention heatmaps.}
 
 \subsubsection{3.5 What Gets Retrieved: The Value
 Space}\label{what-gets-retrieved-the-value-space}
 
 The Q/K geometry determines \emph{where} the model looks; the value
-transformation determines \emph{what information} it extracts. Figure 12
+transformation determines \emph{what information} it extracts. Figure 11
 overlays the value-transformed vectors (\(W_V \mathbf{e}_j\) applied to
 each combined embedding) on the same probability heatmaps from Figure 6.
 The key observation is that the value vectors for each even number are
@@ -514,7 +508,7 @@ boundaries: V carries information in a form that the output layer can
 directly decode.
 
 \pandocbounded{\includegraphics[keepaspectratio,alt={Probability Heatmap with V Values}]{plus_last_even/plots/a4/12_probability_heatmap_with_values.png}}
-\emph{\textbf{Figure 12.} Output probability landscape with
+\emph{\textbf{Figure 11.} Output probability landscape with
 value-transformed vectors (all 96 token+position value vectors overlaid;
 cf.~Figure 6, which shows raw embeddings).}
 
@@ -631,7 +625,7 @@ ground this analysis by tracing a single concrete sequence,
 \texttt{10\ +\ 10\ 6\ +\ 6\ 4\ 8}, through the complete inference
 pipeline and verifying that each step works as predicted.
 
-\textbf{Embedding.} Figure 13 shows where each token in this specific
+\textbf{Embedding.} Figure 12 shows where each token in this specific
 sequence lands in embedding space. The \texttt{+} tokens at positions 1
 and 4 are located far from the number tokens, exactly as the global
 structure predicts. The number tokens fan out according to their
@@ -642,11 +636,11 @@ even being 10) and position 5 (which follows the second \texttt{+}, with
 the last even being 6).
 
 \pandocbounded{\includegraphics[keepaspectratio,alt={Sequence Embeddings}]{plus_last_even/plots/a4/13_sequence_embeddings.png}}
-\emph{\textbf{Figure 13.} Embeddings for the demo sequence
+\emph{\textbf{Figure 12.} Embeddings for the demo sequence
 \texttt{10\ +\ 10\ 6\ +\ 6\ 4\ 8}, shown as heatmaps (top) and 2D
 scatter (bottom).}
 
-\textbf{Attention.} Figure 14 displays the full attention computation
+\textbf{Attention.} Figure 13 displays the full attention computation
 for this sequence. The Q/K scatter (panel 3) shows the sequence's query
 and key vectors against the global backdrop --- the \texttt{+} queries
 at positions 1 and 4 are visibly isolated in the region that aligns with
@@ -659,15 +653,15 @@ which contains 10 --- the most recent even number before that
 \texttt{+}. At position 5 (the token after the second \texttt{+}), the
 model attends most strongly to position 3, which contains 6 --- the most
 recent even number before the second \texttt{+}. The retrieval mechanism
-identified in the global analysis (Figures 8--11) is operating exactly
+identified in the global analysis (Figures 8--10) is operating exactly
 as predicted on real inputs.
 
 \pandocbounded{\includegraphics[keepaspectratio,alt={Q/K Attention}]{plus_last_even/plots/a4/14_qk_attention.png}}
-\emph{\textbf{Figure 14.} Attention computation for the demo sequence.
+\emph{\textbf{Figure 13.} Attention computation for the demo sequence.
 Panels: Q heatmap, K heatmap, Q/K scatter, raw scores, attention
 weights.}
 
-\textbf{Value routing.} Figure 15 completes the attention story by
+\textbf{Value routing.} Figure 14 completes the attention story by
 showing what information is actually extracted. The attention-weighted
 sum of value vectors at each position (panel 3) represents the
 ``message'' that attention delivers to the residual stream. At the two
@@ -679,14 +673,14 @@ output landscape (Figure 6) assigns high probability to the correct
 answer.
 
 \pandocbounded{\includegraphics[keepaspectratio,alt={Value Output}]{plus_last_even/plots/a4/16_value_output.png}}
-\emph{\textbf{Figure 15.} Value pathway for the demo sequence. Panels:
+\emph{\textbf{Figure 14.} Value pathway for the demo sequence. Panels:
 attention weights, V vectors, attention output, V scatter, output
 scatter.}
 
 \textbf{Residual stream.} The attention output
 \(\mathrm{Attn}(\mathbf{e})_i\) does not replace the combined embedding
 \(\mathbf{e}_i\) --- it is added to it via the first residual to form
-\(\mathbf{z}_i = \mathbf{e}_i + \mathrm{Attn}(\mathbf{e})_i\). Figure 16
+\(\mathbf{z}_i = \mathbf{e}_i + \mathrm{Attn}(\mathbf{e})_i\). Figure 15
 visualizes this addition. The bottom row shows, in 2D, the combined
 embedding \(\mathbf{e}_i\) at each position, the attention output
 \(\mathrm{Attn}(\mathbf{e})_i\), and arrows illustrating how the
@@ -702,13 +696,13 @@ does not need to implement the rule --- the arrows are smaller and less
 directed, leaving those representations relatively undisturbed.
 
 \pandocbounded{\includegraphics[keepaspectratio,alt={Residuals}]{plus_last_even/plots/a4/17_residuals.png}}
-\emph{\textbf{Figure 16.} Residual stream for the demo sequence. Bottom
+\emph{\textbf{Figure 15.} Residual stream for the demo sequence. Bottom
 row: combined embeddings \(\mathbf{e}_i\) (a), attention output
 \(\mathrm{Attn}(\mathbf{e})_i\) (b), residual shift arrows
 \(\mathbf{e}_i \to \mathbf{z}_i\) (c), and first-residual states
 \(\mathbf{z}_i\) (d).}
 
-\textbf{Output verification.} Finally, Figure 17 provides the empirical
+\textbf{Output verification.} Finally, Figure 16 provides the empirical
 proof that the full pipeline works. Each subplot overlays the
 first-residual states \(\mathbf{z}_i\) (embedding + attention output) on
 the output probability heatmaps from Figure 6; the heatmap gives
@@ -727,7 +721,7 @@ its value to form \(\mathbf{z}_i\), and land in the correct output
 region.
 
 \pandocbounded{\includegraphics[keepaspectratio,alt={Final on Output Grid}]{plus_last_even/plots/a4/18_final_on_output_grid.png}}
-\emph{\textbf{Figure 17.} First-residual states \(\mathbf{z}_i\)
+\emph{\textbf{Figure 16.} First-residual states \(\mathbf{z}_i\)
 (embedding + attention output) overlaid on the output probability
 landscape. Each \(\mathbf{z}_i\) is the input to the second residual and
 FFN; the LM head then maps
@@ -756,21 +750,21 @@ structure visible in the preceding figures.
 \item
   \textbf{Detect the operator.} The query projection \(W_Q\) maps the
   \texttt{+} embedding to a query vector that is geometrically distinct
-  from number queries. The Q/K embedding space (Figure 8) shows
+  from number queries. The Q/K embedding space (Figure 8, top) shows
   \texttt{+} queries forming a separate cluster.
 \item
   \textbf{Retrieve the last even number.} The dot product between the
   \texttt{+} query and all keys yields high attention weight for
   even-number keys, with recency encoded in the positional component of
-  the key layout. The focused-query analysis (Figure 9) and full
-  attention matrix (Figure 10) make this retrieval pattern explicit; the
-  per-query gradient figure (Figure 11) shows it for the demo sequence.
+  the key layout. The focused-query analysis (Figure 8, bottom) and full
+  attention matrix (Figure 9) make this retrieval pattern explicit; the
+  per-query gradient figure (Figure 10) shows it for the demo sequence.
 \item
   \textbf{Route value through first residual.} Attention selects the
   value vector at the most recent even-number position; the first
   residual adds it to the combined embedding:
   \(\mathbf{z}_i = \mathbf{e}_i + \mathrm{Attn}(\mathbf{e})_i\). The
-  residual stream visualization (Figure 16) shows the \texttt{+}
+  residual stream visualization (Figure 15) shows the \texttt{+}
   position's representation being displaced from \(\mathbf{e}_i\) to
   \(\mathbf{z}_i\) toward the correct even number's region.
 \item
@@ -779,7 +773,7 @@ structure visible in the preceding figures.
   head partitions \(\mathbb{R}^2\) into decision regions, one per token,
   and maps \(\mathbf{h}_i\) to logits; softmax produces the prediction.
   The output probability heatmaps (Figure 6) and the overlay of
-  \(\mathbf{z}_i\) on that landscape (Figure 17) confirm that each
+  \(\mathbf{z}_i\) on that landscape (Figure 16) confirm that each
   \(\mathbf{z}_i\) lies in the region corresponding to the correct even
   number.
 \end{enumerate}

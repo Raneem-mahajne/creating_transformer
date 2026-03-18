@@ -48,9 +48,13 @@ _mod_08_qkv_transforms = __import__("plotting.08_qkv_transforms", fromlist=['plo
 plot_weights_qkv = _mod_08_qkv_transforms.plot_weights_qkv
 plot_qkv_transformations = _mod_08_qkv_transforms.plot_qkv_transformations
 
-_mod_09_qk_embedding_space = __import__("plotting.09_qk_embedding_space", fromlist=['plot_qk_embedding_space', 'plot_qk_embedding_space_focused_query'])
+_mod_09_qk_embedding_space = __import__(
+    "plotting.09_qk_embedding_space",
+    fromlist=["plot_qk_embedding_space", "plot_qk_embedding_space_focused_query", "plot_qk_embedding_space_combined"],
+)
 plot_qk_embedding_space = _mod_09_qk_embedding_space.plot_qk_embedding_space
 plot_qk_embedding_space_focused_query = _mod_09_qk_embedding_space.plot_qk_embedding_space_focused_query
+plot_qk_embedding_space_combined = _mod_09_qk_embedding_space.plot_qk_embedding_space_combined
 
 _mod_11_qk_full_attention_heatmap = __import__("plotting.11_qk_full_attention_heatmap", fromlist=['plot_qk_full_attention_heatmap', 'plot_qk_full_attention_heatmap_last_row', 'plot_qk_full_attention_combined', 'plot_qk_softmax_attention_heatmap'])
 plot_qk_full_attention_heatmap = _mod_11_qk_full_attention_heatmap.plot_qk_full_attention_heatmap
@@ -140,6 +144,7 @@ __all__ = [
     "plot_qkv_transformations",
     "plot_qk_embedding_space",
     "plot_qk_embedding_space_focused_query",
+    "plot_qk_embedding_space_combined",
     "plot_qk_full_attention_heatmap",
     "plot_qk_full_attention_heatmap_last_row",
     "plot_qk_full_attention_combined",
