@@ -1,124 +1,9 @@
-% Options for packages loaded elsewhere
-\PassOptionsToPackage{unicode}{hyperref}
-\PassOptionsToPackage{hyphens}{url}
-\documentclass[
-]{article}
-\usepackage{xcolor}
-\usepackage{amsmath,amssymb}
-\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
-\usepackage{iftex}
-\ifPDFTeX
-  \usepackage[T1]{fontenc}
-  \usepackage[utf8]{inputenc}
-  \usepackage{textcomp} % provide euro and other symbols
-\else % if luatex or xetex
-  \usepackage{unicode-math} % this also loads fontspec
-  \defaultfontfeatures{Scale=MatchLowercase}
-  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
-\fi
-\usepackage{lmodern}
-\ifPDFTeX\else
-  % xetex/luatex font selection
-\fi
-% Use upquote if available, for straight quotes in verbatim environments
-\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
-\IfFileExists{microtype.sty}{% use microtype if available
-  \usepackage[]{microtype}
-  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
-}{}
-\makeatletter
-\@ifundefined{KOMAClassName}{% if non-KOMA class
-  \IfFileExists{parskip.sty}{%
-    \usepackage{parskip}
-  }{% else
-    \setlength{\parindent}{0pt}
-    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
-}{% if KOMA class
-  \KOMAoptions{parskip=half}}
-\makeatother
-\usepackage{color}
-\usepackage{fancyvrb}
-\newcommand{\VerbBar}{|}
-\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
-\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
-% Add ',fontsize=\small' for more characters per line
-\newenvironment{Shaded}{}{}
-\newcommand{\AlertTok}[1]{\textcolor[rgb]{1.00,0.00,0.00}{\textbf{#1}}}
-\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textbf{\textit{#1}}}}
-\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.49,0.56,0.16}{#1}}
-\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.25,0.63,0.44}{#1}}
-\newcommand{\BuiltInTok}[1]{\textcolor[rgb]{0.00,0.50,0.00}{#1}}
-\newcommand{\CharTok}[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
-\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textit{#1}}}
-\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textbf{\textit{#1}}}}
-\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.53,0.00,0.00}{#1}}
-\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.00,0.44,0.13}{\textbf{#1}}}
-\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.56,0.13,0.00}{#1}}
-\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.25,0.63,0.44}{#1}}
-\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.73,0.13,0.13}{\textit{#1}}}
-\newcommand{\ErrorTok}[1]{\textcolor[rgb]{1.00,0.00,0.00}{\textbf{#1}}}
-\newcommand{\ExtensionTok}[1]{#1}
-\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.25,0.63,0.44}{#1}}
-\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.02,0.16,0.49}{#1}}
-\newcommand{\ImportTok}[1]{\textcolor[rgb]{0.00,0.50,0.00}{\textbf{#1}}}
-\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textbf{\textit{#1}}}}
-\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.00,0.44,0.13}{\textbf{#1}}}
-\newcommand{\NormalTok}[1]{#1}
-\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.40,0.40,0.40}{#1}}
-\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.00,0.44,0.13}{#1}}
-\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.74,0.48,0.00}{#1}}
-\newcommand{\RegionMarkerTok}[1]{#1}
-\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
-\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.73,0.40,0.53}{#1}}
-\newcommand{\StringTok}[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
-\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.10,0.09,0.49}{#1}}
-\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
-\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textbf{\textit{#1}}}}
-\usepackage{longtable,booktabs,array}
-\newcounter{none} % for unnumbered tables
-\usepackage{calc} % for calculating minipage widths
-% Correct order of tables after \paragraph or \subparagraph
-\usepackage{etoolbox}
-\makeatletter
-\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
-\makeatother
-% Allow footnotes in longtable head/foot
-\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
-\makesavenoteenv{longtable}
-\usepackage{graphicx}
-\makeatletter
-\newsavebox\pandoc@box
-\newcommand*\pandocbounded[1]{% scales image to fit in text height/width
-  \sbox\pandoc@box{#1}%
-  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
-  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
-  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi% select the smaller of both
-  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
-  \else\usebox{\pandoc@box}%
-  \fi%
-}
-% Set default figure placement to htbp
-\def\fps@figure{htbp}
-\makeatother
-\setlength{\emergencystretch}{3em} % prevent overfull lines
-\providecommand{\tightlist}{%
-  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
-\usepackage{seqsplit}
-\usepackage{tabularx}
-\usepackage{bookmark}
-\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
-\urlstyle{same}
-\hypersetup{
-  hidelinks,
-  pdfcreator={LaTeX via pandoc}}
-
-\author{}
-\date{}
-
-\begin{document}
-
 \section{Fully Interpretable Minimal Transformers: From Geometry to
 Algorithm}\label{fully-interpretable-minimal-transformers-from-geometry-to-algorithm}
+
+Toviah Moldwin, Raneem Mahajne, and Idan Segev\\
+Edmond and Lily Safra Center for Brain Sciences, The Hebrew University
+of Jerusalem
 
 \begin{quote}
 \textbf{Abstract.} We present a framework for building and interpreting
@@ -153,18 +38,21 @@ Understanding how transformers process sequences remains a central
 challenge in mechanistic interpretability. Large-scale models achieve
 strong performance but their internal representations are
 high-dimensional and opaque: one can probe attention or activations, but
-a complete picture of information flow from input to output remains
-elusive.
+a complete picture of information flow from input to output is often
+difficult to obtain.
 
-We bridge this gap with \textbf{minimal transformers}: models that
+We address this problem with \textbf{minimal transformers}: models that
 retain the full structure of a decoder-only transformer (token and
 positional embeddings, single-head causal self-attention, residual
 connections, a feedforward layer, and an LM head) but are constrained to
 two-dimensional embeddings and head dimension. Every internal state ---
 embeddings, queries, keys, values, attention outputs, residual sums, and
-pre-softmax logit vectors --- lives in \(\mathbb{R}^2\). No PCA, t-SNE,
-or UMAP is required; the model's geometry is directly visible in the
-plane.
+pre-softmax logit vectors --- lives in \(\mathbb{R}^2\). Dimentionality
+reduction techniques such as PCA, t-SNE, or UMAP are not required; the
+information geometry learned by the model is directly visible in the 2D
+plane. We can take advantage of this direct visibility to demonstrate
+how the information geometry of the transformer can be straightforwardly
+interpreted as an algorithmic procedure.
 
 \subsection{2. Methods}\label{methods}
 
@@ -186,7 +74,8 @@ generation obeys:
 \item
   \textbf{Retrieval rule:} If \(+\) occurs at position \(t\), the output
   at \(t+1\) must be the most recent even integer
-  \(x_i \in \{0, 2, 4, 6, 8, 10\}\) with \(i < t\).
+  \(x_i \in \{0, 2, 4, 6, 8, 10\}\) with \(i < t\). (If there is no
+  earlier even number, then any token can be chosen).
 \item
   \textbf{Unconstrained positions:} All positions not immediately
   following \(+\) are unconstrained; any token in \(\mathcal{V}\) may
@@ -209,12 +98,27 @@ number with high probability. This is a non-trivial attention task: it
 requires routing information from a variable, content-dependent past
 position to the present.
 
---- --\textgreater{}
-
 \subsubsection{2.2 Model Architecture}\label{model-architecture}
 
-{\def\LTcaptype{none} % do not increment counter
+The model is a single-layer, single-head, decoder-only causal
+transformer --- the minimal instance of the architecture introduced by
+Radford et al.~(GPT). It processes tokens autoregressively: at each
+position it conditions on the preceding tokens within a fixed context
+window of \(T = 8\) and produces a distribution over the next token. The
+single transformer block contains one causal self-attention head and a
+feedforward network (a two-layer MLP applied independently to each
+position), with a residual connection around each sub-layer, followed by
+a linear language-model head that maps the final hidden state to
+vocabulary logits (Figure 1). Table 1 lists all hyperparameters.
+
+\newpage
+
 \begin{longtable}[]{@{}ll@{}}
+\caption{Model hyperparameters.}\label{tbl:hyperparams}\tabularnewline
+\toprule\noalign{}
+Parameter & Value \\
+\midrule\noalign{}
+\endfirsthead
 \toprule\noalign{}
 Parameter & Value \\
 \midrule\noalign{}
@@ -227,24 +131,11 @@ Number of heads & 1 \\
 Head size (\(d_k\)) & 2 \\
 Vocabulary size (\(V\)) & 12 (integers 0--10, operator +) \\
 Feed-forward hidden size & \(16 \times n_{\mathrm{embed}} = 32\) \\
-Residual connections & Yes \\
 \end{longtable}
-}
 
-\newpage
-
-The model is a single-layer, single-head decoder-only causal
-transformer:
-
-\begin{verbatim}
-Input → [token emb x + pos emb p] → e →
-Self-Attention → z = e + Attn(e) → FFN → h = z + FFN(z) →
-LM Head → softmax → P(next token)
-\end{verbatim}
-
-\textbf{Token embedding:} \(E \in \mathbb{R}^{V \times 2}\). At position
+\textbf{Token embedding:} \(X \in \mathbb{R}^{V \times 2}\). At position
 \(i\), the token has id \(t_i\); we denote its \textbf{token embedding}
-(the row of \(E\) for that token) by \(\mathbf{x}_i \in \mathbb{R}^2\).
+(the row of \(X\) for that token) by \(\mathbf{x}_i \in \mathbb{R}^2\).
 \textbf{Positional embedding:} \(P \in \mathbb{R}^{T \times 2}\); the
 embedding of position \(i\) is \(\mathbf{p}_i \in \mathbb{R}^2\). The
 \textbf{combined embedding} (input to attention) at position \(i\) is \[
@@ -260,8 +151,8 @@ position \(i\) (over \(j \leq i\), causal mask) are:
 
 \[
 \boldsymbol{\alpha}_i = \mathrm{softmax}\left(\frac{\mathbf{q}_i^\top \mathbf{K}_{1:i}}{\sqrt{d_k}}\right),
-\] where \(\mathbf{q}_i, \mathbf{k}_j \in \mathbb{R}^2\) (column
-vectors),
+\] where \(\mathbf{q}_i, \mathbf{k}_j \in \mathbb{R}^2\) (column vector
+of length 2),
 \(\mathbf{K}_{1:i} = [\mathbf{k}_1 \, \cdots \, \mathbf{k}_i] \in \mathbb{R}^{2 \times i}\),
 so \(\mathbf{q}_i^\top \mathbf{K}_{1:i}\) is a row vector of length
 \(i\) (one score per \(j \leq i\); causal masking is implicit in the
@@ -285,20 +176,35 @@ feedforward network (and is what the LM head ultimately receives after
 the second residual).
 
 \textbf{Second residual.} The feedforward network (FFN) is applied to
-\(\mathbf{z}_i\) and added back via the second residual. The resulting
-\textbf{hidden state} passed to the LM head is \[
+\(\mathbf{z}_i\), and its output is added back to \(\mathbf{z}_i\) (the
+second residual connection). The resulting \textbf{hidden state} passed
+to the LM head is \[
 \mathbf{h}_i = \mathbf{z}_i + \mathrm{FFN}(\mathbf{z}_i).
 \]
 
-\textbf{LM head.} The LM head maps \(\mathbf{h}_i\) (not
-\(\mathbf{e}_i\)) to logits:
-\(\mathbf{h}_i \mapsto \mathbf{h}_i W_{\mathrm{lm}}^\top + \mathbf{b}\),
-followed by softmax to produce \(P(\text{next token})\).
+\textbf{LM head.} The LM head produces the next-token distribution from
+the hidden state \(\mathbf{h}_i\) (not \(\mathbf{e}_i\)): \[
+P(t_{i+1} \mid \mathbf{h}_i) = \mathrm{softmax}\!\left(\mathbf{h}_i \, W_{\mathrm{lm}}^\top + \mathbf{b}\right),
+\] where \(W_{\mathrm{lm}} \in \mathbb{R}^{V \times 2}\) and
+\(\mathbf{b} \in \mathbb{R}^V\).
 
-With \(n_{\mathrm{embed}} = 2\) and \(d_k = 2\), every vector in this
-pipeline lives in \(\mathbb{R}^2\). This is the critical design choice:
-the model's full geometry is directly visible without dimensionality
-reduction.
+The forward pass can be summarized as:
+
+\[
+\begin{aligned}
+\mathbf{e}_i &= \mathbf{x}_i + \mathbf{p}_i, \\
+\mathbf{z}_i &= \mathbf{e}_i + \mathrm{Attn}(\mathbf{e})_i, \\
+\mathbf{h}_i &= \mathbf{z}_i + \mathrm{FFN}(\mathbf{z}_i), \\
+P(t_{i+1} \mid \mathbf{h}_i) &= \mathrm{softmax}\!\left(\mathbf{h}_i \, W_{\mathrm{lm}}^\top + \mathbf{b}\right).
+\end{aligned}
+\]
+
+\begin{center}
+\pandocbounded{\includegraphics[keepaspectratio,alt={Architecture Overview}]{plus_last_even/plots/a4/01_architecture_overview.png}}
+\end{center}
+
+\emph{\textbf{Figure 1.} Architecture of the minimal transformer. Every
+component operates entirely in \(\mathbb{R}^2\).}
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
@@ -313,10 +219,34 @@ token is fixed to the most recent even number in the prefix (the rule
 target). Thus in the training distribution, \texttt{+} has marginal
 probability 0.3, each digit has marginal probability
 \(0.7 / 11 \approx 0.064\), and every position following \texttt{+} is a
-constrained label. The model is trained for 20,000 steps with batch size
-8 and learning rate 0.001 using standard next-token cross-entropy loss.
-Checkpoints are saved every 100 steps (200 total), enabling the
-construction of training-evolution animations.
+constrained label.
+
+The model is optimized with AdamW (\(\beta_1 = 0.9\),
+\(\beta_2 = 0.999\), weight decay \(10^{-2}\), PyTorch defaults) using
+standard next-token cross-entropy loss. Table 2 lists all training
+hyperparameters. Checkpoints are saved every 100 steps (200 total),
+enabling the construction of training-evolution animations.
+
+\begin{longtable}[]{@{}ll@{}}
+\caption{Training hyperparameters.}\label{tbl:training}\tabularnewline
+\toprule\noalign{}
+Parameter & Value \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+Parameter & Value \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Optimizer & AdamW \\
+Learning rate & \(10^{-3}\) \\
+Batch size & 8 \\
+Training steps & 20,000 \\
+Evaluation interval & every 200 steps \\
+Evaluation iterations & 50 batches \\
+Checkpoint interval & every 100 steps \\
+\end{longtable}
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
@@ -364,10 +294,11 @@ indicating that the model has learned the rule.
 
 \pandocbounded{\includegraphics[keepaspectratio,alt={Learning Curve}]{plus_last_even/plots/a4/03_learning_curve.png}}
 \emph{\textbf{Figure 3.} Training dynamics over 20,000 steps. Left axis:
-cross-entropy loss. Right axis: rule error --- the fraction of positions
-immediately following \texttt{+} where the model's top predicted token
-is not the target (the most recent even number). Rule error near 90\% is
-chance level; near 0\% indicates the rule is learned.}
+cross-entropy loss. Right axis: rule error --- the fraction of
+constrained positions (tokens immediately following \texttt{+}) where
+the model's top predicted token is not the target (the most recent even
+number). Rule error near 90\% is chance level; near 0\% indicates the
+rule is learned.}
 
 Figure 4 compares sequences generated by the model before and after
 training. The same color convention applies: at initialization (step 0),
@@ -405,8 +336,8 @@ even tokens is more important for solving this task.
 The position embeddings (Figure 5b) form a ladder structure, with
 \(p_0\) at the bottom, \(p_7\) at the top, and the other positions
 arranged in ascending order in between. This orderly arrangement allows
-the model to encode ``how far back'' a token is, which is essential for
-the ``most recent'' aspect of the rule. When token and position
+the model to encode how far back a token is, which is essential for
+identifying the most recent even number. When token and position
 embeddings are summed (Figure 5g), each token fans out into eight copies
 --- one per position --- shifted vertically by the position embedding.
 Because the range of values of the position embeddings is smaller than
@@ -425,16 +356,177 @@ every checkpoint across training. At step 0, all points are randomly
 scattered. Within the first few thousand steps, the \texttt{+} token
 rapidly migrates away from the number tokens. The even/odd split
 solidifies between steps 5,000 and 10,000, and the position embedding
-ladder organizes gradually throughout training.
+ladder organizes gradually throughout training. \#\#\# 3.3 The Attention
+Mechanism: Query, Key, and Value Projections
 
-\subsubsection{3.3 The Output Landscape: Where Representations Need to
+The combined embeddings \(\mathbf{e}_i\) alone are not sufficient for
+the model to obey the plus-last-even rule, due to the rule's conditional
+structure: simply knowing the token value and its position is not enough
+to predict the next token. The `+' tokens need to ``search back'' for
+the most recent even number to generate the correct answer. This
+retrieval process is what motivates the use of the attention mechanism.
+
+To illustrate how the attention mechanism works, consider what happens
+when the model encounters a \texttt{+} token and needs to retrieve the
+most recent even number. Each combined embedding \(\mathbf{e}_i\) is
+linearly transformed into three vectors: a query (\(q\)), a key (\(k\)),
+and a value (\(v\)). For example, when processing \(\mathbf{+}_{7}\)
+(the \texttt{+} token at position 7), the query vector represents the
+``search request'' asking, ``Where is the relevant even number?'' Every
+other position in the sequence, including those with even numbers,
+supplies its own key and value vectors. The model computes the attention
+weights for the \texttt{+} token by taking the dot product between its
+query (\(q\)) and every other token's key (\(k\)). This produces a score
+indicating how strongly the \texttt{+} should attend to each past
+token---ideally, giving the highest score to the key corresponding to
+the most recent even number. The value vectors (\(v\)) determine what
+information can actually be retrieved---so the value for the most recent
+even number carries the identity of that number, which is then used to
+generate the correct output after \texttt{+}. In summary: the query and
+key machinery let the \texttt{+} ``look back'' specifically for even
+numbers (and, thanks to position information, for the most recent one),
+while the value machinery lets the model retrieve exactly which even
+number should be output.
+
+The model applies three learned \(2 \times 2\) linear transformations
+--- \(W_Q\), \(W_K\), \(W_V\) --- to every combined embedding
+\(\mathbf{e}_i\), producing query, key, and value vectors respectively.
+Figure 7 shows these transformations and their effect. Panel (a)
+displays the original combined token+position embeddings (all 96 points
+in embedding space). Panels (b), (c), and (d) show the same points after
+projection into query space (blue), key space (red), and value space
+(green). Each of these panels includes a small inset of the
+corresponding weight matrix (\(W_Q\), \(W_K\), or \(W_V\)). Because each
+map is linear, it preserves the origin and sends every line through the
+origin to another line through the origin; geometrically, each
+\(2\times2\) matrix acts as a composition of rotation/reflection with
+anisotropic scaling and (in general) shear, thereby changing relative
+angles and distances between points in a way that supports the distinct
+roles of Q, K, and V.
+
+\pandocbounded{\includegraphics[keepaspectratio,alt={QKV Transformations}]{plus_last_even/plots/a4/08_qkv_transforms.png}}
+\emph{\textbf{Figure 7.} QKV projections. (a) Original combined
+token+position embeddings. (b) Query-space (blue), with \(W_Q\) inset.
+(c) Key-space (red), with \(W_K\) inset. (d) Value-space (green), with
+\(W_V\) inset. All 96 token+position points in each panel.}
+
+\subsubsection{3.4 Who Attends to Whom: The Query--Key
+Geometry}\label{who-attends-to-whom-the-querykey-geometry}
+
+The question at the heart of the plus-last-even rule is: when the model
+encounters a \texttt{+}, how does it know to look back and find the most
+recent even number? The answer lies in the geometry of the query--key
+space. Figure 8 plots all 96 query vectors (blue) and all 96 key vectors
+(red) on common axes, so we can directly read off the attention pattern
+from the spatial relationships.
+
+The \texttt{+} queries form a tight, isolated cluster, well-separated
+from all number queries. More importantly, the direction from the origin
+to this \texttt{+} cluster is geometrically aligned with the keys of
+even-number tokens --- that is, the dot product between a \texttt{+}
+query and an even-number key is large, producing strong attention. In
+contrast, the dot product between a \texttt{+} query and an odd-number
+key is small, producing weak attention. This is the geometric encoding
+of the rule's core requirement: \texttt{+} should attend to even numbers
+and ignore odd numbers.
+
+But the rule demands more than just ``attend to even numbers'' --- it
+requires attending to the \emph{most recent} one. This is encoded in the
+positional spread of each token's keys. Within the key cluster for any
+given even number, keys at later positions (closer to the query) are
+arranged so that they have slightly higher dot products with the
+\texttt{+} query than keys at earlier positions. After softmax
+normalization, this bias means the most recent even number receives the
+highest attention weight. The position embeddings' orderly ladder
+structure (Figure 5) feeds directly into this: position information is
+preserved through the key projection and manifests as a recency gradient
+in the Q/K dot products.
+
+\pandocbounded{\includegraphics[keepaspectratio,alt={Q/K Embedding Space}]{plus_last_even/plots/a4/09_qk_space.png}}
+\emph{\textbf{Figure 8.} Joint query--key space. Blue: queries. Red:
+keys. Labels show token and position.}
+
+Movie 4 reveals how this structure develops over the course of training.
+At initialization, queries and keys are intermingled with no meaningful
+separation. Over the first several thousand steps, the \texttt{+}
+queries begin migrating away from the number queries. Simultaneously,
+even-number keys separate from odd-number keys along the axis that
+aligns with the \texttt{+} query direction. By the end of training, the
+geometry has converged to the configuration described above: a clear
+\texttt{+} query cluster aligned with even-number keys and orthogonal to
+odd-number keys.
+
+To make the attention pattern even more concrete, Figure 9 isolates a
+single query --- \texttt{+} at position 5 --- and colors the entire Q/K
+plane by its dot product with that query. The resulting gradient shows
+high values (green) concentrated at the locations of even-number keys at
+positions 0--4, and low values (white) at odd-number key locations. Keys
+at positions \(\geq 5\) are irrelevant due to the causal mask. This is
+the retrieval mechanism laid bare: the \texttt{+} query acts as a
+selective filter that picks out even-number keys from the past context,
+with recency biasing the selection toward the most recent one.
+
+\pandocbounded{\includegraphics[keepaspectratio,alt={Q/K Space Focus}]{plus_last_even/plots/a4/10_qk_space_focus.png}}
+\emph{\textbf{Figure 9.} Dot-product gradient for the query \texttt{+}
+at position 5. Green = high attention.}
+
+The full 96×96 attention score matrix (Figure 10) confirms that this
+pattern generalizes across all token--position combinations. The matrix
+is organized as a 12×12 grid of blocks, where each block represents one
+query-token versus one key-token, with the 8 positions arranged within
+each block. The bottom row --- corresponding to \texttt{+} as the query
+token --- is the most informative: even-number key columns (0, 2, 4, 6,
+8, 10) show warm colors (high attention scores), while odd-number key
+columns show cool colors (low scores). The \texttt{+} operator attends
+selectively and strongly to even numbers, regardless of position. Movie
+5 shows this row sharpening from a diffuse pattern at initialization to
+the clean even/odd dichotomy observed in the final model.
+
+\pandocbounded{\includegraphics[keepaspectratio,alt={Full Attention Matrix}]{plus_last_even/plots/a4/11_qk_full_heatmap.png}}
+\emph{\textbf{Figure 10.} Full 96×96 attention score matrix, organized
+as a 12×12 grid of token--token blocks.}
+
+For the sequence \texttt{10\ +\ 10\ 6\ +\ 6\ 4\ 8} (traced in full in
+§3.7 below), Figure 11 shows the dot-product gradient for each query
+position. Each panel visualizes that query's dor product with all keys
+across the Q/K plane, along with the masked \(Q \cdot K^\top\) scores
+and the resulting attention weights. This makes the retrieval pattern
+explicit per position (e.g.~Both \texttt{+} queries attend strongly to
+even-number keys).
+
+\pandocbounded{\includegraphics[keepaspectratio,alt={Q dot product gradients}]{plus_last_even/plots/a4/15_q_dot_product_gradients.png}}
+\emph{\textbf{Figure 11.} Dot-product gradients for each query in the
+demo sequence, with masked \(Q \cdot K^\top\) and attention heatmaps.}
+
+\subsubsection{3.5 What Gets Retrieved: The Value
+Space}\label{what-gets-retrieved-the-value-space}
+
+The Q/K geometry determines \emph{where} the model looks; the value
+transformation determines \emph{what information} it extracts. Figure 12
+overlays the value-transformed vectors (\(W_V \mathbf{e}_j\) applied to
+each combined embedding) on the same probability heatmaps from Figure 6.
+The key observation is that the value vectors for each even number are
+positioned so that, after being selected by attention and summed, the
+resulting vector lands in the high-probability region for that even
+number in the output landscape. The model has learned a value
+transformation that is \emph{coordinated} with the LM head's decision
+boundaries: V carries information in a form that the output layer can
+directly decode.
+
+\pandocbounded{\includegraphics[keepaspectratio,alt={Probability Heatmap with V Values}]{plus_last_even/plots/a4/12_probability_heatmap_with_values.png}}
+\emph{\textbf{Figure 12.} Output probability landscape with
+value-transformed vectors (all 96 token+position value vectors overlaid;
+cf.~Figure 6, which shows raw embeddings).}
+
+\subsubsection{3.6 The Output Landscape: Where Representations Need to
 Land}\label{the-output-landscape-where-representations-need-to-land}
 
 Before examining the attention mechanism, we note that the combined
-embedding \(\mathbf{e}_i\) is fed forward (via attention and residuals)
-to the feedforward network and LM head. It can thus be useful to
-understand how the geometry of the combined embeddings \(\mathbf{e}_i\)
-relates to the input-output function determined by the output network.
+token+position embeddings \(\mathbf{e}_i\) is fed forward (via attention
+and residuals) to the feedforward network and LM head. It can thus be
+useful to understand how the geometry of the token+position embeddings
+\(\mathbf{e}_i\) relates to the input-output function determined by the
+output network.
 
 The output network (FFN, second residual, and LM head, as defined in
 §2.2) maps a point \(\mathbf{z}_i \in \mathbb{R}^2\) to a probability
@@ -529,166 +621,6 @@ nearly uniform --- no decision boundaries exist. As the model first
 learns token frequencies, broad regions form. These sharpen
 progressively into the final configuration where each even number has a
 well-defined, non-overlapping high-probability region.
-
-\subsubsection{3.4 The Attention Mechanism: Query, Key, and Value
-Projections}\label{the-attention-mechanism-query-key-and-value-projections}
-
-The combined embeddings \(\mathbf{e}_i\) alone are not sufficient for
-the model to obey the plus-last-even rule, due to the rule's conditional
-structure: simply knowing the token value and its position is not enough
-to predict the next token. The `+' tokens need to ``search back'' for
-the most recent even number to generate the correct answer. This
-retrieval process is what motivates the use of the attention mechanism.
-
-To illustrate how the attention mechanism works, consider what happens
-when the model encounters a \texttt{+} token and needs to retrieve the
-most recent even number. Each combined embedding
-\(\mathbf{e}_i\)---including at each \texttt{+} and each number
-position---is linearly transformed into three vectors: a query (\(Q\)),
-a key (\(K\)), and a value (\(V\)). For example, when processing a
-\texttt{+}, the query vector represents the ``search request'' asking,
-``Where is the relevant even number?'' Every other position in the
-sequence, including those with even numbers, supplies its own key and
-value vectors. The model computes the attention weights for the
-\texttt{+} token by taking the dot product between its query and every
-other token's key. This produces a score indicating how strongly the
-\texttt{+} should attend to each past token---ideally, giving the
-highest score to the key corresponding to the most recent even number.
-The value vectors determine what information can actually be
-retrieved---so the value for the most recent even number carries the
-identity of that number, which is then used to generate the correct
-output after \texttt{+}. In summary: the query and key machinery let the
-\texttt{+} ``look back'' specifically for even numbers (and, thanks to
-position information, for the most recent one), while the value
-machinery lets the model retrieve exactly which even number should be
-output.
-
-The model applies three learned \(2 \times 2\) linear transformations
---- \(W_Q\), \(W_K\), \(W_V\) --- to every combined embedding
-\(\mathbf{e}_i\), producing query, key, and value vectors respectively.
-Figure 7 shows these transformations and their effect. Panel (a)
-displays the original combined token+position embeddings (all 96 points
-in embedding space). Panels (b), (c), and (d) show the same points after
-projection into query space (blue), key space (red), and value space
-(green), each in its own coordinate system; each of these panels
-includes a small inset of the corresponding weight matrix (\(W_Q\),
-\(W_K\), or \(W_V\)). The three projections stretch, rotate, and
-rearrange the points differently, reflecting the different roles these
-vectors play.
-
-\pandocbounded{\includegraphics[keepaspectratio,alt={QKV Transformations}]{plus_last_even/plots/a4/08_qkv_transforms.png}}
-\emph{\textbf{Figure 7.} QKV projections. (a) Original combined
-token+position embeddings. (b) Query-space (blue), with \(W_Q\) inset.
-(c) Key-space (red), with \(W_K\) inset. (d) Value-space (green), with
-\(W_V\) inset. All 96 token+position points in each panel.}
-
-\subsubsection{3.5 Who Attends to Whom: The Query--Key
-Geometry}\label{who-attends-to-whom-the-querykey-geometry}
-
-The question at the heart of the plus-last-even rule is: when the model
-encounters a \texttt{+}, how does it know to look back and find the most
-recent even number? The answer lies in the geometry of the query--key
-space. Figure 8 plots all 96 query vectors (blue) and all 96 key vectors
-(red) on common axes, so we can directly read off the attention pattern
-from the spatial relationships.
-
-The \texttt{+} queries form a tight, isolated cluster, well-separated
-from all number queries. More importantly, the direction from the origin
-to this \texttt{+} cluster is geometrically aligned with the keys of
-even-number tokens --- that is, the dot product between a \texttt{+}
-query and an even-number key is large, producing strong attention. In
-contrast, the dot product between a \texttt{+} query and an odd-number
-key is small, producing weak attention. This is the geometric encoding
-of the rule's core requirement: \texttt{+} should attend to even numbers
-and ignore odd numbers.
-
-But the rule demands more than just ``attend to even numbers'' --- it
-requires attending to the \emph{most recent} one. This is encoded in the
-positional spread of each token's keys. Within the key cluster for any
-given even number, keys at later positions (closer to the query) are
-arranged so that they have slightly higher dot products with the
-\texttt{+} query than keys at earlier positions. After softmax
-normalization, this bias means the most recent even number receives the
-highest attention weight. The position embeddings' orderly ladder
-structure (Figure 5) feeds directly into this: position information is
-preserved through the key projection and manifests as a recency gradient
-in the Q/K dot products.
-
-\pandocbounded{\includegraphics[keepaspectratio,alt={Q/K Embedding Space}]{plus_last_even/plots/a4/09_qk_space.png}}
-\emph{\textbf{Figure 8.} Joint query--key space. Blue: queries. Red:
-keys. Labels show token and position.}
-
-Movie 4 reveals how this structure develops over the course of training.
-At initialization, queries and keys are intermingled with no meaningful
-separation. Over the first several thousand steps, the \texttt{+}
-queries begin migrating away from the number queries. Simultaneously,
-even-number keys separate from odd-number keys along the axis that
-aligns with the \texttt{+} query direction. By the end of training, the
-geometry has converged to the configuration described above: a clear
-\texttt{+} query cluster aligned with even-number keys and orthogonal to
-odd-number keys.
-
-To make the attention pattern even more concrete, Figure 9 isolates a
-single query --- \texttt{+} at position 5 --- and colors the entire Q/K
-plane by its dot product with that query. The resulting gradient shows
-high values (green) concentrated at the locations of even-number keys at
-positions 0--4, and low values (white) at odd-number key locations. Keys
-at positions \(\geq 5\) are irrelevant due to the causal mask. This is
-the retrieval mechanism laid bare: the \texttt{+} query acts as a
-selective filter that picks out even-number keys from the past context,
-with recency biasing the selection toward the most recent one.
-
-\pandocbounded{\includegraphics[keepaspectratio,alt={Q/K Space Focus}]{plus_last_even/plots/a4/10_qk_space_focus.png}}
-\emph{\textbf{Figure 9.} Dot-product gradient for the query \texttt{+}
-at position 5. Green = high attention.}
-
-The full 96×96 attention score matrix (Figure 10) confirms that this
-pattern generalizes across all token--position combinations. The matrix
-is organized as a 12×12 grid of blocks, where each block represents one
-query-token versus one key-token, with the 8 positions arranged within
-each block. The bottom row --- corresponding to \texttt{+} as the query
-token --- is the most informative: even-number key columns (0, 2, 4, 6,
-8, 10) show warm colors (high attention scores), while odd-number key
-columns show cool colors (low scores). The \texttt{+} operator attends
-selectively and strongly to even numbers, regardless of position. Movie
-5 shows this row sharpening from a diffuse pattern at initialization to
-the clean even/odd dichotomy observed in the final model.
-
-\pandocbounded{\includegraphics[keepaspectratio,alt={Full Attention Matrix}]{plus_last_even/plots/a4/11_qk_full_heatmap.png}}
-\emph{\textbf{Figure 10.} Full 96×96 attention score matrix, organized
-as a 12×12 grid of token--token blocks.}
-
-For the sequence \texttt{10\ +\ 10\ 6\ +\ 6\ 4\ 8} (traced in full in
-§3.7 below), Figure 11 shows the dot-product gradient for each query
-position. Each panel visualizes that query's dor product with all keys
-across the Q/K plane, along with the masked \(Q \cdot K^\top\) scores
-and the resulting attention weights. This makes the retrieval pattern
-explicit per position (e.g.~Both \texttt{+} queries attend strongly to
-even-number keys).
-
-\pandocbounded{\includegraphics[keepaspectratio,alt={Q dot product gradients}]{plus_last_even/plots/a4/15_q_dot_product_gradients.png}}
-\emph{\textbf{Figure 11.} Dot-product gradients for each query in the
-demo sequence, with masked \(Q \cdot K^\top\) and attention heatmaps.}
-
-\subsubsection{3.6 What Gets Retrieved: The Value
-Space}\label{what-gets-retrieved-the-value-space}
-
-The Q/K geometry determines \emph{where} the model looks; the value
-transformation determines \emph{what information} it extracts. Figure 12
-overlays the value-transformed vectors (\(W_V \mathbf{e}_j\) applied to
-each combined embedding) on the same probability heatmaps from Figure 6.
-The key observation is that the value vectors for each even number are
-positioned so that, after being selected by attention and summed, the
-resulting vector lands in the high-probability region for that even
-number in the output landscape. The model has learned a value
-transformation that is \emph{coordinated} with the LM head's decision
-boundaries: V carries information in a form that the output layer can
-directly decode.
-
-\pandocbounded{\includegraphics[keepaspectratio,alt={Probability Heatmap with V Values}]{plus_last_even/plots/a4/12_probability_heatmap_with_values.png}}
-\emph{\textbf{Figure 12.} Output probability landscape with
-value-transformed vectors (all 96 token+position value vectors overlaid;
-cf.~Figure 6, which shows raw embeddings).}
 
 \subsubsection{3.7 Tracing a Sequence Through the
 Pipeline}\label{tracing-a-sequence-through-the-pipeline}
@@ -1010,5 +942,3 @@ Additional static figures in
   computational power of finite precision RNNs for language recognition.
   \emph{ACL}.
 \end{itemize}
-
-\end{document}
