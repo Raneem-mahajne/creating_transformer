@@ -41,6 +41,9 @@ plot_embeddings_scatterplots_only = _mod_05_token_embeddings.plot_embeddings_sca
 _mod_06_output_probability_heatmap = __import__("plotting.06_output_probability_heatmap", fromlist=['plot_probability_heatmap'])
 plot_probability_heatmap = _mod_06_output_probability_heatmap.plot_probability_heatmap
 
+_mod_06b_output_landscape_summary = __import__("plotting.06b_output_landscape_summary", fromlist=['plot_output_landscape_summary'])
+plot_output_landscape_summary = _mod_06b_output_landscape_summary.plot_output_landscape_summary
+
 _mod_07_output_probs_with_embeddings = __import__("plotting.07_output_probs_with_embeddings", fromlist=['plot_probability_heatmap_with_embeddings'])
 plot_probability_heatmap_with_embeddings = _mod_07_output_probs_with_embeddings.plot_probability_heatmap_with_embeddings
 
@@ -139,6 +142,7 @@ __all__ = [
     "plot_embeddings_pca",
     "plot_embeddings_scatterplots_only",
     "plot_probability_heatmap",
+    "plot_output_landscape_summary",
     "plot_probability_heatmap_with_embeddings",
     "plot_weights_qkv",
     "plot_qkv_transformations",

@@ -5,7 +5,8 @@ plus_last_even,03,learning_curve.png,03_learning_curve.png
 plus_last_even,04,generated_sequences_heatmap.png,04_generated_sequences.png
 plus_last_even,05,embeddings.png,05_token_embeddings.png
 plus_last_even,06,probability_heatmap.png,06_output_probs.png
-plus_last_even,07,probability_heatmap_with_embeddings.png,07_output_probs_embed.png
+plus_last_even,07,output_landscape_summary.png,07_output_landscape_summary.png
+plus_last_even,sup07,probability_heatmap_with_embeddings.png,07_output_probs_embed.png
 plus_last_even,08,qkv_transformations.png,08_qkv_transforms.png
 plus_last_even,09,qk_embedding_space.png,09_qk_space.png
 plus_last_even,10,qk_embedding_space_plus5_focus.png,10_qk_space_focus.png

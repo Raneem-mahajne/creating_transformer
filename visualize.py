@@ -40,6 +40,7 @@ from plotting import (
     plot_final_on_output_heatmap_grid,
     plot_residuals,
     plot_probability_heatmap,
+    plot_output_landscape_summary,
     plot_probability_heatmap_with_embeddings,
     plot_probability_heatmap_with_values,
     plot_per_token_frozen_output,
@@ -479,6 +480,10 @@ def visualize_from_checkpoint(
     if _plot("probability_heatmap.png"):
         plot_probability_heatmap(
             model, itos, save_path=_plot_path("probability_heatmap.png")
+        )
+    if _plot("output_landscape_summary.png"):
+        plot_output_landscape_summary(
+            model, itos, save_path=_plot_path("output_landscape_summary.png")
         )
     if _plot("probability_heatmap_with_embeddings.png"):
         plot_probability_heatmap_with_embeddings(
