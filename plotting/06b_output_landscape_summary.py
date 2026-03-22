@@ -149,14 +149,14 @@ def plot_output_landscape_summary(
     else:
         fig, axes = plt.subplots(2, 2, figsize=(10, 10))
 
-    # (a) argmax with region annotations for large regions
-    _plot_argmax(axes[0, 0], xx, yy, probs, itos, cmap, norm, grid_resolution, extent,
-                 annotate_regions=True, min_region_pixels=60)
-
-    # (b) entropy
-    ent_im = _plot_entropy(axes[0, 1], xx, yy, probs, grid_resolution, extent)
-    cbar = fig.colorbar(ent_im, ax=axes[0, 1], fraction=0.046, pad=0.04)
+    # (a) entropy (top-left)
+    ent_im = _plot_entropy(axes[0, 0], xx, yy, probs, grid_resolution, extent)
+    cbar = fig.colorbar(ent_im, ax=axes[0, 0], fraction=0.046, pad=0.04)
     cbar.set_label("nats", fontsize=8)
+
+    # (b) argmax with region annotations for large regions (top-right)
+    _plot_argmax(axes[0, 1], xx, yy, probs, itos, cmap, norm, grid_resolution, extent,
+                 annotate_regions=True, min_region_pixels=60)
 
     # (c) argmax + embeddings
     _plot_argmax(axes[1, 0], xx, yy, probs, itos, cmap, norm, grid_resolution, extent)
@@ -182,8 +182,12 @@ def plot_output_landscape_summary(
         for c in range(2):
             axes[r, c].set_xlabel("embedding dim 0", fontsize=9)
             axes[r, c].set_ylabel("embedding dim 1", fontsize=9)
+            # Mark origin (0, 0)
+            axes[r, c].axhline(0, color="black", linestyle="--", linewidth=0.8, alpha=0.7, zorder=5)
+            axes[r, c].axvline(0, color="black", linestyle="--", linewidth=0.8, alpha=0.7, zorder=5)
 
     # Panel labels outside the panels (to the left of each panel)
+    # (a)=entropy, (b)=argmax, (c)=argmax+embeddings, (d)=argmax+values
     panel_labels = ["(a)", "(b)", "(c)", "(d)"]
     for idx, (r, c) in enumerate([(0, 0), (0, 1), (1, 0), (1, 1)]):
         axes[r, c].text(
