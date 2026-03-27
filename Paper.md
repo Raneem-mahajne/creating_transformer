@@ -257,6 +257,10 @@ As we showed earlier, the even, odd and `+` token embeddings are separated from 
 ![Q/K Attention](plus_last_even/plots/a4/14_qk_attention.png)
 ***Figure 13.** Attention computation for the demo sequence. (a) Q heatmap, (b) K heatmap, (c) scatterplot of queries (blue), and keys (red) for tokens within our test sequence against a backdrop of all 96 possible queries and keys(gray).*
 
+For each token within the sequence, the model should compute the dot product between that token's query and the key of every token in the sequence. To illustrate this, for each query we show what the dot product with that query would be at an arbitrary point in space. We then overlay the actual keys within our test sequence over this space for each query, making it clear which keys would produce the largest dot product.
+For each query, we also gray out the keys that come in later positions to show the effect of the causal masking.
+It is clear from this process that once causal masking is applied, the dot product between the `+` tokens and the key of the most recent even number relative to that `+` token, will be largest relative to other unmasked keys. This is also made clear in Figure 11b, which shows that the masked query key dot product and Figure 11c which shows the full attention matrix after applying the softmax.
+
 Figure 11 shows the dot-product gradient for each query position in this sequence. Each panel visualizes that query's dot product with all keys across the Q/K plane, along with the masked $Q \cdot K^\top$ scores and the resulting attention weights. This makes the retrieval pattern explicit per position (e.g. both `+` queries attend strongly to even-number keys).
 
 ![Q dot product gradients](plus_last_even/plots/a4/15_q_dot_product_gradients.png)
