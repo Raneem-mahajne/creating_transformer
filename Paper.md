@@ -259,12 +259,11 @@ As we showed earlier, the even, odd and `+` token embeddings are separated from 
 
 For each token within the sequence, the model should compute the dot product between that token's query and the key of every token in the sequence. To illustrate this, for each query we show what the dot product with that query would be at an arbitrary point in space. We then overlay the actual keys within our test sequence over this space for each query, making it clear which keys would produce the largest dot product.
 For each query, we also gray out the keys that come in later positions to show the effect of the causal masking.
-It is clear from this process that once causal masking is applied, the dot product between the `+` tokens and the key of the most recent even number relative to that `+` token, will be largest relative to other unmasked keys. This is also made clear in Figure 11b, which shows that the masked query key dot product and Figure 11c which shows the full attention matrix after applying the softmax.
-
-Figure 11 shows the dot-product gradient for each query position in this sequence. Each panel visualizes that query's dot product with all keys across the Q/K plane, along with the masked $Q \cdot K^\top$ scores and the resulting attention weights. This makes the retrieval pattern explicit per position (e.g. both `+` queries attend strongly to even-number keys).
+It is clear from these visualizations that once causal masking is applied, the dot product between the query of each `+` token and the key of the most recent even number relative to that `+` token, will be the largest for that query relative to other unmasked keys. This is also apparent in the heatmap of Figure 11b, which shows the masked query-key dot products, and Figure 11c which shows the full attention matrix after normalization by ${\sqrt{d_k}}$
+ and applying softmax.
 
 ![Q dot product gradients](plus_last_even/plots/a4/15_q_dot_product_gradients.png)
-***Figure 11.** Dot-product gradients for each query in the demo sequence, with masked $Q \cdot K^\top$ and attention heatmaps.*
+**Figure 11.** (a) The background of each panel displays the dot product of a specific query (blue) in the test sequence with every point in space (green = high, white = low). The unmasked (red) and masked (gray) keys are overlayed on this space to show their dot products with the selected query. (b) the  masked $Q \cdot K^\top$ matrix, (c) the attention matrix after normalization by ${\sqrt{d_k}}$ and applying softmax.
 
 **Value routing.** Figure 14 completes the attention story by showing what information is actually extracted. The attention-weighted sum of value vectors at each position (panel 3) represents the "message" that attention delivers to the residual stream. At the constrained position, the attention output is dominated by the value vector of the attended even number — token 4. The attention-output scatter (panel 5) shows where these messages land in 2D space: they point toward the regions where the output landscape (Figure 7) assigns high probability to the correct answer.
 
