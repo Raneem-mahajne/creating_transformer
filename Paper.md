@@ -197,7 +197,7 @@ Figure 9 (Top) makes this geometry visible. The `+` queries form a tight single-
 
 But the rule demands more than just "attend to even numbers" — it requires attending to the *most recent* one. This is encoded in the positional spread of each token's keys. Within the key cluster for any given even number, keys at later positions (closer to the query) are arranged so that they are closer to the `+` queries than keys at earlier positions. 
 
-If we focus on a single query $\mathbf{+}_5$ (`+` at position 5), we can see the dot product (green background) between that query and a key at any point in space (Figure 9 Bottom). In principle, the dot product is highest with even numbers at position 7, however, because of the causal masking, queries are only allowed to look at keys that come before it in the sequence, so we have greyed out all keys that come before position 5 (keys in positions 5 are also greyed out because if there's a plus in position 5, no other token could be in position 5). The `+` query thus acts as a selective filter that picks out even-number keys from the past context, with recency biasing the selection toward the most recent one.
+If we focus on a single query $\mathbf{+}_5$ (`+` at position 5), we can see the dot product (green background) between that query and a key at any point in space (Figure 9 Bottom). In principle, the dot product is highest with even numbers at position 7, however, because of the causal masking, queries are only allowed to look at keys that come before it in the sequence, so we have grayed out all keys that come before position 5 (keys in positions 5 are also grayed out because if there's a plus in position 5, no other token could be in position 5). The `+` query thus acts as a selective filter that picks out even-number keys from the past context, with recency biasing the selection toward the most recent one.
 
 ![Q/K embedding space and focused query](plus_last_even/plots/a4/09_10_qk_space_combined.png)
 ***Figure 9.** Query–key geometry in Q/K space. **Top:** joint query–key space (blue: queries; red: keys; labels show token and position). **Bottom:** dot-product landscape for the query `+` at position 5; background color is $\mathbf{q}_{+_5}^\top \mathbf{k}$, and keys with position $\geq 5$ are grayed by the causal mask.*
@@ -242,17 +242,20 @@ Panel (d) shows the value-transformed vectors $\mathbf{v}_j = W_V \mathbf{e}_j$ 
 
 ### 3.7 Tracing a Sequence Through the Pipeline
 
-The preceding analysis characterized the model's learned parameters in the abstract — all 96 possible token+position combinations. We now ground this analysis by tracing a single concrete sequence, `4 1 + 4 6 9 5 +`, through the complete inference pipeline and verifying that each step works as predicted.
+The preceding analysis characterized the model's learned parameters in the abstract — all 96 possible token+position combinations. We now ground this analysis by tracing a single concrete sequence, `4 1 + 4 6 9 5 +`, through the complete inference pipeline and verifying that each step works as expected.
+This sequence ends in a `+` to illustrate next token prediction. The model's output for the next token in the sequence should be a 6.
+**Embedding.** The embeddings for this sequence are a subset of the total set of token+positions embeddings, as there can only be one token in each position. Thus, this sequence uses only 8 out of the 96 total possible token+position combinations. In Figure 12, we show the tokens for this sequence against a backdrop of all 96 possible token+position combinations as shown in Figure 5.
+As we showed earlier, the even, odd and `+` token embeddings are separated from each other in the embedding space, and the position of each token in the sequence determines where it appears in the "ladder" structure for that token.
 
-**Embedding.** Figure 12 shows where each token in this specific sequence lands in embedding space. The `+` tokens at positions 2 and 7 are located far from the number tokens, exactly as the global structure predicts. The number tokens fan out according to their position offsets, with even numbers (4, 6) and odd numbers (1, 9, 5) in their respective global clusters. In this length-8 window, there is one constrained position: position 3 (which follows the `+` at position 2, with the last even being 4).
 
 ![Sequence Embeddings](plus_last_even/plots/a4/13_sequence_embeddings.png)
-***Figure 12.** Embeddings for the demo sequence `4 1 + 4 6 9 5 +`, shown as heatmaps (top) and 2D scatter (bottom).*
+***Figure 12.** Embeddings for the demo sequence `4 1 + 4 6 9 5 +`. **a-c:** Embedding heatmaps for tokens, positions and token+position.
+ ** d–f:** 2D scatter plot views of tokens, positions, and token+position combinations, shown over a backdrop of all possible tokens, position, and token+position embeddings (light gray).
 
-**Attention.** Figure 13 displays the full attention computation for this sequence. The Q/K scatter (panel 3) shows the sequence's query and key vectors against the global backdrop — the `+` queries at positions 2 and 7 are visibly isolated in the region that aligns with even-number keys. The raw attention scores (panel 4, before softmax) show high values where `+` queries meet keys from positions containing even numbers, and the final attention matrix (panel 5, after softmax) confirms the expected retrieval. At position 3 (the token after the `+` at position 2), the model attends overwhelmingly to position 0, which contains 4 — the most recent even number before that `+`.
+**Attention.** The model must compute the attention matrix for this sequence by constructing the Q and K matrices and computing pairwise dot product for each key and query within the sequence. Figure 13 shows the Q and K heatmaps for the representation of the tokens within this sequence, and panel c shows these Q and K embedding on the same scatterplot against a backdrop of all 96 possible queries and keys, as in Figure 9.
 
 ![Q/K Attention](plus_last_even/plots/a4/14_qk_attention.png)
-***Figure 13.** Attention computation for the demo sequence. Panels: Q heatmap, K heatmap, Q/K scatter, raw scores, attention weights.*
+***Figure 13.** Attention computation for the demo sequence. (a) Q heatmap, (b) K heatmap, (c) scatterplot of queries (blue), and keys (red) for tokens within our test sequence against a backdrop of all 96 possible queries and keys(gray).*
 
 Figure 11 shows the dot-product gradient for each query position in this sequence. Each panel visualizes that query's dot product with all keys across the Q/K plane, along with the masked $Q \cdot K^\top$ scores and the resulting attention weights. This makes the retrieval pattern explicit per position (e.g. both `+` queries attend strongly to even-number keys).
 
