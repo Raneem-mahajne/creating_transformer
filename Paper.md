@@ -250,12 +250,12 @@ As we showed earlier, the even, odd and `+` token embeddings are separated from 
 
 ![Sequence Embeddings](plus_last_even/plots/a4/13_sequence_embeddings.png)
 ***Figure 12.** Embeddings for the demo sequence `4 1 + 4 6 9 5 +`. **a-c:** Embedding heatmaps for tokens, positions and token+position.
- ** d–f:** 2D scatter plot views of tokens, positions, and token+position combinations, shown over a backdrop of all possible tokens, position, and token+position embeddings (light gray).
+ **d–f:** 2D scatter plot views of tokens, positions, and token+position combinations, shown over a backdrop of all possible tokens, position, and token+position embeddings (light gray).
 
 **Attention.** The model must compute the attention matrix for this sequence by constructing the Q and K matrices and computing pairwise dot product for each key and query within the sequence. Figure 13 shows the Q and K heatmaps for the representation of the tokens within this sequence, and panel c shows these Q and K embedding on the same scatterplot against a backdrop of all 96 possible queries and keys, as in Figure 9.
 
 ![Q/K Attention](plus_last_even/plots/a4/14_qk_attention.png)
-***Figure 13.** Attention computation for the demo sequence. (a) Q heatmap, (b) K heatmap, (c) scatterplot of queries (blue), and keys (red) for tokens within our test sequence against a backdrop of all 96 possible queries and keys(gray).*
+***Figure 13.** Attention computation for the demo sequence. (a) Q heatmap, (b) K heatmap, (c) scatterplot of queries (blue), and keys (red) for tokens within our test sequence against a backdrop of all 96 possible queries and keys (gray).*
 
 For each token within the sequence, the model should compute the dot product between that token's query and the key of every token in the sequence. To illustrate this, for each query we show what the dot product with that query would be at an arbitrary point in space. We then overlay the actual keys within our test sequence over this space for each query, making it clear which keys would produce the largest dot product.
 For each query, we also gray out the keys that come in later positions to show the effect of the causal masking.

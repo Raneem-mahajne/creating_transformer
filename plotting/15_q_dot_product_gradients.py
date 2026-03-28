@@ -12,6 +12,7 @@ from matplotlib.patches import Patch
 import matplotlib.patheffects as pe
 import matplotlib.text as _mtext
 import matplotlib.colors as mcolors
+from matplotlib.cm import ScalarMappable
 import seaborn as sns
 
 from data import get_batch_from_sequences
@@ -150,8 +151,7 @@ def plot_q_dot_product_gradients(model, X_list, itos, save_path=None, num_sequen
         # Compute dot product grid: for each (x,y), dot product with q_focus
         dot_grid = X_grid * q_focus_2d[0] + Y_grid * q_focus_2d[1]
         
-        # Display background heatmap
-        im = ax.pcolormesh(x_grid, y_grid, dot_grid, cmap='Greens', shading='auto', zorder=0)
+        ax.pcolormesh(x_grid, y_grid, dot_grid, cmap='Greens', shading='auto', zorder=0)
         
         # Add origin lines (dashed, faded)
         ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
@@ -195,6 +195,20 @@ def plot_q_dot_product_gradients(model, X_list, itos, save_path=None, num_sequen
         ax.grid(True, alpha=0.3)
         # ax.set_aspect('equal', adjustable='box')
         ax.tick_params(axis='y', left=True, right=False, labelleft=True, labelright=False)
+
+    _cbar_fs = 9 if _u._JOURNAL_MODE else 10
+    _sm_bg = ScalarMappable(norm=mcolors.Normalize(vmin=0, vmax=1), cmap="Greens")
+    _sm_bg.set_array([])
+    _cbar = fig.colorbar(
+        _sm_bg, ax=_grad_axes, fraction=0.035, pad=0.02, shrink=0.85,
+    )
+    _cbar.set_ticks([0.0, 1.0])
+    _cbar.set_ticklabels(["Low", "High"])
+    _cbar.set_label(
+        r"Dot product $q^{\top} k$ in PC plane (per panel)",
+        fontsize=_cbar_fs,
+    )
+    _cbar.ax.tick_params(labelsize=_cbar_fs - 1)
 
     # Block 3: Section title with proper superscript for transpose
     _row_title_fs = 10 if _u._JOURNAL_MODE else 12
