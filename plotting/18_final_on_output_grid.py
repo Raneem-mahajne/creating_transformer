@@ -29,6 +29,66 @@ from plotting.v_before_after_demo import _get_v_before_after_for_sequence
 
 
 @torch.no_grad()
+def compute_second_residual_next_token_prob_grid(
+    model, grid_resolution=60, extent_margin=0.5, extra_xy=None,
+):
+    """
+    For each point p in an embedding-space grid, compute softmax(lm_head(p + ffwd(p)))
+    (or lm_head(ffwd(p)) if use_residual is False). Same field as the heatmap background
+    in plot_final_on_output_heatmap_grid.
+
+    Returns:
+        (xx, yy, probs) with probs shape (grid_resolution, grid_resolution, vocab_size),
+        or None if n_embd != 2.
+    """
+    use_residual = getattr(model, "use_residual", True)
+    n_embd = model.lm_head.in_features
+    if n_embd != 2:
+        return None
+    dev = next(model.parameters()).device
+    with torch.no_grad():
+        token_emb = model.token_embedding.weight.detach().cpu().numpy()
+        pos_emb = model.position_embedding_table.weight.detach().cpu().numpy()
+        combined = token_emb[:, None, :] + pos_emb[None, :, :]
+        flat = combined.reshape(-1, 2)
+        x_min_g = flat[:, 0].min() - extent_margin
+        x_max_g = flat[:, 0].max() + extent_margin
+        y_min_g = flat[:, 1].min() - extent_margin
+        y_max_g = flat[:, 1].max() + extent_margin
+    x_c, y_c = (x_min_g + x_max_g) / 2, (y_min_g + y_max_g) / 2
+    half = max(x_max_g - x_min_g, y_max_g - y_min_g) / 2
+    x_min_g, x_max_g = x_c - half, x_c + half
+    y_min_g, y_max_g = y_c - half, y_c + half
+
+    stacks = [flat]
+    if extra_xy is not None and len(extra_xy):
+        stacks.append(np.asarray(extra_xy, dtype=np.float64))
+    all_xy = np.vstack(stacks)
+    x_min = min(x_min_g, all_xy[:, 0].min()) - extent_margin
+    x_max = max(x_max_g, all_xy[:, 0].max()) + extent_margin
+    y_min = min(y_min_g, all_xy[:, 1].min()) - extent_margin
+    y_max = max(y_max_g, all_xy[:, 1].max()) + extent_margin
+    x_c2, y_c2 = (x_min + x_max) / 2, (y_min + y_max) / 2
+    half2 = max(x_max - x_min, y_max - y_min) / 2
+    x_min, x_max = x_c2 - half2, x_c2 + half2
+    y_min, y_max = y_c2 - half2, y_c2 + half2
+
+    xs = np.linspace(x_min, x_max, grid_resolution)
+    ys = np.linspace(y_min, y_max, grid_resolution)
+    xx, yy = np.meshgrid(xs, ys)
+    points = np.stack([xx.ravel(), yy.ravel()], axis=1)
+    pts = torch.tensor(points, dtype=torch.float32, device=dev)
+    with torch.no_grad():
+        h = (pts + model.ffwd(pts)) if use_residual else model.ffwd(pts)
+        logits = model.lm_head(h).cpu().numpy()
+    probs = np.exp(logits - logits.max(axis=1, keepdims=True))
+    probs /= probs.sum(axis=1, keepdims=True)
+    vocab_size = probs.shape[1]
+    probs = probs.reshape(grid_resolution, grid_resolution, vocab_size)
+    return xx, yy, probs
+
+
+@torch.no_grad()
 def plot_final_on_output_heatmap_grid(
     model, itos, sequence, save_path=None, grid_resolution=60, extent_margin=0.5
 ):
@@ -63,41 +123,15 @@ def plot_final_on_output_heatmap_grid(
     x_np, v_before, v_after = _get_v_before_after_for_sequence(model, idx)
     final_x = x_np + v_after  # (T, 2)
 
-    with torch.no_grad():
-        token_emb = model.token_embedding.weight.detach().cpu().numpy()
-        pos_emb = model.position_embedding_table.weight.detach().cpu().numpy()
-        combined = token_emb[:, None, :] + pos_emb[None, :, :]
-        flat = combined.reshape(-1, 2)
-        # Grid domain = embedding space only (background)
-        x_min_g = flat[:, 0].min() - extent_margin
-        x_max_g = flat[:, 0].max() + extent_margin
-        y_min_g = flat[:, 1].min() - extent_margin
-        y_max_g = flat[:, 1].max() + extent_margin
-    x_c, y_c = (x_min_g + x_max_g) / 2, (y_min_g + y_max_g) / 2
-    half = max(x_max_g - x_min_g, y_max_g - y_min_g) / 2
-    x_min_g, x_max_g = x_c - half, x_c + half
-    y_min_g, y_max_g = y_c - half, y_c + half
-    # Axis limits: include first-residual positions so all arrows are visible
-    all_xy = np.vstack([flat, final_x])
-    x_min = min(x_min_g, all_xy[:, 0].min()) - extent_margin
-    x_max = max(x_max_g, all_xy[:, 0].max()) + extent_margin
-    y_min = min(y_min_g, all_xy[:, 1].min()) - extent_margin
-    y_max = max(y_max_g, all_xy[:, 1].max()) + extent_margin
-    x_c2, y_c2 = (x_min + x_max) / 2, (y_min + y_max) / 2
-    half2 = max(x_max - x_min, y_max - y_min) / 2
-    x_min, x_max = x_c2 - half2, x_c2 + half2
-    y_min, y_max = y_c2 - half2, y_c2 + half2
-
-    xs = np.linspace(x_min, x_max, grid_resolution)
-    ys = np.linspace(y_min, y_max, grid_resolution)
-    xx, yy = np.meshgrid(xs, ys)
-    points = np.stack([xx.ravel(), yy.ravel()], axis=1)
-    pts = torch.tensor(points, dtype=torch.float32, device=dev)
-    with torch.no_grad():
-        h = (pts + model.ffwd(pts)) if use_residual else model.ffwd(pts)
-        logits = model.lm_head(h).cpu().numpy()
-    probs = np.exp(logits - logits.max(axis=1, keepdims=True))
-    probs /= probs.sum(axis=1, keepdims=True)
+    grid = compute_second_residual_next_token_prob_grid(
+        model, grid_resolution=grid_resolution, extent_margin=extent_margin, extra_xy=final_x,
+    )
+    if grid is None:
+        model.train()
+        return
+    xx, yy, probs_all = grid
+    x_min, x_max = xx.min(), xx.max()
+    y_min, y_max = yy.min(), yy.max()
 
     # Journal: 3 cols for A4; else 6 cols.
     n_cols = min(3 if _u._JOURNAL_MODE else 6, vocab_size)
@@ -118,7 +152,7 @@ def plot_final_on_output_heatmap_grid(
     for d in range(vocab_size):
         row, col = d // n_cols, d % n_cols
         ax = axes[row, col]
-        Z = probs[:, d].reshape(grid_resolution, grid_resolution)
+        Z = probs_all[:, :, d]
         ax.pcolormesh(xx, yy, Z, cmap='viridis', vmin=0, vmax=1, shading='auto', zorder=0)
         # Limits include first-residual positions so all arrows are visible
         ax.set_xlim(x_min, x_max)

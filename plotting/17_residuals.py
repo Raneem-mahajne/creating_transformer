@@ -9,14 +9,19 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from matplotlib.patches import Patch
-import matplotlib.patheffects as pe
-import matplotlib.text as _mtext
 import matplotlib.colors as mcolors
 import seaborn as sns
 
 from data import get_batch_from_sequences
 
 import plotting._utils as _u
+
+_mod_18_final_on_output_grid = __import__(
+    "plotting.18_final_on_output_grid", fromlist=["compute_second_residual_next_token_prob_grid"]
+)
+compute_second_residual_next_token_prob_grid = (
+    _mod_18_final_on_output_grid.compute_second_residual_next_token_prob_grid
+)
 from plotting._utils import (
     _constrain_figsize, _update_font_scale_for_figure,
     set_journal_mode, clear_journal_mode,
@@ -115,10 +120,10 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         n_rows_r, num_cols = 2, 3
         if _u._JOURNAL_MODE:
             fig = plt.figure(figsize=(7.0, 5.5))
-            gs = GridSpec(n_rows_r, num_cols, figure=fig, hspace=0.45, wspace=0.5)
+            gs = GridSpec(n_rows_r, num_cols, figure=fig, hspace=0.22, wspace=0.38)
         else:
             fig = plt.figure(figsize=(4 * num_cols, 5 * n_rows_r))
-            gs = GridSpec(n_rows_r, num_cols, figure=fig, hspace=0.4, wspace=0.3)
+            gs = GridSpec(n_rows_r, num_cols, figure=fig, hspace=0.22, wspace=0.22)
     else:
         num_cols = 6
         fig = plt.figure(figsize=(6 * num_cols, 4 * num_sequences))
@@ -173,9 +178,51 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
     y_min_shared, y_max_shared = all_scatter_stacked[:, 1].min(), all_scatter_stacked[:, 1].max()
     x_range_shared = x_max_shared - x_min_shared if x_max_shared != x_min_shared else 1.0
     y_range_shared = y_max_shared - y_min_shared if y_max_shared != y_min_shared else 1.0
-    padding = 0.1
+    padding = 0.02
     xlim_shared = (x_min_shared - padding * x_range_shared, x_max_shared + padding * x_range_shared)
     ylim_shared = (y_min_shared - padding * y_range_shared, y_max_shared + padding * y_range_shared)
+
+    prob_grid_bg = None
+    if use_two_rows_r and all_data and all_data[0]["embeddings"].shape[1] == 2:
+        d0 = all_data[0]
+        extra_xy = np.vstack([d0["embeddings"], d0["V_transformed"], d0["Sum"]])
+        prob_grid_bg = compute_second_residual_next_token_prob_grid(
+            model, grid_resolution=60, extent_margin=0.5, extra_xy=extra_xy,
+        )
+        # Match 2D axis limits to the probability grid so the underlay fills the axes (no empty margins).
+        if prob_grid_bg is not None:
+            xx_bg, yy_bg, _ = prob_grid_bg
+            xlim_shared = (float(xx_bg.min()), float(xx_bg.max()))
+            ylim_shared = (float(yy_bg.min()), float(yy_bg.max()))
+
+    show_landscape = prob_grid_bg is not None and use_two_rows_r
+    landscape_mappable = [None]
+
+    def _draw_output_landscape(ax):
+        if not show_landscape:
+            return
+        xx_g, yy_g, probs_g = prob_grid_bg
+        V = probs_g.shape[2]
+        # Discrete regions: color by argmax token (one color per winning next-token class).
+        Z_cat = np.argmax(probs_g, axis=2)
+        tab = plt.cm.get_cmap("tab20", 20)
+        colors = [tab(i % 20) for i in range(V)]
+        cat_cmap = mcolors.ListedColormap(colors)
+        bounds = np.arange(V + 1) - 0.5
+        norm = mcolors.BoundaryNorm(bounds, cat_cmap.N)
+        pcm = ax.pcolormesh(
+            xx_g, yy_g, Z_cat, cmap=cat_cmap, norm=norm,
+            shading="auto", zorder=0, rasterized=True,
+        )
+        if landscape_mappable[0] is None:
+            landscape_mappable[0] = pcm
+
+    def _dim_axis_labels(used_pca):
+        if used_pca:
+            return "PC1", "PC2"
+        if show_landscape:
+            return "dim 0", "dim 1"
+        return "Dim 1", "Dim 2"
     
     # Second pass: create plots
     _resid_axes = []
@@ -234,64 +281,77 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         # Embeddings scatter (row 1, under Embed heatmap)
         ax = fig.add_subplot(gs[r1_r, c_emb_sc])
         embeddings_2d = pca_2d(embeddings)
+        _draw_output_landscape(ax)
         # Mark origin with faint dashed lines
         ax.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
         ax.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
             color = token_pos_to_color[(token, pos)]
-            ax.text(embeddings_2d[i, 0], embeddings_2d[i, 1], _token_pos_label(token, pos),
-                   fontsize=11, fontweight='bold', ha='center', va='center', color=color)
+            ax.text(
+                embeddings_2d[i, 0], embeddings_2d[i, 1], _token_pos_label(token, pos),
+                fontsize=11, fontweight="bold", ha="center", va="center",
+                color="white" if show_landscape else color, zorder=6,
+            )
         ax.set_xlim(xlim_shared)
         ax.set_ylim(ylim_shared)
+        ax.margins(0)
         used_pca = embeddings.shape[1] > 2
-        if used_pca:
-            ax.set_xlabel("PC1", fontsize=10)
-            ax.set_ylabel("PC2", fontsize=10)
-            title_suffix = " (PCA)"
-        else:
-            ax.set_xlabel("Dim 1", fontsize=10)
-            ax.set_ylabel("Dim 2", fontsize=10)
-            title_suffix = ""
-        ax.set_title(f"Embed{title_suffix}", fontsize=11)
-        ax.grid(True, alpha=0.3)
+        xl, yl = _dim_axis_labels(used_pca)
+        ax.set_xlabel(xl, fontsize=10)
+        ax.set_ylabel(yl, fontsize=10)
+        title_suffix = " (PCA)" if used_pca else ""
+        subt = "\n(same plane as Fig. 18)" if show_landscape and not used_pca else ""
+        ax.set_title(f"Embed{title_suffix}{subt}", fontsize=9 if _u._JOURNAL_MODE and subt else 11)
+        ax.grid(True, alpha=0.35, zorder=4)
         
         # V Transformed scatter (with arrows from origin to each point)
         ax = fig.add_subplot(gs[r1_r, c_v_sc])
         V_transformed_2d = pca_2d(V_transformed)
+        _draw_output_landscape(ax)
         # Mark origin with faint dashed lines
         ax.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
         ax.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
+        arr_ec = "0.25" if show_landscape else None
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
             color = token_pos_to_color[(token, pos)]
             x, y = V_transformed_2d[i, 0], V_transformed_2d[i, 1]
             # Arrow from origin to this point
             arr_len = np.sqrt(x**2 + y**2)
             head = max(0.12, min(0.25, arr_len * 0.12))
-            ax.arrow(0, 0, x, y, head_width=head, head_length=head, fc=color, ec=color, alpha=0.8, length_includes_head=True, width=0.015, zorder=2)
-            ax.text(x, y, _token_pos_label(token, pos),
-                   fontsize=11, fontweight='bold', ha='center', va='center', color=color, zorder=3)
+            kw = dict(head_width=head, head_length=head, fc=color, alpha=0.88, length_includes_head=True, width=0.015, zorder=3)
+            if arr_ec is not None:
+                kw["ec"] = arr_ec
+                kw["linewidth"] = 0.6
+            else:
+                kw["ec"] = color
+            ax.arrow(0, 0, x, y, **kw)
+            ax.text(
+                x, y, _token_pos_label(token, pos),
+                fontsize=11, fontweight="bold", ha="center", va="center",
+                color="white" if show_landscape else color, zorder=6,
+            )
         ax.set_xlim(xlim_shared)
         ax.set_ylim(ylim_shared)
+        ax.margins(0)
         used_pca = V_transformed.shape[1] > 2
-        if used_pca:
-            ax.set_xlabel("PC1", fontsize=10)
-            ax.set_ylabel("PC2", fontsize=10)
-            title_suffix = " (PCA)"
-        else:
-            ax.set_xlabel("Dim 1", fontsize=10)
-            ax.set_ylabel("Dim 2", fontsize=10)
-            title_suffix = ""
-        ax.set_title(f"V Transformed{title_suffix}", fontsize=11)
-        ax.grid(True, alpha=0.3)
+        xl, yl = _dim_axis_labels(used_pca)
+        ax.set_xlabel(xl, fontsize=10)
+        ax.set_ylabel(yl, fontsize=10)
+        title_suffix = " (PCA)" if used_pca else ""
+        subt = "\n(underlay: embed. space)" if show_landscape and not used_pca else ""
+        ax.set_title(f"V Transformed{title_suffix}{subt}", fontsize=9 if _u._JOURNAL_MODE and subt else 11)
+        ax.grid(True, alpha=0.35, zorder=4)
         
         # Embeddings → Final arrows (col 2, row 1 when single seq)
         ax = fig.add_subplot(gs[r1_r, c_final_arrow] if use_two_rows_r else gs[r1_r, c_arrow])
         embeddings_2d = pca_2d(embeddings)
         Final_2d = pca_2d(Sum)
+        _draw_output_landscape(ax)
         # Mark origin with faint dashed lines
         ax.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
         ax.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
         # Draw arrows from embeddings to Final points
+        arr_ec2 = "0.25" if show_landscape else None
         for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
             color = token_pos_to_color[(token, pos)]
             # Calculate arrow length for head size scaling
@@ -299,37 +359,64 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
             dy = Final_2d[i, 1] - embeddings_2d[i, 1]
             arrow_length = np.sqrt(dx**2 + dy**2)
             head_size = max(0.15, min(0.3, arrow_length * 0.15))  # Scale head size with arrow length
-            # Draw arrow from embeddings to Final
-            ax.arrow(embeddings_2d[i, 0], embeddings_2d[i, 1],
-                    dx, dy,
-                    head_width=head_size, head_length=head_size, fc=color, ec=color, alpha=0.8, length_includes_head=True, width=0.02)
+            kw2 = dict(head_width=head_size, head_length=head_size, fc=color, alpha=0.88, length_includes_head=True, width=0.02, zorder=3)
+            if arr_ec2 is not None:
+                kw2["ec"] = arr_ec2
+                kw2["linewidth"] = 0.6
+            else:
+                kw2["ec"] = color
+            ax.arrow(embeddings_2d[i, 0], embeddings_2d[i, 1], dx, dy, **kw2)
             # Annotate only at beginning (embeddings point)
-            ax.text(embeddings_2d[i, 0], embeddings_2d[i, 1], _token_pos_label(token, pos),
-                   fontsize=11, fontweight='bold', ha='center', va='center', color=color)
+            ax.text(
+                embeddings_2d[i, 0], embeddings_2d[i, 1], _token_pos_label(token, pos),
+                fontsize=11, fontweight="bold", ha="center", va="center",
+                color="white" if show_landscape else color, zorder=6,
+            )
         ax.set_xlim(xlim_shared)
         ax.set_ylim(ylim_shared)
+        ax.margins(0)
         used_pca = embeddings.shape[1] > 2
-        if used_pca:
-            ax.set_xlabel("PC1", fontsize=10)
-            ax.set_ylabel("PC2", fontsize=10)
-            title_suffix = " (PCA)"
-        else:
-            ax.set_xlabel("Dim 1", fontsize=10)
-            ax.set_ylabel("Dim 2", fontsize=10)
-            title_suffix = ""
-        ax.set_title(f"Embed → Final (Modified by Attention){title_suffix}", fontsize=11)
-        ax.grid(True, alpha=0.3)
+        xl, yl = _dim_axis_labels(used_pca)
+        ax.set_xlabel(xl, fontsize=10)
+        ax.set_ylabel(yl, fontsize=10)
+        title_suffix = " (PCA)" if used_pca else ""
+        subt = "\n(same plane as Fig. 18)" if show_landscape and not used_pca else ""
+        ax.set_title(f"Embed → Final (Modified by Attention){title_suffix}{subt}", fontsize=8 if _u._JOURNAL_MODE and subt else 11)
+        ax.grid(True, alpha=0.35, zorder=4)
     
-    # Subtitle with sequence (single-sequence figure)
+    # Title + optional caption for output landscape (single-sequence figure)
     if use_two_rows_r and all_data:
         seq_str_sub = all_data[0]['seq_str']
-        fig.suptitle(f"Sequence: {seq_str_sub}", fontsize=10, y=1.02)
-    plt.tight_layout(rect=[0, 0, 0.90, 0.95])
-    # Single shared colorbar in right margin (leave room so Embed->Final title is not hidden)
+        if show_landscape:
+            fig.text(0.5, 1.012, f"Sequence: {seq_str_sub}", ha="center", fontsize=10, transform=fig.transFigure)
+            cap = (
+                "Background: at each (dim 0, dim 1), color = token with highest P(next token) after the second residual "
+                "(same field as Fig. 18; one categorical map instead of one panel per token)."
+            )
+            if _u._JOURNAL_MODE:
+                cap = (
+                    "Background = argmax_v P(next=v) in embedding plane (post-second residual; same as Fig. 18, one panel)."
+                )
+            fig.text(0.5, 0.982, cap, ha="center", fontsize=7 if _u._JOURNAL_MODE else 8, transform=fig.transFigure)
+        else:
+            fig.suptitle(f"Sequence: {seq_str_sub}", fontsize=10, y=1.02)
+    top_rect = 0.90 if show_landscape else 0.95
+    right_rect = 0.86 if show_landscape else 0.90
+    plt.tight_layout(rect=[0, 0, right_rect, top_rect], pad=0.4)
+    # Colorbar(s) in right margin
     if heatmap_axes and use_two_rows_r:
         mappable = heatmap_axes[0].collections[0]
-        ax_cbar = fig.add_axes([0.91, 0.42, 0.015, 0.35])
-        fig.colorbar(mappable, cax=ax_cbar)
+        y0, h = (0.50, 0.32) if show_landscape else (0.42, 0.35)
+        ax_cbar = fig.add_axes([0.91, y0, 0.015, h])
+        cb1 = fig.colorbar(mappable, cax=ax_cbar)
+        cb1.set_label("Row 1 heatmaps (a.u.)", fontsize=7 if _u._JOURNAL_MODE else 8)
+    if show_landscape and landscape_mappable[0] is not None and prob_grid_bg is not None:
+        ax_cbar2 = fig.add_axes([0.91, 0.12, 0.015, 0.30])
+        V_cb = prob_grid_bg[2].shape[2]
+        tick_idx = np.arange(V_cb)
+        cb2 = fig.colorbar(landscape_mappable[0], cax=ax_cbar2, ticks=tick_idx)
+        cb2.set_ticklabels([str(itos[i]) for i in range(V_cb)])
+        cb2.set_label("argmax next token", fontsize=7 if _u._JOURNAL_MODE else 8)
     if save_path:
         plt.savefig(save_path, bbox_inches='tight', dpi=150)
         plt.close()
