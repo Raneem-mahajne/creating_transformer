@@ -186,8 +186,11 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
     if use_two_rows_r and all_data and all_data[0]["embeddings"].shape[1] == 2:
         d0 = all_data[0]
         extra_xy = np.vstack([d0["embeddings"], d0["V_transformed"], d0["Sum"]])
+        # Background resolution is controlled by grid_resolution: more points -> smoother
+        # categorical boundaries in the argmax next-token underlay.
+        bg_grid_resolution = 120 if _u._JOURNAL_MODE else 60
         prob_grid_bg = compute_second_residual_next_token_prob_grid(
-            model, grid_resolution=60, extent_margin=0.5, extra_xy=extra_xy,
+            model, grid_resolution=bg_grid_resolution, extent_margin=0.5, extra_xy=extra_xy,
         )
         # Match 2D axis limits to the probability grid so the underlay fills the axes (no empty margins).
         if prob_grid_bg is not None:
