@@ -229,6 +229,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
     
     # Second pass: create plots
     _resid_axes = []
+    ax_col_b_top = None  # top-row axis of column (b); sequence title centered over this
     for data_dict in all_data:
         seq_idx = data_dict['seq_idx']
         tokens = data_dict['tokens']
@@ -267,6 +268,8 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
             ax.set_title(f"{_p0}Embed ({dim_str})" if _u._JOURNAL_MODE else f"{_p0}Embeddings (Token+Pos) {dim_str}", fontsize=_hm_fs)
         # V Transformed heatmap
         ax = fig.add_subplot(gs[r0_r, c_v_hm])
+        if use_two_rows_r:
+            ax_col_b_top = ax
         _resid_axes.append(ax)
         dim_str = f"(T×d={T}×{V_transformed.shape[1]})"
         sns.heatmap(V_transformed, cmap="RdBu_r", center=0, vmin=hm_vmin, vmax=hm_vmax,
@@ -403,25 +406,26 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         ax.set_title(f"Embed → Final (Modified by Attention){title_suffix}", fontsize=_sc_fs)
         ax.grid(True, alpha=0.35, zorder=4)
     
-    # Title + optional caption for output landscape (single-sequence figure)
-    if use_two_rows_r and all_data:
-        seq_str_sub = all_data[0]['seq_str']
-        if show_landscape:
-            fig.text(0.5, 1.012, f"Sequence: {seq_str_sub}", ha="center", fontsize=10, transform=fig.transFigure)
-            cap = (
-                "Background: at each (dim 0, dim 1), color = token with highest P(next token) after the second residual "
-                "(same field as Fig. 18; one categorical map instead of one panel per token)."
-            )
-            if _u._JOURNAL_MODE:
-                cap = (
-                    "Background = argmax_v P(next=v) in embedding plane (post-second residual; same as Fig. 18, one panel)."
-                )
-            fig.text(0.5, 0.982, cap, ha="center", fontsize=7 if _u._JOURNAL_MODE else 8, transform=fig.transFigure)
-        else:
-            fig.suptitle(f"Sequence: {seq_str_sub}", fontsize=10, y=1.02)
-    top_rect = 0.90 if show_landscape else 0.95
+    top_rect = 0.95
     right_rect = 0.86 if show_landscape else 0.90
     plt.tight_layout(rect=[0, 0, right_rect, top_rect], pad=0.4)
+    # Sequence title: centered over column (b) — use bbox of V heatmap after layout
+    if use_two_rows_r and all_data:
+        seq_str_sub = all_data[0]['seq_str']
+        if ax_col_b_top is not None:
+            _pos_b = ax_col_b_top.get_position()
+            _seq_x = _pos_b.x0 + _pos_b.width / 2
+        else:
+            _seq_x = right_rect / 2
+        if show_landscape:
+            fig.text(
+                _seq_x, 0.998, f"Sequence: {seq_str_sub}",
+                ha="center", va="top", fontsize=10, transform=fig.transFigure,
+            )
+        else:
+            fig.suptitle(
+                f"Sequence: {seq_str_sub}", fontsize=10, x=_seq_x, y=0.99, ha="center",
+            )
     # Colorbar(s) in right margin
     if heatmap_axes and use_two_rows_r:
         mappable = heatmap_axes[0].collections[0]
