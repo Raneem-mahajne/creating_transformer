@@ -243,7 +243,9 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
             c_emb_hm, c_v_hm, c_emb_sc, c_v_sc = 0, 1, 0, 1
             c_final_hm = 2       # Final heatmap in col 2, row 0
             c_final_arrow = 2    # Embed→Final arrows in col 2, row 1
+            _col_abc = ("(a) ", "(b) ", "(c) ")
         else:
+            _col_abc = None
             r0_r = r1_r = r2_r = seq_idx
             c_emb_hm, c_v_hm, c_sum_hm, c_emb_sc, c_v_sc, c_arrow = 0, 1, 2, 3, 4, 5
         
@@ -256,7 +258,13 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         heatmap_axes.append(ax)
         ax.set_xlabel("Dim", fontsize=10)
         ax.set_ylabel(seq_str if use_two_rows_r else f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
-        ax.set_title(f"Embed ({dim_str})" if _u._JOURNAL_MODE else f"Embeddings (Token+Pos) {dim_str}", fontsize=9 if _u._JOURNAL_MODE else 11)
+        _p0 = _col_abc[0] if _col_abc else ""
+        _hm_fs = 9 if _u._JOURNAL_MODE else 11
+        if _col_abc:
+            _body0 = f"Embed ({dim_str})" if _u._JOURNAL_MODE else f"Embeddings (Token+Pos) {dim_str}"
+            ax.set_title(f"{_p0.strip()}\n{_body0}", fontsize=_hm_fs)
+        else:
+            ax.set_title(f"{_p0}Embed ({dim_str})" if _u._JOURNAL_MODE else f"{_p0}Embeddings (Token+Pos) {dim_str}", fontsize=_hm_fs)
         # V Transformed heatmap
         ax = fig.add_subplot(gs[r0_r, c_v_hm])
         _resid_axes.append(ax)
@@ -266,7 +274,12 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         heatmap_axes.append(ax)
         ax.set_xlabel("Dim", fontsize=10)
         ax.set_ylabel(seq_str if use_two_rows_r else f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
-        ax.set_title(f"V Trans ({dim_str})" if _u._JOURNAL_MODE else f"V Transformed (Attention@V) {dim_str}", fontsize=9 if _u._JOURNAL_MODE else 11)
+        _p1 = _col_abc[1] if _col_abc else ""
+        if _col_abc:
+            _body1 = f"V Trans ({dim_str})" if _u._JOURNAL_MODE else f"V Transformed (Attention@V) {dim_str}"
+            ax.set_title(f"{_p1.strip()}\n{_body1}", fontsize=_hm_fs)
+        else:
+            ax.set_title(f"{_p1}V Trans ({dim_str})" if _u._JOURNAL_MODE else f"{_p1}V Transformed (Attention@V) {dim_str}", fontsize=_hm_fs)
         
         # Final heatmap (col 2, row 0 when single seq)
         if use_two_rows_r:
@@ -279,7 +292,12 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         heatmap_axes.append(ax)
         ax.set_xlabel("Dim", fontsize=10)
         ax.set_ylabel(seq_str if use_two_rows_r else f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
-        ax.set_title(f"Final ({dim_str})" if _u._JOURNAL_MODE else f"Final (Embed+V_transformed) {dim_str}", fontsize=9 if _u._JOURNAL_MODE else 11)
+        _p2 = _col_abc[2] if _col_abc else ""
+        if _col_abc:
+            _body2 = f"Final ({dim_str})" if _u._JOURNAL_MODE else f"Final (Embed+V_transformed) {dim_str}"
+            ax.set_title(f"{_p2.strip()}\n{_body2}", fontsize=_hm_fs)
+        else:
+            ax.set_title(f"{_p2}Final ({dim_str})" if _u._JOURNAL_MODE else f"{_p2}Final (Embed+V_transformed) {dim_str}", fontsize=_hm_fs)
         
         # Embeddings scatter (row 1, under Embed heatmap)
         ax = fig.add_subplot(gs[r1_r, c_emb_sc])
@@ -303,8 +321,8 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         ax.set_xlabel(xl, fontsize=10)
         ax.set_ylabel(yl, fontsize=10)
         title_suffix = " (PCA)" if used_pca else ""
-        subt = "\n(same plane as Fig. 18)" if show_landscape and not used_pca else ""
-        ax.set_title(f"Embed{title_suffix}{subt}", fontsize=9 if _u._JOURNAL_MODE and subt else 11)
+        _sc_fs = 9 if _u._JOURNAL_MODE else 11
+        ax.set_title(f"Embed{title_suffix}", fontsize=_sc_fs)
         ax.grid(True, alpha=0.35, zorder=4)
         
         # V Transformed scatter (with arrows from origin to each point)
@@ -341,8 +359,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         ax.set_xlabel(xl, fontsize=10)
         ax.set_ylabel(yl, fontsize=10)
         title_suffix = " (PCA)" if used_pca else ""
-        subt = "\n(underlay: embed. space)" if show_landscape and not used_pca else ""
-        ax.set_title(f"V Transformed{title_suffix}{subt}", fontsize=9 if _u._JOURNAL_MODE and subt else 11)
+        ax.set_title(f"V Transformed{title_suffix}", fontsize=_sc_fs)
         ax.grid(True, alpha=0.35, zorder=4)
         
         # Embeddings → Final arrows (col 2, row 1 when single seq)
@@ -383,8 +400,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         ax.set_xlabel(xl, fontsize=10)
         ax.set_ylabel(yl, fontsize=10)
         title_suffix = " (PCA)" if used_pca else ""
-        subt = "\n(same plane as Fig. 18)" if show_landscape and not used_pca else ""
-        ax.set_title(f"Embed → Final (Modified by Attention){title_suffix}{subt}", fontsize=8 if _u._JOURNAL_MODE and subt else 11)
+        ax.set_title(f"Embed → Final (Modified by Attention){title_suffix}", fontsize=_sc_fs)
         ax.grid(True, alpha=0.35, zorder=4)
     
     # Title + optional caption for output landscape (single-sequence figure)
