@@ -18,8 +18,14 @@ Edmond and Lily Safra Center for Brain Sciences, The Hebrew University of Jerusa
 
 Understanding how transformers process sequences (Vaswani et al., 2017) remains a central challenge in mechanistic interpretability. Large-scale models achieve strong performance but their internal representations are high-dimensional and opaque: one can probe attention or activations, but a complete picture of information flow from input to output is often difficult to obtain. 
 
-We address this problem with **minimal transformers**: models that retain the full structure of a decoder-only transformer (token and positional embeddings, single-head causal self-attention, residual connections, a feedforward layer, and an LM head) but are constrained to two-dimensional embeddings and head dimension. Every internal state — embeddings, queries, keys, values, attention outputs, residual sums, and pre-softmax logit vectors — lives in $\mathbb{R}^2$. Dimentionality reduction techniques such as PCA, t-SNE, or UMAP are not required; the information geometry learned by the model is directly visible in the 2D plane.
+We address this problem with **minimal transformers**: models that retain the full structure of a decoder-only transformer (token and positional embeddings, single-head causal self-attention, residual connections, a feedforward layer, and an LM head) but are constrained to two-dimensional embeddings and head dimension. Every internal state — embeddings, queries, keys, values, attention outputs, residual sums, and pre-softmax logit vectors — lives in $\mathbb{R}^2$. Dimentionality reduction techniques such as PCA, t-SNE (van der Maaten & Hinton, 2008), or UMAP are not required; the information geometry learned by the model is directly visible in the 2D plane.
 We can take advantage of this direct visibility to demonstrate how the information geometry of the transformer can be straightforwardly interpreted as an algorithmic procedure. 
+
+### 1.1 Related work
+
+Much of the work in the mechanistic interpretability literature focuses on large language models and tries to interpret the attention matrices in terms of their linguistic properties they seem to represent (Vaswani et al., 2017; Clark et al., 2019; Vig, 2019; Wang, 2022). However, this work generally does not elucidate the full internal computational processing of the transformer, as we do here.
+
+Other work on small models with 2-dimensional embeddings has analyzed how geometric structure in embedding space emerges during training on modular arithmetic (Musat, 2024). Complementary mechanistic work reverse-engineers the algorithm and training dynamics of grokking on modular addition in small transformers (Nanda et al., 2023); Welch Labs (2025) gives a visual overview aimed at a broad audience.
 
 ## 2. Methods
 
@@ -51,7 +57,7 @@ Positions not immediately following `+` are unconstrained — any token may appe
 
 ### 2.2 Model Architecture
 
-The model is a single-layer, single-head, decoder-only causal transformer — the minimal instance of the architecture introduced by Radford et al. (2018), using scaled dot-product self-attention as in Vaswani et al. (2017). It processes tokens autoregressively: at each position it conditions on the preceding tokens within a fixed context window of $T = 8$ and produces a distribution over the next token. The single transformer block contains one causal self-attention head and a feedforward network (a two-layer MLP applied independently to each position), with a residual connection around each sub-layer, followed by a linear language-model head that maps the final hidden state to vocabulary logits (Figure 1). Table 1 lists all hyperparameters.
+The model is a single-layer, single-head, decoder-only causal transformer — the minimal instance of the GPT-style architecture of Radford et al. (2018), using scaled dot-product self-attention as in Vaswani et al. (2017). It processes tokens autoregressively: at each position it conditions on the preceding tokens within a fixed context window of $T = 8$ and produces a distribution over the next token. The single transformer block contains one causal self-attention head and a feedforward network (a two-layer MLP applied independently to each position), with a residual connection around each sub-layer, followed by a linear language-model head that maps the final hidden state to vocabulary logits (Figure 1). Table 1 lists all hyperparameters.
 
 \newpage
 
@@ -310,7 +316,7 @@ We have thus demonstrated how the representational geometry of the transformer (
 
 **Limitations.** The primary limitation of this approach is the representational capacity of the 2D plane. While $\mathbb{R}^2$ is sufficient for the 12-token plus-last-even task, it would not be effective for more complex conditional rules, and certainly not for full-fledged AI tasks such as language modeling. Furthermore, this study is restricted to a single-layer, single-head architecture. In deeper models, the interaction between successive residual updates and FFN transformations introduce topological complexities that are harder to interpret as a single-step geometric nudge toward a decision boundary. 
 
-**Future directions.** The plus-last-even task is an artificial task that was chosen for pedagogicial purposes to illustrate various facets of the transformer computation. Additional tasks including certain simple mathematical or logical operations can potentially also be solved using our minimal transformer architecture. The internal representations learned when solving different tasks can provide further insight into how transformers use information geometry to approach different kinds of problems. Moreover, transformers trained on the same tasks but with different random seeds can provide insight into what aspects of the information geometry are necessary to solve a task versus what aspects are left up to the model's "creative discretion". 
+**Future directions.** The plus-last-even task is an artificial task that was chosen for pedagogicial purposes to illustrate various facets of the transformer computation. Additional tasks including certain simple mathematical or logical operations can potentially also be solved using our minimal transformer architecture. The internal representations learned when solving different tasks can provide further insight into how transformers use information geometry to approach different kinds of problems. Moreover, transformers trained on the same tasks but with different random seeds can provide insight into what aspects of the information geometry are necessary to solve a task versus what aspects are left up to the model's "creative discretion". Comparing such trajectories to analyses of clustering, alignment, and emergent structure during training in other low-dimensional, algorithmic settings (Musat, 2024) may help isolate what is generic to optimization in $\mathbb{R}^2$ versus what is architecture- or task-specific. 
 
 Although our work emphasized using 2-dimensional latent spaces for the purpose of complete interpretability, the visualization approaches that we used here can also be applied to more complex models if dimensionality reduction techniques are used and steps are taken to isolate the representations at each layer.  
 
@@ -385,14 +391,17 @@ python main.py plus_last_even --video-qkv
 
 ## References
 
-- Bhattamishra, S., Ahuja, K., & Goyal, N. (2020). On the computational power of transformers and its implications in sequence modeling. *CoRR*, abs/2006.09286.
+
 - Clark, K., Khandelwal, U., Levy, O., & Manning, C. D. (2019). What does BERT look at? An analysis of BERT's attention. *ACL Workshop on BlackboxNLP*.
-- Hewitt, J. & Liang, P. (2019). Designing and interpreting probes with control tasks. *EMNLP*.
-- Mikolov, T., Sutskever, I., Chen, K., Corrado, G. S., & Dean, J. (2013). Distributed representations of words and phrases and their compositionality. *NeurIPS*.
-- Olsson, C., Elhage, N., Nanda, N., et al. (2022). In-context learning and induction heads. *Transformer Circuits Thread*.
-- Radford, A., Narasimhan, K., Salimans, T., & Sutskever, I. (2018). Improving language understanding by generative pre-training. OpenAI technical report.
+
+- Musat, T. (2024). Clustering and alignment: Understanding the training dynamics in modular addition. *arXiv preprint* arXiv:2408.09414v2.
+
+- Nanda, N., Chan, L., Liberum, T., Smith, J., & Steinhardt, J. (2023). Progress measures for grokking via mechanistic interpretability. *arXiv preprint* arXiv:2301.05217v1. https://arxiv.org/pdf/2301.05217v1
+
+- Radford, A., Narasimhan, K., Salimans, T., & Sutskever, I. (2018). Improving language understanding by generative pre-training. OpenAI. https://cdn.openai.com/research-covers/language-unsupervised/language_understanding_paper.pdf
+
 - van der Maaten, L. & Hinton, G. (2008). Visualizing data using t-SNE. *JMLR*, 9, 2579–2605.
 - Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, Ł., & Polosukhin, I. (2017). Attention is all you need. *Advances in Neural Information Processing Systems*, 30.
 - Vig, J. (2019). A multiscale visualization of attention in the transformer model. *ACL System Demonstrations*.
 - Wang, K., Variengien, A., Conmy, A., Shlegeris, B., & Steinhardt, J. (2022). Interpretability in the wild: A circuit for indirect object identification in GPT-2 small. *NeurIPS*.
-- Weiss, G., Goldberg, Y., & Yahav, E. (2018). On the practical computational power of finite precision RNNs for language recognition. *ACL*.
+- Welch Labs. (2025). *The most complex model we actually understand* [Video]. YouTube. https://www.youtube.com/watch?v=D8GOeCFFby4
