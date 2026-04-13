@@ -384,7 +384,7 @@ Checkpoint interval & every 100 steps \\
 \subsection{3. Results}\label{results}
 
 The full computation graph of the minimal transformer is shown in Figure
-1. Every component --- token and position embeddings, the single-head
+1 (Section 2.2). Every component --- token and position embeddings, the single-head
 attention block with its \(W_Q\), \(W_K\), \(W_V\) projections (yielding
 \(\mathbf{Q}, \mathbf{K}, \mathbf{V} \in \mathbb{R}^{T \times d_k}\) for
 the context), the causal mask, residual connections, feed-forward
@@ -392,12 +392,6 @@ network, and LM head --- operates with per-position vectors in
 \(\mathbb{R}^{n_{\mathrm{embed}}} = \mathbb{R}^{d_k} = \mathbb{R}^2\),
 making it possible to visualize each stage of the pipeline without any
 dimensionality reduction.
-
-\begin{center}
-\pandocbounded{\includegraphics[keepaspectratio,alt={Architecture Overview}]{plus_last_even/plots/a4/01_architecture_overview.png}}
-\end{center}
-
-\emph{\textbf{Figure 1.} Architecture of the minimal transformer.}
 
 \subsubsection{3.1 The Model Learns the
 Rule}\label{the-model-learns-the-rule}

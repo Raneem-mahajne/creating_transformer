@@ -1,3 +1,122 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\documentclass[
+]{article}
+\usepackage{xcolor}
+\usepackage{amsmath,amssymb}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\newenvironment{Shaded}{}{}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{1.00,0.00,0.00}{\textbf{#1}}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.49,0.56,0.16}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.25,0.63,0.44}{#1}}
+\newcommand{\BuiltInTok}[1]{\textcolor[rgb]{0.00,0.50,0.00}{#1}}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.53,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.00,0.44,0.13}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.56,0.13,0.00}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.25,0.63,0.44}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.73,0.13,0.13}{\textit{#1}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{1.00,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.25,0.63,0.44}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.02,0.16,0.49}{#1}}
+\newcommand{\ImportTok}[1]{\textcolor[rgb]{0.00,0.50,0.00}{\textbf{#1}}}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.00,0.44,0.13}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.40,0.40,0.40}{#1}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.00,0.44,0.13}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.74,0.48,0.00}{#1}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.73,0.40,0.53}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.10,0.09,0.49}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textbf{\textit{#1}}}}
+\usepackage{longtable,booktabs,array}
+\newcounter{none} % for unnumbered tables
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{% scales image to fit in text height/width
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi% select the smaller of both
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+% Set default figure placement to htbp
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{seqsplit}
+\usepackage{tabularx}
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\author{}
+\date{}
+
+\begin{document}
+
 \section{Fully Interpretable Minimal Transformers: From Geometry to
 Algorithm}\label{fully-interpretable-minimal-transformers-from-geometry-to-algorithm}
 
@@ -27,16 +146,17 @@ interpretability visualizations that make the algorithmic interpretation
 of this procedure explicit, and provide training-evolution animations
 showing how the algorithmic geometry emerges during learning. The
 framework offers a pedagogical and experimental testbed to explore how
-transformers use informational geometry to solve tasks.
+transformers (Vaswani et al., 2017) use informational geometry to solve
+tasks.
 \end{quote}
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
 \subsection{1. Introduction}\label{introduction}
 
-Understanding how transformers process sequences remains a central
-challenge in mechanistic interpretability. Large-scale models achieve
-strong performance but their internal representations are
+Understanding how transformers process sequences (Vaswani et al., 2017)
+remains a central challenge in mechanistic interpretability. Large-scale
+models achieve strong performance but their internal representations are
 high-dimensional and opaque: one can probe attention or activations, but
 a complete picture of information flow from input to output is often
 difficult to obtain.
@@ -48,11 +168,28 @@ connections, a feedforward layer, and an LM head) but are constrained to
 two-dimensional embeddings and head dimension. Every internal state ---
 embeddings, queries, keys, values, attention outputs, residual sums, and
 pre-softmax logit vectors --- lives in \(\mathbb{R}^2\). Dimentionality
-reduction techniques such as PCA, t-SNE, or UMAP are not required; the
-information geometry learned by the model is directly visible in the 2D
-plane. We can take advantage of this direct visibility to demonstrate
-how the information geometry of the transformer can be straightforwardly
-interpreted as an algorithmic procedure.
+reduction techniques such as PCA, t-SNE (van der Maaten \& Hinton,
+2008), or UMAP are not required; the information geometry learned by the
+model is directly visible in the 2D plane. We can take advantage of this
+direct visibility to demonstrate how the information geometry of the
+transformer can be straightforwardly interpreted as an algorithmic
+procedure.
+
+\subsubsection{1.1 Related work}\label{related-work}
+
+Much of the work in the mechanistic interpretability literature focuses
+on large language models and tries to interpret the attention matrices
+in terms of their linguistic properties they seem to represent (Vaswani
+et al., 2017; Clark et al., 2019; Vig, 2019; Wang, 2022; Liu, 2022).
+However, this work generally does not elucidate the full internal
+computational processing of the transformer, as we do here.
+
+Other work on small models with 2-dimensional embeddings has analyzed
+how geometric structure in embedding space emerges during training on
+modular arithmetic (Musat, 2024). Complementary mechanistic work
+reverse-engineers the algorithm and training dynamics of grokking on
+modular addition in small transformers (Nanda et al., 2023); Welch Labs
+(2025) gives a visual overview aimed at a broad audience.
 
 \subsection{2. Methods}\label{methods}
 
@@ -101,8 +238,9 @@ position to the present.
 \subsubsection{2.2 Model Architecture}\label{model-architecture}
 
 The model is a single-layer, single-head, decoder-only causal
-transformer --- the minimal instance of the architecture introduced by
-Radford et al.~(GPT). It processes tokens autoregressively: at each
+transformer --- the minimal instance of the GPT-style architecture of
+Radford et al.~(2018), using scaled dot-product self-attention as in
+Vaswani et al.~(2017). It processes tokens autoregressively: at each
 position it conditions on the preceding tokens within a fixed context
 window of \(T = 8\) and produces a distribution over the next token. The
 single transformer block contains one causal self-attention head and a
@@ -142,7 +280,7 @@ embedding of position \(i\) is \(\mathbf{p}_i \in \mathbb{R}^2\). The
 \mathbf{e}_i = \mathbf{x}_i + \mathbf{p}_i.
 \]
 
-\textbf{Self-attention.} Let
+\textbf{Self-attention.} Following Vaswani et al.~(2017), let
 \(\mathbf{E} \in \mathbb{R}^{T \times n_{\mathrm{embed}}}\) stack the
 combined embeddings with \textbf{row} \(i\) equal to
 \(\mathbf{e}_i^\top\). Learned projections
@@ -237,7 +375,9 @@ The model is optimized with AdamW (\(\beta_1 = 0.9\),
 \(\beta_2 = 0.999\), weight decay \(10^{-2}\), PyTorch defaults) using
 standard next-token cross-entropy loss. Table 2 lists all training
 hyperparameters. Checkpoints are saved every 100 steps (200 total),
-enabling the construction of training-evolution animations.
+enabling the construction of training-evolution animations. In our
+setup, a full run of 20,000 steps took on the order of 10--15 minutes on
+a laptop CPU (no GPU).
 
 \begin{longtable}[]{@{}ll@{}}
 \caption{Training hyperparameters.}\label{tbl:training}\tabularnewline
@@ -265,20 +405,15 @@ Checkpoint interval & every 100 steps \\
 \subsection{3. Results}\label{results}
 
 The full computation graph of the minimal transformer is shown in Figure
-1. Every component --- token and position embeddings, the single-head
-attention block with its \(W_Q\), \(W_K\), \(W_V\) projections (yielding
+1 (Section 2.2). Every component --- token and position embeddings, the
+single-head attention block (Vaswani et al., 2017) with its \(W_Q\),
+\(W_K\), \(W_V\) projections (yielding
 \(\mathbf{Q}, \mathbf{K}, \mathbf{V} \in \mathbb{R}^{T \times d_k}\) for
 the context), the causal mask, residual connections, feed-forward
 network, and LM head --- operates with per-position vectors in
 \(\mathbb{R}^{n_{\mathrm{embed}}} = \mathbb{R}^{d_k} = \mathbb{R}^2\),
 making it possible to visualize each stage of the pipeline without any
 dimensionality reduction.
-
-\begin{center}
-\pandocbounded{\includegraphics[keepaspectratio,alt={Architecture Overview}]{plus_last_even/plots/a4/01_architecture_overview.png}}
-\end{center}
-
-\emph{\textbf{Figure 1.} Architecture of the minimal transformer.}
 
 \subsubsection{3.1 The Model Learns the
 Rule}\label{the-model-learns-the-rule}
@@ -379,7 +514,8 @@ the model to obey the plus-last-even rule, due to the rule's conditional
 structure: simply knowing the token value and its position is not enough
 to predict the next token. The `+' tokens need to ``search back'' for
 the most recent even number to generate the correct answer. This
-retrieval process is what motivates the use of the attention mechanism.
+retrieval process is what motivates the use of the attention mechanism
+(Vaswani et al., 2017).
 
 To illustrate how the attention mechanism works, consider what happens
 when the model encounters a \texttt{+} token and needs to retrieve the
@@ -603,13 +739,13 @@ heatmaps with embedding and value overlays are included in the
 Supplementary Figures.)
 
 \pandocbounded{\includegraphics[keepaspectratio,alt={Output Landscape Summary}]{plus_last_even/plots/a4/07_output_landscape_summary.png}}
-\emph{\textbf{Figure 10.} Output landscape summary (summary of Figure 9).
-(a) Entropy of the output distribution (nats); high in the indifference
-region (top half), near zero in even-number target zones (bottom half).
-(b) Argmax prediction map: color and annotation indicate which token has
-the highest predicted probability at each point. (c) Argmax map with
-combined embeddings \(\mathbf{e}_i\) overlaid. (d) Argmax map with
-value-transformed vectors \(\mathbf{v}_j\) overlaid.}
+\emph{\textbf{Figure 10.} Output landscape summary (summary of Figure
+9). (a) Entropy of the output distribution (nats); high in the
+indifference region (top half), near zero in even-number target zones
+(bottom half). (b) Argmax prediction map: color and annotation indicate
+which token has the highest predicted probability at each point. (c)
+Argmax map with combined embeddings \(\mathbf{e}_i\) overlaid. (d)
+Argmax map with value-transformed vectors \(\mathbf{v}_j\) overlaid.}
 
 \subsubsection{3.7 Tracing a Sequence Through the
 Pipeline}\label{tracing-a-sequence-through-the-pipeline}
@@ -673,8 +809,8 @@ tokens that appear in the sequence, each of those rows has the largest
 value in the column belonging to the most recent even number relative to
 that \texttt{+}token. Once we generate the final attention matrix via
 normalization by \({\sqrt{d_k}}\) and applying softmax, it is clear that
-the + tokens attend to their respective most recent even numbers (Figure
-13c).
+the \texttt{+} tokens attend to their respective most recent even
+numbers (Figure 13c).
 
 \pandocbounded{\includegraphics[keepaspectratio,alt={Q dot product gradients}]{plus_last_even/plots/a4/15_q_dot_product_gradients.png}}
 \textbf{Figure 13.} (a) The background of each panel displays the dot
@@ -698,9 +834,9 @@ by the value matrix \(\mathbf{V}\) (Figure 14B) such that we have
 14C). We also show the value vectors \(\mathbf{v}_j\) (Figure 14D) and
 attention vectors \(\mathrm{Attn}(\mathbf{e})_i\) as scatter plots. The
 attention weights for each token here effectively select value vectors
-to be used for the prediciton; the attention vectors for the + tokens
-for example, are basically copies of the value vectors of the most recen
-even number.
+to be used for the prediciton; the attention vectors for the \texttt{+}
+tokens for example, are basically copies of the value vectors of the
+most recen even number.
 
 \pandocbounded{\includegraphics[keepaspectratio,alt={Value Output}]{plus_last_even/plots/a4/16_value_output.png}}
 \emph{\textbf{Figure 14.} Value pathway for the demo sequence. Panels:
@@ -788,43 +924,64 @@ structure visible in the preceding figures.
 \end{enumerate}
 
 We have thus demonstrated how the representational geometry of the
-transformer can be directly interpreted to solve the plus-last-even
-rule.
+transformer (Vaswani et al., 2017) can be directly interpreted to solve
+the plus-last-even rule.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
 \subsection{5. Discussion}\label{discussion}
 
-\textbf{Conclusions and implications.} For the plus-last-even task, a
-tiny transformer does not just achieve the right output; it learns an
-internal geometry that can be read as an algorithm. By inspecting
-embeddings, Q/K/V projections, attention patterns, and output regions in
-two dimensions, we can explain how the model detects the \texttt{+}
-token, retrieves the most recent even number, and converts that
-information into the correct prediction. This is useful because it
-offers a concrete example of mechanistic interpretability: rather than
-only observing what the model predicts, we can trace how the computation
-is organized inside the network.
+\textbf{Conclusions and implications.} By selecting a sufficiently
+simple task, the plus-last-even task, we have shown that it is possible
+to train a transformer with a dimensionality of 2 for the embedding size
+and head size to near-perfect accuracy. This low dimensionality enables
+us to inspect the learned internal information geometry of the
+transformer at every step in the architecture. This approach enables
+complete mechanistic interpretability: rather than only observing what
+the model predicts, we can trace exactly how the computation is
+organized inside the network and verify the algorithm without the need
+for dimensionality reduction.
 
-\textbf{Limitations.} The setting is deliberately simple: the task is
-synthetic, the vocabulary is small, and the model has only one block and
-one head. That simplicity is what makes the geometry interpretable, but
-it also limits how far the conclusions can be generalized to larger
-models or natural-language tasks. In addition, the algorithmic account
-given here is an interpretation supported by consistent geometric
-evidence, not a formal proof, and we have not systematically studied how
-stable these structures are across tasks, architectures, or random
-seeds.
+\textbf{Limitations.} The primary limitation of this approach is the
+representational capacity of the 2D plane. While \(\mathbb{R}^2\) is
+sufficient for the 12-token plus-last-even task, it would not be
+effective for more complex conditional rules, and certainly not for
+full-fledged AI tasks such as language modeling. Furthermore, this study
+is restricted to a single-layer, single-head architecture. In deeper
+models, the interaction between successive residual updates and FFN
+transformations introduce topological complexities that are harder to
+interpret as a single-step geometric nudge toward a decision boundary.
 
-\textbf{Future directions.} The most important next step is to test
-whether this style of analysis extends to harder algorithmic tasks and
-to somewhat larger models, where computation may be distributed less
-cleanly. It would also be useful to compare runs across seeds and model
-sizes to identify which geometric features are robust, and to automate
-parts of the analysis so that similar studies scale more easily.
-Finally, targeted interventions on embeddings or attention pathways
-could help establish whether the proposed geometric mechanism is not
-just descriptive but genuinely causal.
+\textbf{Future directions.} The plus-last-even task is an artificial
+task that was chosen for pedagogicial purposes to illustrate various
+facets of the transformer computation. Additional tasks including
+certain simple mathematical or logical operations can potentially also
+be solved using our minimal transformer architecture. The internal
+representations learned when solving different tasks can provide further
+insight into how transformers use information geometry to approach
+different kinds of problems. Moreover, transformers trained on the same
+tasks but with different random seeds can provide insight into what
+aspects of the information geometry are necessary to solve a task versus
+what aspects are left up to the model's ``creative discretion''.
+Comparing such trajectories to analyses of clustering, alignment, and
+emergent structure during training in other low-dimensional, algorithmic
+settings (Musat, 2024) may help isolate what is generic to optimization
+in \(\mathbb{R}^2\) versus what is architecture- or task-specific.
+
+Although our work emphasized using 2-dimensional latent spaces for the
+purpose of complete interpretability, the visualization approaches that
+we used here can also be applied to more complex models if
+dimensionality reduction techniques are used and steps are taken to
+isolate the representations at each layer.
+
+Neuroscientists have become increasingly interested in relating the
+representational geometry of complex perceptions and behaviors in the
+brain to those found in large language models (e.g., Caucheteux et al.,
+2021; Hosseini et al., 2022; Sun et al., 2025; Doerig et al., 2025). Our
+framework allows for the possibility of exploring representational
+geometry in sufficiently simple tasks that can also be used in
+experimental neuroscience, potentially enabling for a direct comparison
+of neural activity to the transformer's internal representations.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
@@ -915,28 +1072,57 @@ Additional static figures in
 \subsection{References}\label{references}
 
 \begin{itemize}
-\tightlist
-\item
-  Bhattamishra, S., Ahuja, K., \& Goyal, N. (2020). On the computational
-  power of transformers and its implications in sequence modeling.
-  \emph{CoRR}, abs/2006.09286.
 \item
   Clark, K., Khandelwal, U., Levy, O., \& Manning, C. D. (2019). What
   does BERT look at? An analysis of BERT's attention. \emph{ACL Workshop
   on BlackboxNLP}.
 \item
-  Hewitt, J. \& Liang, P. (2019). Designing and interpreting probes with
-  control tasks. \emph{EMNLP}.
+  Caucheteux, C., Gramfort, A., \& King, J.-R. (2021). GPT-2's
+  activations predict the degree of semantic comprehension in the human
+  brain. \emph{bioRxiv}. https://doi.org/10.1101/2021.04.20.440622
 \item
-  Mikolov, T., Sutskever, I., Chen, K., Corrado, G. S., \& Dean, J.
-  (2013). Distributed representations of words and phrases and their
-  compositionality. \emph{NeurIPS}.
+  Doerig, A., Kietzmann, T. C., Allen, E., et al.~(2025). High-level
+  visual representations in the human brain are aligned with large
+  language models. \emph{Nature Machine Intelligence}, \emph{7},
+  1220--1234. https://doi.org/10.1038/s42256-025-01072-0
 \item
-  Olsson, C., Elhage, N., Nanda, N., et al.~(2022). In-context learning
-  and induction heads. \emph{Transformer Circuits Thread}.
+  Gromov, A. (2023). Grokking modular arithmetic. \emph{arXiv preprint}
+  arXiv:2301.02679v1. https://arxiv.org/pdf/2301.02679
+\item
+  Hosseini, E. A., Schrimpf, M., Zhang, Y., Bowman, S., Zaslavsky, N.,
+  \& Fedorenko, E. (2022). Artificial neural network language models
+  predict human brain responses to language even after a developmentally
+  realistic amount of training. \emph{bioRxiv}.
+  https://doi.org/10.1101/2022.10.04.510681
+\item
+  Liu, Z., Kitouni, O., Nolte, N., Michaud, E. J., Tegmark, M., \&
+  Williams, M. (2022). Towards understanding grokking: An effective
+  theory of representation learning. \emph{arXiv preprint}
+  arXiv:2205.10343v2. https://arxiv.org/pdf/2205.10343
+\item
+  Musat, T. (2024). Clustering and alignment: Understanding the training
+  dynamics in modular addition. \emph{arXiv preprint}
+  arXiv:2408.09414v2.
+\item
+  Nanda, N., Chan, L., Liberum, T., Smith, J., \& Steinhardt, J. (2023).
+  Progress measures for grokking via mechanistic interpretability.
+  \emph{arXiv preprint} arXiv:2301.05217v1.
+  https://arxiv.org/pdf/2301.05217v1
+\item
+  Radford, A., Narasimhan, K., Salimans, T., \& Sutskever, I. (2018).
+  Improving language understanding by generative pre-training. OpenAI.
+  https://cdn.openai.com/research-covers/language-unsupervised/language\_understanding\_paper.pdf
+\item
+  Sun, W., Winnubst, J., Natrajan, M., et al.~(2025). Learning produces
+  an orthogonalized state machine in the hippocampus. \emph{Nature},
+  \emph{640}, 165--175. https://doi.org/10.1038/s41586-024-08548-w
 \item
   van der Maaten, L. \& Hinton, G. (2008). Visualizing data using t-SNE.
   \emph{JMLR}, 9, 2579--2605.
+\item
+  Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez,
+  A. N., Kaiser, Ł., \& Polosukhin, I. (2017). Attention is all you
+  need. \emph{Advances in Neural Information Processing Systems}, 30.
 \item
   Vig, J. (2019). A multiscale visualization of attention in the
   transformer model. \emph{ACL System Demonstrations}.
@@ -945,7 +1131,9 @@ Additional static figures in
   (2022). Interpretability in the wild: A circuit for indirect object
   identification in GPT-2 small. \emph{NeurIPS}.
 \item
-  Weiss, G., Goldberg, Y., \& Yahav, E. (2018). On the practical
-  computational power of finite precision RNNs for language recognition.
-  \emph{ACL}.
+  Welch Labs. (2025). \emph{The most complex model we actually
+  understand} {[}Video{]}. YouTube.
+  https://www.youtube.com/watch?v=D8GOeCFFby4
 \end{itemize}
+
+\end{document}

@@ -155,12 +155,7 @@ The model is optimized with AdamW ($\beta_1 = 0.9$, $\beta_2 = 0.999$, weight de
 
 ## 3. Results
 
-The full computation graph of the minimal transformer is shown in Figure 1. Every component — token and position embeddings, the single-head attention block (Vaswani et al., 2017) with its $W_Q$, $W_K$, $W_V$ projections (yielding $\mathbf{Q}, \mathbf{K}, \mathbf{V} \in \mathbb{R}^{T \times d_k}$ for the context), the causal mask, residual connections, feed-forward network, and LM head — operates with per-position vectors in $\mathbb{R}^{n_{\mathrm{embed}}} = \mathbb{R}^{d_k} = \mathbb{R}^2$, making it possible to visualize each stage of the pipeline without any dimensionality reduction.
-
-\begin{center}
-\pandocbounded{\includegraphics[keepaspectratio,alt={Architecture Overview}]{plus_last_even/plots/a4/01_architecture_overview.png}}
-\end{center}
-***Figure 1.** Architecture of the minimal transformer.*
+The full computation graph of the minimal transformer is shown in Figure 1 (Section 2.2). Every component — token and position embeddings, the single-head attention block (Vaswani et al., 2017) with its $W_Q$, $W_K$, $W_V$ projections (yielding $\mathbf{Q}, \mathbf{K}, \mathbf{V} \in \mathbb{R}^{T \times d_k}$ for the context), the causal mask, residual connections, feed-forward network, and LM head — operates with per-position vectors in $\mathbb{R}^{n_{\mathrm{embed}}} = \mathbb{R}^{d_k} = \mathbb{R}^2$, making it possible to visualize each stage of the pipeline without any dimensionality reduction.
 
 ### 3.1 The Model Learns the Rule
 
@@ -186,7 +181,7 @@ The first stage of the transformer maps each input token and position to a 2D ve
 The position embeddings (Figure 5b) form a ladder structure, with $p_0$ at the bottom, $p_7$ at the top, and the other positions arranged in ascending order in between. This orderly arrangement allows the model to encode how far back a token is, which is essential for identifying the most recent even number. When token and position embeddings are summed (Figure 5g), each token fans out into eight copies — one per position — shifted vertically by the position embedding. Because the range of values of the position embeddings is smaller than the range of the token embeddings, the 'macro'-level geometry of the summed token+position embeddings retains the odd/even/'+' organization of the token embeddings, while the 'micro'-level geometry preserves the ladder structure of the position embeddings.
 
 ![Token Embeddings](plus_last_even/plots/a4/05_token_embeddings.png)
-***Figure 5.** Learned embeddings. (a) Token embeddings. (b) Position embeddings. (c) Combined token+position embeddings.*
+***Figure 5.** Learned embeddings. (a) Token embeddings $\mathbf{x_i}$ shown as heatmap. (b) Position embeddings  $\mathbf{p_i}$ shown as heatmap. (c) Combined token+position embeddings shown as scatterplot. (d) Positions $\mathbf{p_i}$ shown as scatterplot. (e) Token+position embeddings $\mathbf{e_i}$ shown as scatterplot. *
 
 We emphasize that this geometric structure does not exist at initialization; it is learned. Movie 1 shows the embedding space at every checkpoint across training. At step 0, all points are randomly scattered. Within the first few thousand steps, the `+` token rapidly migrates away from the number tokens. The even/odd split solidifies between steps 5,000 and 10,000, and the position embedding ladder organizes gradually throughout training. 
 ### 3.3 The Attention Mechanism: Query, Key, and Value Projections
