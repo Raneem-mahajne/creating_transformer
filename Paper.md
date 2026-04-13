@@ -215,7 +215,7 @@ Movie 4 reveals how this structure develops over the course of training. At init
 Because Figure 8 is not tied to a specific input sequence, we can not produce a true attention matrix (which would require having only a single token in each position). However, we can calculate the raw query–key scores $QK^T$: the dot product between every possible query vector and every possible key vector. To focus on the rule-relevant structure, Figure 8 shows only the blocks where the **query token is `+`**. Each subplot is an 8×8 grid: rows index the **position of the `+` query**, and columns index the **position of the key** for the indicated key token. Even-number key blocks score consistently higher than odd-number key blocks, showing that `+` queries score even keys more strongly across positions. (The full all-query $QK^T$ matrix is included in the Supplementary Figures). Moreover, tokens at later positions receive higher dot product scores than tokens at earlier positions. This confirms the observation from Figure 7 that the geometry of the key/query space allows the `+` tokens to attend to most recent even tokens.
 
 ![QK scores for `+` queries](plus_last_even/plots/a4/11_1_qk_full_heatmap_last_row.png)
-***Figure 8.** Pre-softmax query–key scores \(QK^\top\), restricted to `+` queries. Each subplot shows an 8×8 matrix of dot products: `+` query positions (rows) vs. key positions (columns) for a fixed key token.*
+***Figure 8.** Pre-softmax query–key scores $QK^\top$, restricted to `+` queries. Each subplot shows an 8×8 matrix of dot products: `+` query positions (rows) vs. key positions (columns) for a fixed key token.*
 
 ### 3.5 The Output Landscape: Where Representations Need to Land
 

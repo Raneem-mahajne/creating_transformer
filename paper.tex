@@ -497,8 +497,12 @@ of the token embeddings, while the `micro'-level geometry preserves the
 ladder structure of the position embeddings.
 
 \pandocbounded{\includegraphics[keepaspectratio,alt={Token Embeddings}]{plus_last_even/plots/a4/05_token_embeddings.png}}
-\emph{\textbf{Figure 5.} Learned embeddings. (a) Token embeddings. (b)
-Position embeddings. (c) Combined token+position embeddings.}
+\emph{\textbf{Figure 5.} Learned embeddings. (a) Token embeddings
+\(\mathbf{x_i}\) shown as heatmap. (b) Position embeddings
+\(\mathbf{p_i}\) shown as heatmap. (c) Combined token+position
+embeddings shown as scatterplot. (d) Positions \(\mathbf{p_i}\) shown as
+scatterplot. (e) Token+position embeddings \(\mathbf{e_i}\) shown as
+scatterplot. }
 
 We emphasize that this geometric structure does not exist at
 initialization; it is learned. Movie 1 shows the embedding space at
@@ -629,7 +633,7 @@ from Figure 7 that the geometry of the key/query space allows the
 \texttt{+} tokens to attend to most recent even tokens.
 
 \pandocbounded{\includegraphics[keepaspectratio,alt={QK scores for + queries}]{plus_last_even/plots/a4/11_1_qk_full_heatmap_last_row.png}}
-\emph{\textbf{Figure 8.} Pre-softmax query--key scores (QK\^{}\top),
+\emph{\textbf{Figure 8.} Pre-softmax query--key scores \(QK^\top\),
 restricted to \texttt{+} queries. Each subplot shows an 8×8 matrix of
 dot products: \texttt{+} query positions (rows) vs.~key positions
 (columns) for a fixed key token.}
