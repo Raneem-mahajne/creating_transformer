@@ -347,15 +347,17 @@ def plot_qk_embedding_space_combined(
 
     # Prefer constrained layout for multi-panel text-heavy figures.
     if _u._JOURNAL_MODE:
-        fig = plt.figure(figsize=(7.0, 9.5), constrained_layout=True)
+        fig = plt.figure(figsize=(7.0, 8.8), constrained_layout=True)
     else:
-        fig = plt.figure(figsize=(18, 20), constrained_layout=True)
+        fig = plt.figure(figsize=(18, 18.5), constrained_layout=True)
+    # Reduce vertical whitespace between stacked panels in the combined figure.
+    fig.set_constrained_layout_pads(hspace=0.0, h_pad=0.0, wspace=0.02, w_pad=0.02)
 
     if step_label is not None:
         _suptitle_fs = 10 if _u._JOURNAL_MODE else 18
         fig.suptitle(f"Step: {step_label}", fontsize=_suptitle_fs, fontweight="bold", y=0.99)
 
-    gs = GridSpec(2, 1, figure=fig, height_ratios=[1.0, 1.05], hspace=0.12)
+    gs = GridSpec(2, 1, figure=fig, height_ratios=[1.0, 1.03], hspace=0.0)
     ax_top = fig.add_subplot(gs[0, 0])
     ax_bottom = fig.add_subplot(gs[1, 0])
 
@@ -385,7 +387,7 @@ def plot_qk_embedding_space_combined(
     ax_top.tick_params(axis="both", labelsize=tick_fontsize)
     ax_top.set_title(
         f"Q and K Embedding Space\n{num_combinations} Q (blue) + {num_combinations} K (red)",
-        fontsize=title_fontsize, fontweight="bold",
+        fontsize=title_fontsize, fontweight="bold", pad=2, linespacing=1.0,
     )
     ax_top.axhline(y=0, color="gray", linestyle="--", linewidth=0.8, alpha=0.4, zorder=0.5)
     ax_top.axvline(x=0, color="gray", linestyle="--", linewidth=0.8, alpha=0.4, zorder=0.5)
@@ -448,7 +450,7 @@ def plot_qk_embedding_space_combined(
     ax_bottom.set_title(
         f"Q/K space: focus on query {_token_pos_label(token_str, position)}\n"
         f"Background = dot product with this query; keys with position ≥ {position} grayed",
-        fontsize=title_fontsize, fontweight="bold",
+        fontsize=title_fontsize, fontweight="bold", pad=2, linespacing=1.0,
     )
     ax_bottom.axhline(y=0, color="gray", linestyle="--", linewidth=1.0, alpha=0.55, zorder=10)
     ax_bottom.axvline(x=0, color="gray", linestyle="--", linewidth=1.0, alpha=0.55, zorder=10)

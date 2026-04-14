@@ -3,6 +3,8 @@
 \PassOptionsToPackage{hyphens}{url}
 \documentclass[
 ]{article}
+\raggedbottom
+\usepackage[top=0.9in]{geometry}
 \usepackage{xcolor}
 \usepackage{amsmath,amssymb}
 \setcounter{secnumdepth}{-\maxdimen} % remove section numbering
@@ -132,13 +134,13 @@ integer sequences. By constraining the embedding dimension to
 full two-dimensional visualization of every internal representation ---
 embeddings, query/key/value transforms, attention outputs, residual
 streams, and the language-model head's decision boundaries. Our central
-claim is that \textbf{the learned geometry implies an algorithm}: the
-arrangement of points and boundaries in \(\mathbb{R}^2\) can be read as
-a step-by-step procedure. Using a simple task where the model must
-produce the most recent even number whenever it sees the `+' operator,
-we show how the model embeds the tokens and their respective positions
-in the sequence, transforms them via the Q, K, and V matrices, uses the
-dot product between the Q and K representations to form the attention
+claim is that the learned geometry implies an algorithm: the arrangement
+of points and boundaries in \(\mathbb{R}^2\) can be read as a
+step-by-step procedure. Using a simple task where the model must produce
+the most recent even number whenever it sees the `+' operator, we show
+how the model embeds the tokens and their respective positions in the
+sequence, transforms them via the Q, K, and V matrices, uses the dot
+product between the Q and K representations to form the attention
 matrix, and uses the attention matrix to select values that move the
 representation of each input token to the region of the domain of the LM
 head that will correctly predict the next token. We introduce a suite of
@@ -161,10 +163,10 @@ high-dimensional and opaque: one can probe attention or activations, but
 a complete picture of information flow from input to output is often
 difficult to obtain.
 
-We address this problem with \textbf{minimal transformers}: models that
-retain the full structure of a decoder-only transformer (token and
-positional embeddings, single-head causal self-attention, residual
-connections, a feedforward layer, and an LM head) but are constrained to
+We address this problem with minimal transformers: models that retain
+the full structure of a decoder-only transformer (token and positional
+embeddings, single-head causal self-attention, residual connections, a
+feedforward layer, and an LM head) but are constrained to
 two-dimensional embeddings and head dimension. Every internal state ---
 embeddings, queries, keys, values, attention outputs, residual sums, and
 pre-softmax logit vectors --- lives in \(\mathbb{R}^2\). Dimentionality
@@ -248,8 +250,6 @@ feedforward network (a two-layer MLP applied independently to each
 position), with a residual connection around each sub-layer, followed by
 a linear language-model head that maps the final hidden state to
 vocabulary logits (Figure 1). Table 1 lists all hyperparameters.
-
-\newpage
 
 \begin{longtable}[]{@{}ll@{}}
 \caption{Model hyperparameters.}\label{tbl:hyperparams}\tabularnewline
@@ -350,13 +350,14 @@ P(t_{i+1} \mid \mathbf{h}_i) &= \mathrm{softmax}\!\left(\mathbf{h}_i \, W_{\math
 \]
 
 \begin{center}
-\pandocbounded{\includegraphics[keepaspectratio,alt={Architecture Overview}]{plus_last_even/plots/a4/01_architecture_overview.png}}
-\end{center}
+\begin{minipage}{\linewidth}
+\centering
+\includegraphics[width=0.68\linewidth,keepaspectratio]{plus_last_even/plots/a4/01_architecture_overview.png}
 
 \emph{\textbf{Figure 1.} Architecture of the minimal transformer. Every
 component operates entirely in \(\mathbb{R}^2\).}
-
-\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+\end{minipage}
+\end{center}
 
 \subsubsection{2.3 Training}\label{training}
 
@@ -399,8 +400,6 @@ Evaluation interval & every 200 steps \\
 Evaluation iterations & 50 batches \\
 Checkpoint interval & every 100 steps \\
 \end{longtable}
-
-\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
 \subsection{3. Results}\label{results}
 
@@ -496,6 +495,14 @@ summed token+position embeddings retains the odd/even/`+' organization
 of the token embeddings, while the `micro'-level geometry preserves the
 ladder structure of the position embeddings.
 
+We emphasize that this geometric structure does not exist at
+initialization; it is learned. Movie 1 shows the embedding space at
+every checkpoint across training. At step 0, all points are randomly
+scattered. Within the first few thousand steps, the \texttt{+} token
+rapidly migrates away from the number tokens. The even/odd split
+solidifies between steps 5,000 and 10,000, and the position embedding
+ladder organizes gradually throughout training.
+
 \pandocbounded{\includegraphics[keepaspectratio,alt={Token Embeddings}]{plus_last_even/plots/a4/05_token_embeddings.png}}
 \emph{\textbf{Figure 5.} Learned embeddings. (a) Token embeddings
 \(\mathbf{x_i}\) shown as heatmap. (b) Position embeddings
@@ -504,14 +511,8 @@ embeddings shown as scatterplot. (d) Positions \(\mathbf{p_i}\) shown as
 scatterplot. (e) Token+position embeddings \(\mathbf{e_i}\) shown as
 scatterplot. }
 
-We emphasize that this geometric structure does not exist at
-initialization; it is learned. Movie 1 shows the embedding space at
-every checkpoint across training. At step 0, all points are randomly
-scattered. Within the first few thousand steps, the \texttt{+} token
-rapidly migrates away from the number tokens. The even/odd split
-solidifies between steps 5,000 and 10,000, and the position embedding
-ladder organizes gradually throughout training. \#\#\# 3.3 The Attention
-Mechanism: Query, Key, and Value Projections
+\subsubsection{3.3 The Attention Mechanism: Query, Key, and Value
+Projections}\label{the-attention-mechanism-query-key-and-value-projections}
 
 The combined embeddings \(\mathbf{e}_i\) alone are not sufficient for
 the model to obey the plus-last-even rule, due to the rule's conditional
@@ -597,13 +598,18 @@ The \texttt{+} query thus acts as a selective filter that picks out
 even-number keys from the past context, with recency biasing the
 selection toward the most recent one.
 
-\pandocbounded{\includegraphics[keepaspectratio,alt={Q/K embedding space and focused query}]{plus_last_even/plots/a4/09_10_qk_space_combined.png}}
+\begin{samepage}
+\begin{center}
+\includegraphics[width=0.92\linewidth,keepaspectratio,alt={Q/K embedding space and focused query}]{plus_last_even/plots/a4/09_10_qk_space_combined.png}
+\end{center}
 \emph{\textbf{Figure 7.} Query--key geometry in Q/K space. \textbf{Top:}
 joint query--key space (blue: queries; red: keys; labels show token and
 position). \textbf{Bottom:} dot-product landscape for the query
 \texttt{+} at position 5; background color is
 \(\mathbf{q}_{+_5}^\top \mathbf{k}\), and keys with position \(\geq 5\)
 are grayed by the causal mask.}
+\end{samepage}
+\newpage
 
 Movie 4 reveals how this structure develops over the course of training.
 At initialization, queries and keys are intermingled with no meaningful
@@ -772,7 +778,7 @@ embedding space, and the position of each token in the sequence
 determines where it appears in the ``ladder'' structure for that token.
 
 \pandocbounded{\includegraphics[keepaspectratio,alt={Sequence Embeddings}]{plus_last_even/plots/a4/13_sequence_embeddings.png}}
-*\textbf{Figure 11.} Embeddings for the demo sequence
+\textbf{Figure 11.} Embeddings for the demo sequence
 \texttt{4\ 1\ +\ 4\ 6\ 9\ 5\ +}. \textbf{a-c:} Embedding heatmaps for
 tokens, positions and token+position. \textbf{d--f:} 2D scatter plot
 views of tokens, positions, and token+position combinations, shown over
