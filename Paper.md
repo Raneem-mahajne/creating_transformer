@@ -23,22 +23,20 @@ We can take advantage of this direct visibility to demonstrate how the informati
 
 ### 1.1 Related work
 
-Much of the work in the mechanistic interpretability literature focuses on large language models and tries to interpret the attention matrices in terms of their linguistic properties they seem to represent (Vaswani et al., 2017; Clark et al., 2019; Vig, 2019; Wang, 2022; Liu, 2022). However, this work generally does not elucidate the full internal computational processing of the transformer, as we do here.
-
-Other work on small models with 2-dimensional embeddings has analyzed how geometric structure in embedding space emerges during training on modular arithmetic (Musat, 2024). Complementary mechanistic work reverse-engineers the algorithm and training dynamics of grokking on modular addition in small transformers (Nanda et al., 2023); Welch Labs (2025) gives a visual overview aimed at a broad audience.
+Much of the work in the mechanistic interpretability literature focuses on large language models and tries to interpret the attention matrices in terms of the linguistic relationships they express (Vaswani et al., 2017; Clark et al., 2019; Vig, 2019; Wang, 2022; Liu, 2022). However, this work generally does not elucidate the full internal computational processing of the transformer, as we do here. Other work on small models with 2-dimensional embeddings has analyzed how geometric structure in embedding space emerges during training on modular arithmetic (Musat, 2024; Nanda et al., 2023; Welch Labs 2025).
 
 ## 2. Methods
 
 ### 2.1 Task Definition
 
-We adopt the plus-last-even rule as our primary task. This procedurally generated task isolates the core attention operations—conditional retrieval and recency—in a setting simple enough that all internal representations remain interpretable in $\mathbb{R}^2$.
+We adopt the "plus-last-even" rule, described below, as our primary task. We chose this task because it is simple enough to be learned by a small transformer model while still illustrating the core attention mechanism of history-based information retrieval.
 
 #### 2.1.1 The Plus-Last-Even Task
 
-The task is defined over a vocabulary $\mathcal{V}$ of 12 tokens: the integers $\{0, \ldots, 10\}$ and a special operator $+$. Sequence generation obeys:
+The task is defined over a vocabulary $\mathcal{V}$ of 12 tokens: the integers $\{0, \ldots, 10\}$ and a special operator `+`. Sequence generation obeys:
 
-- **Retrieval rule:** If $+$ occurs at position $t$, the output at $t+1$ must be the most recent even integer $x_i \in \{0, 2, 4, 6, 8, 10\}$ with $i < t$. (If there is no earlier even number, then any token can be chosen).
-- **Unconstrained positions:** All positions not immediately following $+$ are unconstrained; any token in $\mathcal{V}$ may appear. These positions provide context that the model must process without applying the retrieval rule.
+- **Retrieval rule:** If `+` occurs at position $t$, the output at $t+1$ must be the most recent even integer $x_i \in \{0, 2, 4, 6, 8, 10\}$ with $i < t$. (If there is no earlier even number, then any token can be chosen).
+- **Unconstrained positions:** All positions not immediately following `+` are unconstrained; any token in $\mathcal{V}$ may appear. These positions provide context that the model must process without applying the retrieval rule.
 
 
 <!-- The primary demonstration task is the **plus-last-even** rule. Sequences are generated over a vocabulary of 12 tokens: the integers 0–10 and a special operator `+`.
@@ -52,12 +50,12 @@ The task is defined over a vocabulary $\mathcal{V}$ of 12 tokens: the integers $
        last even = 8     last even = 4
 ```
 
-Positions not immediately following `+` are unconstrained — any token may appear. The rule constrains only a fraction of positions; the remainder serve as context. The model must learn to (1) identify when the current position follows `+`, (2) scan backward through the context to locate the most recent even number, and (3) output that number with high probability. This is a non-trivial attention task: it requires routing information from a variable, content-dependent past position to the present.
+Positions not immediately following `+` are unconstrained — any token may appear. The rule constrains only a fraction of positions; the remainder serve as context. The model must learn to (1) identify when the current position follows the `+` token, (2) scan backward through the context to locate the most recent even number, and (3) output that number with high probability. This is a non-trivial attention task: it requires routing information from a variable, content-dependent past position to the present.
 
 
 ### 2.2 Model Architecture
 
-The model is a single-layer, single-head, decoder-only causal transformer — the minimal instance of the GPT-style architecture of Radford et al. (2018), using scaled dot-product self-attention as in Vaswani et al. (2017). It processes tokens autoregressively: at each position it conditions on the preceding tokens within a fixed context window of $T = 8$ and produces a distribution over the next token. The single transformer block contains one causal self-attention head and a feedforward network (a two-layer MLP applied independently to each position), with a residual connection around each sub-layer, followed by a linear language-model head that maps the final hidden state to vocabulary logits (Figure 1). Table 1 lists all hyperparameters.
+The model is a single-layer, single-head, decoder-only causal transformer — the minimal instance of the GPT-style architecture of Radford et al. (2018), using scaled dot-product self-attention as in Vaswani et al. (2017). The model processes tokens autoregressively: at each position it conditions on the preceding tokens within a fixed context window of $T = 8$ and produces a distribution over the next token. The single transformer block contains one causal self-attention head and a feedforward network (a two-layer MLP applied independently to each position), with a residual connection from the block input to the output of the self-attention sub-layer and a residual connection from the self-attention output to the output of the feedforward sub-layer, followed by a linear language-model head that maps the final hidden state to vocabulary logits (Figure 1). Table 1 lists all hyperparameters.
 
 
 | Parameter | Value |
@@ -72,13 +70,17 @@ The model is a single-layer, single-head, decoder-only causal transformer — th
 : Model hyperparameters. {#tbl:hyperparams}
 
 
-**Token embedding:** $X \in \mathbb{R}^{V \times 2}$. At position $i$, the token has id $t_i$; we denote its **token embedding** (the row of $X$ for that token) by $\mathbf{x}_i \in \mathbb{R}^2$. **Positional embedding:** $P \in \mathbb{R}^{T \times 2}$; the embedding of position $i$ is $\mathbf{p}_i \in \mathbb{R}^2$. The **combined embedding** (input to attention) at position $i$ is
+**Token embedding:** $X \in \mathbb{R}^{V \times 2}$. At position $i$, the token has id $t_i$; we denote its **token embedding** (the row of $X$ for that token) by $\mathbf{x}_i \in \mathbb{R}^2$. 
+
+**Positional embedding:** $P \in \mathbb{R}^{T \times 2}$; the embedding of position $i$ is $\mathbf{p}_i \in \mathbb{R}^2$. 
+
+The **combined embedding** (input to attention) at position $i$ is
 $$
 \mathbf{e}_i = \mathbf{x}_i + \mathbf{p}_i.
 $$
 
 
-**Self-attention.** Following Vaswani et al. (2017), let $\mathbf{E} \in \mathbb{R}^{T \times n_{\mathrm{embed}}}$ stack the combined embeddings with **row** $i$ equal to $\mathbf{e}_i^\top$. Learned projections $W_Q, W_K, W_V \in \mathbb{R}^{d_k \times n_{\mathrm{embed}}}$ map each position into head space (here $d_k = n_{\mathrm{embed}} = 2$). Per position, query, key, and value **column** vectors are $\mathbf{q}_i = W_Q \mathbf{e}_i$, $\mathbf{k}_i = W_K \mathbf{e}_i$, and $\mathbf{v}_i = W_V \mathbf{e}_i$ in $\mathbb{R}^{d_k}$. Stacking them as **rows** gives
+**Self-attention.** Let $\mathbf{E} \in \mathbb{R}^{T \times n_{\mathrm{embed}}}$ stack the combined embeddings with **row** $i$ equal to $\mathbf{e}_i^\top$. Learned projections $W_Q, W_K, W_V \in \mathbb{R}^{d_k \times n_{\mathrm{embed}}}$ map each position into head space (here $d_k = n_{\mathrm{embed}} = 2$). Per position, query, key, and value **column** vectors are $\mathbf{q}_i = W_Q \mathbf{e}_i$, $\mathbf{k}_i = W_K \mathbf{e}_i$, and $\mathbf{v}_i = W_V \mathbf{e}_i$ in $\mathbb{R}^{d_k}$. Stacking them as **rows** gives
 $$
 \mathbf{Q} = \mathbf{E} W_Q^\top, \quad \mathbf{K} = \mathbf{E} W_K^\top, \quad \mathbf{V} = \mathbf{E} W_V^\top,
 $$
