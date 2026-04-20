@@ -386,7 +386,7 @@ def plot_qk_embedding_space_combined(
     ax_top.set_ylabel(f"Dimension 2{dim_suffix}", fontsize=axis_fontsize)
     ax_top.tick_params(axis="both", labelsize=tick_fontsize)
     ax_top.set_title(
-        f"Q and K Embedding Space\n{num_combinations} Q (blue) + {num_combinations} K (red)",
+        f"Q and K Embedding Space\n{num_combinations} Q (blue) and {num_combinations} K (red)",
         fontsize=title_fontsize, fontweight="bold", pad=2, linespacing=1.0,
     )
     ax_top.axhline(y=0, color="gray", linestyle="--", linewidth=0.8, alpha=0.4, zorder=0.5)
@@ -412,8 +412,8 @@ def plot_qk_embedding_space_combined(
     dot_grid = Xgrid * q_focus[0] + Ygrid * q_focus[1]
     ax_bottom.pcolormesh(xx, yy, dot_grid, cmap="Greens", shading="auto", zorder=0)
 
-    label_fontsize_right = 8 if _u._JOURNAL_MODE else 14
-    legend_fontsize = 7 if _u._JOURNAL_MODE else 12
+    label_fontsize_right = 9 if _u._JOURNAL_MODE else 15
+    legend_fontsize = 8 if _u._JOURNAL_MODE else 13
 
     # Other queries (light blue)
     for i in range(num_combinations):
@@ -447,10 +447,10 @@ def plot_qk_embedding_space_combined(
     ax_bottom.set_xlabel(f"Dimension 1{dim_suffix}", fontsize=axis_fontsize)
     ax_bottom.set_ylabel(f"Dimension 2{dim_suffix}", fontsize=axis_fontsize)
     ax_bottom.tick_params(axis="both", labelsize=tick_fontsize)
+    bottom_title_fontsize = (title_fontsize + 1) if _u._JOURNAL_MODE else title_fontsize
     ax_bottom.set_title(
-        f"Q/K space: focus on query {_token_pos_label(token_str, position)}\n"
-        f"Background = dot product with this query; keys with position ≥ {position} grayed",
-        fontsize=title_fontsize, fontweight="bold", pad=2, linespacing=1.0,
+        f"Q/K space: focus on query {_token_pos_label(token_str, position)}",
+        fontsize=bottom_title_fontsize, fontweight="bold", pad=2, linespacing=1.0,
     )
     ax_bottom.axhline(y=0, color="gray", linestyle="--", linewidth=1.0, alpha=0.55, zorder=10)
     ax_bottom.axvline(x=0, color="gray", linestyle="--", linewidth=1.0, alpha=0.55, zorder=10)

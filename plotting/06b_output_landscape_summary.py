@@ -165,7 +165,7 @@ def plot_output_landscape_summary(
 
     # (d) argmax + values
     _plot_argmax(axes[1, 1], xx, yy, probs, itos, cmap, norm, grid_resolution, extent)
-    axes[1, 1].set_title("Argmax + values $W_V \\mathbf{e}_i$", fontsize=10)
+    axes[1, 1].set_title(r"$v_j \; (W_v e_i)$", fontsize=10)
     _overlay_labels(axes[1, 1], val_pts, val_labels)
 
     # shared legend for argmax colors

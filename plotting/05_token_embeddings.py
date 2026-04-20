@@ -237,6 +237,13 @@ def plot_embeddings_pca(model, itos, save_path=None):
             return 4 if _u._JOURNAL_MODE else 10
         else:
             return 3 if _u._JOURNAL_MODE else 8
+
+    def get_scatter_annot_style(num_items):
+        """Readable, high-contrast annotation style for panels (c) and (d)."""
+        base = get_fontsize(num_items)
+        # Keep annotations legible in A4 output while avoiding very large overlap.
+        boosted = base + (2 if _u._JOURNAL_MODE else 1)
+        return boosted, "black"
     
     model.eval()
     
@@ -379,11 +386,11 @@ def plot_embeddings_pca(model, itos, save_path=None):
             ax3.set_aspect('auto')
         else:
             ax3.set_aspect('equal', adjustable='box')
-        token_fontsize = get_fontsize(vocab_size)
+        token_fontsize, token_text_color = get_scatter_annot_style(vocab_size)
         if vocab_size <= 80:
             for i in range(vocab_size):
                 ax3.text(X2[i, 0], X2[i, 1], itos[i], fontsize=token_fontsize, fontweight='bold',
-                        ha='center', va='center', color=token_colors[i])
+                        ha='center', va='center', color=token_text_color)
         if _u._JOURNAL_MODE:
             ax3.tick_params(axis='both', labelsize=6)
     elif n_embd == 2:
@@ -406,11 +413,11 @@ def plot_embeddings_pca(model, itos, save_path=None):
             ax3.set_aspect('auto')
         else:
             ax3.set_aspect('equal', adjustable='box')
-        token_fontsize = get_fontsize(vocab_size)
+        token_fontsize, token_text_color = get_scatter_annot_style(vocab_size)
         if vocab_size <= 80:
             for i in range(vocab_size):
                 ax3.text(X_emb[i, 0], X_emb[i, 1], itos[i], fontsize=token_fontsize, fontweight='bold',
-                        ha='center', va='center', color=token_colors[i])
+                        ha='center', va='center', color=token_text_color)
         if _u._JOURNAL_MODE:
             ax3.tick_params(axis='both', labelsize=6)
     else:
@@ -423,11 +430,11 @@ def plot_embeddings_pca(model, itos, save_path=None):
         ax3.set_xlabel("Embedding value")
         ax3.set_ylabel("")
         ax3.grid(True, alpha=0.3)
-        token_fontsize = get_fontsize(vocab_size)
+        token_fontsize, token_text_color = get_scatter_annot_style(vocab_size)
         if vocab_size <= 80:
             for i in range(vocab_size):
                 ax3.text(X1[i], 0, itos[i], fontsize=token_fontsize, fontweight='bold',
-                        ha='center', va='center', color=token_colors[i])
+                        ha='center', va='center', color=token_text_color)
         ax3.set_yticks([])
         if _u._JOURNAL_MODE:
             ax3.tick_params(axis='both', labelsize=6)
@@ -476,11 +483,11 @@ def plot_embeddings_pca(model, itos, save_path=None):
             ax6.set_aspect('auto')
         else:
             ax6.set_aspect('equal', adjustable='box')
-        pos_fontsize = get_fontsize(block_size)
+        pos_fontsize, pos_text_color = get_scatter_annot_style(block_size)
         if block_size <= 80:
             for i in range(block_size):
                 ax6.text(X2_pos[i, 0], X2_pos[i, 1], pos_labels[i], fontsize=pos_fontsize, fontweight='bold',
-                        ha='center', va='center', color=pos_colors[i])
+                        ha='center', va='center', color=pos_text_color)
         if _u._JOURNAL_MODE:
             ax6.tick_params(axis='both', labelsize=6)
     elif n_embd == 2:
@@ -503,11 +510,11 @@ def plot_embeddings_pca(model, itos, save_path=None):
             ax6.set_aspect('auto')
         else:
             ax6.set_aspect('equal', adjustable='box')
-        pos_fontsize = get_fontsize(block_size)
+        pos_fontsize, pos_text_color = get_scatter_annot_style(block_size)
         if block_size <= 80:
             for i in range(block_size):
                 ax6.text(X_pos[i, 0], X_pos[i, 1], pos_labels[i], fontsize=pos_fontsize, fontweight='bold',
-                        ha='center', va='center', color=pos_colors[i])
+                        ha='center', va='center', color=pos_text_color)
         if _u._JOURNAL_MODE:
             ax6.tick_params(axis='both', labelsize=6)
     else:
@@ -520,11 +527,11 @@ def plot_embeddings_pca(model, itos, save_path=None):
         ax6.set_xlabel("Embedding value")
         ax6.set_ylabel("Position index")
         ax6.grid(True, alpha=0.3)
-        pos_fontsize = get_fontsize(block_size)
+        pos_fontsize, pos_text_color = get_scatter_annot_style(block_size)
         if block_size <= 80:
             for i in range(block_size):
                 ax6.text(X1_pos[i], i, pos_labels[i], fontsize=pos_fontsize, fontweight='bold',
-                        ha='center', va='center', color=pos_colors[i])
+                        ha='center', va='center', color=pos_text_color)
         if _u._JOURNAL_MODE:
             ax6.tick_params(axis='both', labelsize=6)
     
