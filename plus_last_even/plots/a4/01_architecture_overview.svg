@@ -593,7 +593,7 @@ z
    </g>
    <g id="text_1">
    <!-- h -->
-   <g style="fill: #34495e" transform="translate(323 966) scale(0.14 -0.14)">
+  <g style="fill: #34495e" transform="translate(308 988) scale(0.14 -0.14)">
      <defs>
       <path id="Georgia-Italic-65" d="M 2894 2503 
 Q 2894 2172 2686 1934 
@@ -633,7 +633,7 @@ z
      <use xlink:href="#SegoeUI-Bold-68"/>
     </g>
    </g>
-   <g id="text_2">
+  <g id="text_2" style="display: none;">
     <!-- skip around -->
     <g style="fill: #27ae60" transform="translate(32.290956 563.878581) rotate(-90) scale(0.09 -0.09)">
      <defs>
@@ -1109,7 +1109,7 @@ z
      <use xlink:href="#Georgia-Italic-64" transform="translate(518.701172 0)"/>
     </g>
    </g>
-   <g id="text_3">
+  <g id="text_3" style="display: none;">
     <!-- attention -->
     <g style="fill: #27ae60" transform="translate(14.081894 642.702581) rotate(-90) scale(0.09 -0.09)">
      <defs>
@@ -1169,7 +1169,7 @@ z
    </g>
    <g id="text_4">
    <!-- z -->
-   <g style="fill: #2980b9" transform="translate(286 792) scale(0.14 -0.14)">
+ <g style="fill: #2980b9" transform="translate(308 772) scale(0.14 -0.14)">
      <defs>
       <path id="Georgia-Italic-7a" d="M 2919 3059 
 L 2878 2875 
@@ -1201,7 +1201,7 @@ z
      <use xlink:href="#Georgia-Italic-7a"/>
     </g>
    </g>
-   <g id="text_5">
+  <g id="text_5" style="display: none;">
     <!-- skip around -->
     <g style="fill: #2980b9" transform="translate(32.290956 886.438581) rotate(-90) scale(0.09 -0.09)">
      <use xlink:href="#Georgia-Italic-73" transform="translate(37.5 0)"/>
@@ -1217,7 +1217,7 @@ z
      <use xlink:href="#Georgia-Italic-64" transform="translate(518.701172 0)"/>
     </g>
    </g>
-   <g id="text_6">
+  <g id="text_6" style="display: none;">
     <!-- FFN -->
     <g style="fill: #2980b9" transform="translate(14.690097 965.262581) rotate(-90) scale(0.09 -0.09)">
      <defs>
