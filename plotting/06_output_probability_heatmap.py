@@ -104,7 +104,8 @@ def plot_probability_heatmap(
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(y_min, y_max)
         ax.set_aspect('equal')
-        ax.set_title(f"P(next = {itos[token_idx]})", fontsize=10)
+        # Add clear separation between title text and heatmap area.
+        ax.set_title(f"P(next = {itos[token_idx]})", fontsize=10, pad=6, y=1.00)
         if row == n_rows - 1:
             ax.set_xlabel("embedding dim 0", fontsize=9)
         if col == 0:
@@ -116,9 +117,20 @@ def plot_probability_heatmap(
         col = token_idx % n_cols
         axes[row, col].axis('off')
 
-    plt.tight_layout()
     if _u._JOURNAL_MODE:
-        plt.subplots_adjust(hspace=0.12, wspace=0.08)
+        plt.subplots_adjust(hspace=0.34, wspace=0.08, right=0.86)
+    else:
+        plt.subplots_adjust(hspace=0.36, wspace=0.12, right=0.88)
+
+    # Place a shared colorbar just to the right of the rightmost subplot column.
+    all_axes = axes.ravel().tolist()
+    right_edge = max(ax.get_position().x1 for ax in all_axes)
+    bottom_edge = min(ax.get_position().y0 for ax in all_axes)
+    top_edge = max(ax.get_position().y1 for ax in all_axes)
+    cbar_pad = 0.02
+    cbar_width = 0.018 if _u._JOURNAL_MODE else 0.015
+    cax = fig.add_axes([right_edge + cbar_pad, bottom_edge, cbar_width, top_edge - bottom_edge])
+    fig.colorbar(im, cax=cax, label="Probability")
     if save_path:
         plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')
         plt.close()

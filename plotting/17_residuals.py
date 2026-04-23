@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from matplotlib.patches import Patch
 import matplotlib.colors as mcolors
+from matplotlib.ticker import NullLocator
 import seaborn as sns
 
 from data import get_batch_from_sequences
@@ -278,11 +279,12 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         ax.set_xlabel("Dim", fontsize=10)
         ax.set_ylabel(seq_str if use_two_rows_r else f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
         _p1 = _col_abc[1] if _col_abc else ""
+        _title_attn_e_i = r"$\mathrm{Attn}(e)_i$" + f" {dim_str}"
         if _col_abc:
-            _body1 = f"V Trans ({dim_str})" if _u._JOURNAL_MODE else f"V Transformed (Attention@V) {dim_str}"
+            _body1 = _title_attn_e_i
             ax.set_title(f"{_p1.strip()}\n{_body1}", fontsize=_hm_fs)
         else:
-            ax.set_title(f"{_p1}V Trans ({dim_str})" if _u._JOURNAL_MODE else f"{_p1}V Transformed (Attention@V) {dim_str}", fontsize=_hm_fs)
+            ax.set_title(f"{_p1}{_title_attn_e_i}", fontsize=_hm_fs)
         
         # Final heatmap (col 2, row 0 when single seq)
         if use_two_rows_r:
@@ -362,7 +364,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         ax.set_xlabel(xl, fontsize=10)
         ax.set_ylabel(yl, fontsize=10)
         title_suffix = " (PCA)" if used_pca else ""
-        ax.set_title(f"V Transformed{title_suffix}", fontsize=_sc_fs)
+        ax.set_title(r"$\mathrm{Attn}(e)_i$" + title_suffix, fontsize=_sc_fs)
         ax.grid(True, alpha=0.35, zorder=4)
         
         # Embeddings → Final arrows (col 2, row 1 when single seq)
@@ -440,6 +442,9 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         cb2 = fig.colorbar(landscape_mappable[0], cax=ax_cbar2, ticks=tick_idx)
         cb2.set_ticklabels([str(itos[i]) for i in range(V_cb)])
         cb2.set_label("argmax next token", fontsize=7 if _u._JOURNAL_MODE else 8)
+        # Discrete BoundaryNorm colorbars often get minor ticks between classes; hide them.
+        cb2.ax.yaxis.set_minor_locator(NullLocator())
+        cb2.ax.minorticks_off()
     if save_path:
         plt.savefig(save_path, bbox_inches='tight', dpi=150)
         plt.close()

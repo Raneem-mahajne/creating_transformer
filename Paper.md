@@ -128,7 +128,7 @@ $$
 
 
 \begin{center}
-\pandocbounded{\includegraphics[keepaspectratio,alt={Architecture Overview}]{plus_last_even/plots/a4/01_architecture_overview.svg}}
+\pandocbounded{\includegraphics[keepaspectratio,alt={Architecture Overview}]{plus_last_even/plots/a4/01_architecture_overview.png}}
 \end{center}
 ***Figure 1.** Architecture of the minimal transformer. Every component operates entirely in $\mathbb{R}^2$.*
 
@@ -257,7 +257,7 @@ As we showed earlier, the even, odd and `+` token embeddings are separated from 
 **Attention.** The model must compute the attention matrix for this sequence by forming $\mathbf{Q}, \mathbf{K} \in \mathbb{R}^{T \times d_k}$ for the $T$ positions and taking dot products between query rows and key rows (i.e. the matrix $\mathbf{Q}\mathbf{K}^\top$). Figure 12 shows the Q and K heatmaps for the representation of the tokens within this sequence, and panel c shows these Q and K embedding on the same scatterplot against a backdrop of all 96 possible queries and keys, as in Figure 7.
 
 ![Q/K Attention](plus_last_even/plots/a4/14_qk_attention.png)
-***Figure 12.** Attention computation for the demo sequence. (a) Q heatmap, (b) K heatmap, (c) scatterplot of queries (blue), and keys (red) for tokens within our test sequence against a backdrop of all 96 possible queries and keys (gray).*
+***Figure 12.** Q and K for the demo sequence. (a) Q heatmap, (b) K heatmap, (c) scatterplot of queries (blue), and keys (red) for tokens within our test sequence against a backdrop of all 96 possible queries and keys (gray).*
 
 For each token within the sequence, the model should compute the dot product between that token's query and the key of every token in the sequence. To illustrate this, for each query, we show what the dot product with that query would be at an arbitrary point in space. We then overlay the actual keys within our test sequence over this space for each query, making it clear which keys would produce the largest dot product.
 For each query, we also gray out the keys that come in later positions to show the effect of the causal masking (Figure 13a).
@@ -265,7 +265,7 @@ For each query, we also gray out the keys that come in later positions to show t
 It is apparent from these visualizations that once causal masking is applied, the dot product between the query of each `+` token and the key of the most recent even number relative to that `+` token, will be the largest for that query relative to other unmasked keys. We can verify this by looking at the heatmap of Figure 13b, which shows the masked query-key dot products. If we look at the rows for the two `+` tokens that appear in the sequence, each of those rows has the largest value in the column belonging to the most recent even number relative to that `+`token. Once we generate the final attention matrix via normalization by ${\sqrt{d_k}}$ and applying softmax, it is clear that the `+` tokens attend to their respective most recent even numbers (Figure 13c).
 
 ![Q dot product gradients](plus_last_even/plots/a4/15_q_dot_product_gradients.png)
-**Figure 13.** (a) The background of each panel displays the dot product of a specific query (blue) in the test sequence with every point in space (green = high, white = low). The unmasked (red) and masked (gray) keys are overlayed on this space to show their dot products with the selected query. (b) the  masked $Q \cdot K^\top$ matrix, (c) the attention matrix after normalization by ${\sqrt{d_k}}$ and applying softmax.
+**Figure 13.** Attention computation for the demo sequence. (a) The background of each panel displays the dot product of a specific query (blue) in the test sequence with every point in space (green = high, white = low). The unmasked (red) and masked (gray) keys are overlayed on this space to show their dot products with the selected query. (b) the  masked $Q \cdot K^\top$ matrix, (c) the attention matrix after normalization by ${\sqrt{d_k}}$ and applying softmax.
 
 **Value routing.** Now that we have the attention weight matrix $\mathbf{A}$, we need to apply it to the value vectors in order to produce the attention vector for each token $\mathrm{Attn}(\mathbf{e})_i$. Specifically, the attention vectors are the attention-weighted sum of the value vectors for each token, i.e. $\mathrm{Attn}(\mathbf{e})_i = \sum_{j=1}^{i} \alpha_{ij} \mathbf{v}_j$. We can generate a matrix whose rows are the embeddings for each vector by multiplying the attention weight matrix $\mathbf{A}$ (Figure 14A) by the value matrix $\mathbf{V}$ (Figure 14B) such that we have $\mathrm{Attn}(\mathbf{e})_i^\top = (A \mathbf{V})_{i,:}$ (Figure 14C). We also show the value vectors $\mathbf{v}_j$ (Figure 14D) and attention vectors $\mathrm{Attn}(\mathbf{e})_i$ as scatter plots. The attention weights for each token here effectively select value vectors to be used for the prediciton; the attention vectors for the `+` tokens for example, are basically copies of the value vectors of the most recent even number. 
 

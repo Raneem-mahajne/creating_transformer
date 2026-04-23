@@ -219,10 +219,18 @@ def plot_qk_full_attention_heatmap_last_row(model, itos, save_path: str = None):
     else:
         axes = np.atleast_2d(axes)
     
-    # Get global min/max for consistent color scale
-    valid_values = masked_attention[np.isfinite(masked_attention)]
-    vmin = valid_values.min()
-    vmax = valid_values.max()
+    # Normalize to the values actually shown in this figure (the '+' query row only),
+    # so the displayed panels span the full colormap dynamic range.
+    visible_values = last_row_attention[np.isfinite(last_row_attention)]
+    if visible_values.size == 0:
+        vmin, vmax = -1.0, 1.0
+    else:
+        vmin = float(visible_values.min())
+        vmax = float(visible_values.max())
+        if np.isclose(vmin, vmax):
+            pad = 1e-6 if vmin == 0 else abs(vmin) * 1e-6
+            vmin -= pad
+            vmax += pad
     
     for key_token_idx in range(vocab_size):
         row = key_token_idx // n_cols

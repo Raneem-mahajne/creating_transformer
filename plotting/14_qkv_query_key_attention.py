@@ -226,7 +226,7 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         dim_str = f"(T×hs={Q.shape[0]}×{Q.shape[1]})"
         sns.heatmap(Q, cmap="viridis", xticklabels=list(range(Q.shape[1])), 
                    yticklabels=tokens, cbar=True, ax=ax)
-        ax.set_xlabel("Head size dim", fontsize=10)
+        ax.set_xlabel("Dim", fontsize=10)
         ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n" if not use_two_rows else f"{seq_str}", fontsize=9)
         if _u._JOURNAL_MODE:
             ax.tick_params(axis='both', labelsize=7)
@@ -238,7 +238,7 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         dim_str = f"(T×hs={K.shape[0]}×{K.shape[1]})"
         sns.heatmap(K, cmap="viridis", xticklabels=list(range(K.shape[1])), 
                    yticklabels=tokens, cbar=True, ax=ax)
-        ax.set_xlabel("Head size dim", fontsize=10)
+        ax.set_xlabel("Dim", fontsize=10)
         ax.set_ylabel("Sequence position", fontsize=10)
         if _u._JOURNAL_MODE:
             ax.tick_params(axis='both', labelsize=7)
@@ -299,7 +299,7 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         else:
             ax.set_xlabel("Dimension 1", fontsize=10)
             ax.set_ylabel("Dimension 2", fontsize=10)
-            title_suffix = " (raw)"
+            title_suffix = ""
         ax.set_title("Q vs K" + title_suffix, fontsize=11, pad=10, loc='center')
         # Add origin lines (dashed, faded)
         ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
@@ -473,7 +473,7 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n" if not use_two_rows_2 else seq_str, fontsize=9)
         if _u._JOURNAL_MODE:
             ax.tick_params(axis='both', labelsize=7)
-        ax.set_title(f"Attention\n{dim_str}", fontsize=11, pad=6)
+        ax.set_title(f"Attention (A)\n{dim_str}", fontsize=11, pad=6)
         
         # V: same color scheme as Q/K (viridis)
         ax = fig2.add_subplot(gs2[r0_2, c_v2])
@@ -497,7 +497,11 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         ax.set_ylabel("T", fontsize=10)
         if _u._JOURNAL_MODE:
             ax.tick_params(axis='both', labelsize=7)
-        ax.set_title(f"Final Output (Attention@V)\n{dim_str}", fontsize=11, pad=18)
+        ax.set_title(
+            f"Attention output\n(Attention × V)\n{dim_str}",
+            fontsize=11,
+            pad=10,
+        )
 
         # Scatter plot for V (under V heatmap)
         ax = fig2.add_subplot(gs2[r1_2, c_vscat2])
@@ -523,7 +527,7 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         else:
             ax.set_xlabel("Dim 1", fontsize=10)
             ax.set_ylabel("Dim 2", fontsize=10)
-            title_suffix = " (raw)"
+            title_suffix = ""
         ax.set_title(f"V{title_suffix}", fontsize=11, pad=6)
         ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
         ax.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
@@ -540,15 +544,23 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
             ax.text(Final_Output_2d[i, 0], Final_Output_2d[i, 1], _token_pos_label(token, pos),
                    fontsize=10, fontweight='bold', ha='center', va='center', color='black')
         
+        dim_str_attn_out = f"(T×hs={Final_Output.shape[0]}×{Final_Output.shape[1]})"
         if Final_Output.shape[1] > 2:
             ax.set_xlabel("PC1", fontsize=10)
             ax.set_ylabel("PC2", fontsize=10)
-            title_suffix = " (PCA)"
+            ax.set_title(
+                f"Attention Output\n(Attention × V)\n{dim_str_attn_out}\n(PCA)",
+                fontsize=11,
+                pad=8,
+            )
         else:
             ax.set_xlabel("Dim 1", fontsize=10)
             ax.set_ylabel("Dim 2", fontsize=10)
-            title_suffix = " (raw)"
-        ax.set_title(f"Final Output (Attention@V)\n{title_suffix}", fontsize=11, pad=14)
+            ax.set_title(
+                f"Attention Output\n(Attention × V)\n{dim_str_attn_out}",
+                fontsize=11,
+                pad=8,
+            )
         ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
         ax.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
         ax.grid(True, alpha=0.3)
