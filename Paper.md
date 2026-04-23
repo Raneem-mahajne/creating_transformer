@@ -34,7 +34,6 @@ We adopt the "plus-last-even" rule, described below, as our primary task. We cho
 #### 2.1.1 The Plus-Last-Even Task
 
 The task is defined over a vocabulary $\mathcal{V}$ of 12 tokens: the integers $\{0, \ldots, 10\}$ and a special operator `+`. Sequence generation obeys:
-
 - **Retrieval rule:** If `+` occurs at position $t$, the output at $t+1$ must be the most recent even integer $x_i \in \{0, 2, 4, 6, 8, 10\}$ with $i < t$. (If there is no earlier even number, then any token can be chosen).
 - **Unconstrained positions:** All positions not immediately following `+` are unconstrained; any token in $\mathcal{V}$ may appear. These positions provide context that the model must process without applying the retrieval rule.
 
@@ -127,10 +126,7 @@ P(t_{i+1} \mid \mathbf{h}_i) &= \mathrm{softmax}\!\left(\mathbf{h}_i \, W_{\math
 $$
 
 
-\begin{center}
-\pandocbounded{\includegraphics[keepaspectratio,alt={Architecture Overview}]{plus_last_even/plots/a4/01_architecture_overview.png}}
-\end{center}
-***Figure 1.** Architecture of the minimal transformer. Every component operates entirely in $\mathbb{R}^2$.*
+![Figure 1. Architecture of the minimal transformer. Every component operates entirely in $\mathbb{R}^2$.](plus_last_even/plots/a4/01_architecture_overview.png)
 
 ---
 
@@ -183,6 +179,7 @@ The position embeddings (Figure 5b) form a ladder structure, with $p_0$ at the b
 ***Figure 5.** Learned embeddings. (a) Token embeddings $\mathbf{x_i}$ shown as heatmap. (b) Position embeddings  $\mathbf{p_i}$ shown as heatmap. (c) Combined token+position embeddings shown as scatterplot. (d) Positions $\mathbf{p_i}$ shown as scatterplot. (e) Token+position embeddings $\mathbf{e_i}$ shown as scatterplot. Positions are indicated as subscripts next to each token e.g. $+_5$ is the `+` token at position 5.*
 
 We emphasize that this geometric structure does not exist at initialization; it is learned. Movie 1 shows the embedding space at every checkpoint across training. At step 0, all points are randomly scattered. Within the first few thousand steps, the `+` token rapidly migrates away from the number tokens. The even/odd split solidifies between steps 5,000 and 10,000, and the position embedding ladder organizes gradually throughout training. 
+
 ### 3.3 The Attention Mechanism: Query, Key, and Value Projections
 
 The combined embeddings $\mathbf{e}_i$ alone are not sufficient for the model to obey the plus-last-even rule, due to the rule's conditional structure. The `+` tokens need to "search back" for the most recent even number to generate the correct answer; simply knowing the token value and its position is not enough to predict the next token. This retrieval process is what motivates the use of the attention mechanism (Vaswani et al., 2017).
