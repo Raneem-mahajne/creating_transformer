@@ -199,14 +199,20 @@ mechanism of history-based information retrieval.
 
 The task is defined over a vocabulary \(\mathcal{V}\) of 12 tokens: the
 integers \(\{0, \ldots, 10\}\) and a special operator \texttt{+}.
-Sequence generation obeys: - \textbf{Retrieval rule:} If \texttt{+}
-occurs at position \(t\), the output at \(t+1\) must be the most recent
-even integer \(x_i \in \{0, 2, 4, 6, 8, 10\}\) with \(i < t\). (If there
-is no earlier even number, then any token can be chosen). -
-\textbf{Unconstrained positions:} All positions not immediately
-following \texttt{+} are unconstrained; any token in \(\mathcal{V}\) may
-appear. These positions provide context that the model must process
-without applying the retrieval rule.
+Sequence generation obeys:
+
+\begin{itemize}
+\item
+  \textbf{Retrieval rule:} If \texttt{+} occurs at position \(t\), the
+  output at \(t+1\) must be the most recent even integer
+  \(x_i \in \{0, 2, 4, 6, 8, 10\}\) with \(i < t\). (If there is no
+  earlier even number, then any token can be chosen).
+\item
+  \textbf{Unconstrained positions:} All positions not immediately
+  following \texttt{+} are unconstrained; any token in \(\mathcal{V}\)
+  may appear. These positions provide context that the model must
+  process without applying the retrieval rule.
+\end{itemize}
 
 \begin{verbatim}
 5  3  8  7  +  8  10  2  4  +  4  ...

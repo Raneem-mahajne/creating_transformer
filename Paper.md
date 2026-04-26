@@ -34,6 +34,7 @@ We adopt the "plus-last-even" rule, described below, as our primary task. We cho
 #### 2.1.1 The Plus-Last-Even Task
 
 The task is defined over a vocabulary $\mathcal{V}$ of 12 tokens: the integers $\{0, \ldots, 10\}$ and a special operator `+`. Sequence generation obeys:
+
 - **Retrieval rule:** If `+` occurs at position $t$, the output at $t+1$ must be the most recent even integer $x_i \in \{0, 2, 4, 6, 8, 10\}$ with $i < t$. (If there is no earlier even number, then any token can be chosen).
 - **Unconstrained positions:** All positions not immediately following `+` are unconstrained; any token in $\mathcal{V}$ may appear. These positions provide context that the model must process without applying the retrieval rule.
 

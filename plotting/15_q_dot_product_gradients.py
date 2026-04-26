@@ -138,18 +138,19 @@ def plot_q_dot_product_gradients(model, X_list, itos, save_path=None, num_sequen
     y_grid = np.linspace(y_min, y_max, grid_resolution)
     X_grid, Y_grid = np.meshgrid(x_grid, y_grid)
 
-    # One shared colormap range for all gradient panels (PC-plane linear functional q·(x,y))
+    # PC-plane linear functional q·(x,y); per panel min–max over the grid → [0, 1].
     dot_grids = []
     for idx in range(num_queries_to_show):
         q_focus_2d = Q_2d[idx]
         dot_grids.append(X_grid * q_focus_2d[0] + Y_grid * q_focus_2d[1])
-    dot_stack = np.stack(dot_grids, axis=0)
-    global_vmin = float(np.min(dot_stack))
-    global_vmax = float(np.max(dot_stack))
-    if global_vmin == global_vmax:
-        global_vmin -= 1e-6
-        global_vmax += 1e-6
-    norm_bg = mcolors.Normalize(vmin=global_vmin, vmax=global_vmax)
+    att_grids = []
+    for g in dot_grids:
+        gmin, gmax = float(g.min()), float(g.max())
+        if gmax > gmin:
+            att_grids.append((g - gmin) / (gmax - gmin))
+        else:
+            att_grids.append(np.full_like(g, 0.5))
+    norm_bg = mcolors.Normalize(vmin=0.0, vmax=1.0)
 
     _grad_axes = []
     for idx in range(num_queries_to_show):
@@ -159,7 +160,7 @@ def plot_q_dot_product_gradients(model, X_list, itos, save_path=None, num_sequen
         _grad_axes.append(ax)
 
         ax.pcolormesh(
-            x_grid, y_grid, dot_grids[idx],
+            x_grid, y_grid, att_grids[idx],
             cmap="Greens", shading="auto", zorder=0, norm=norm_bg,
         )
         
@@ -212,10 +213,10 @@ def plot_q_dot_product_gradients(model, X_list, itos, save_path=None, num_sequen
     _cbar = fig.colorbar(
         _sm_bg, ax=_grad_axes, fraction=0.035, pad=0.02, shrink=0.85,
     )
-    _cbar.set_ticks([global_vmin, global_vmax])
-    _cbar.set_ticklabels([f"{global_vmin:.3g}", f"{global_vmax:.3g}"])
+    _cbar.set_ticks([0.0, 0.25, 0.5, 0.75, 1.0])
+    _cbar.set_ticklabels(["0", "0.25", "0.5", "0.75", "1"])
     _cbar.set_label(
-        r"Dot product $q^{\top} k$ in PC plane (shared scale across queries)",
+        r"Per-panel min-max normalized $q^{\top} k$ in PC plane (lowest grid value = 0, highest = 1)",
         fontsize=_cbar_fs,
     )
     _cbar.ax.tick_params(labelsize=_cbar_fs - 1)
