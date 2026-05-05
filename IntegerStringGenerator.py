@@ -1354,6 +1354,45 @@ class Lucky7Rule(IntegerStringGenerator):
         return mask
 
 
+# Sun et al. (Spruston lab) 2ACDC symbolic sequences — vanilla RNN encoding from Methods (Nature 2025).
+SPRUSTON_NEAR_TRIAL = [1] * 6 + [2] * 4 + [1] * 3 + [4] + [6] + [1] * 3 + [5, 5] + [1] * 2 + [0]
+SPRUSTON_FAR_TRIAL = [1] * 6 + [3] * 4 + [1] * 3 + [4, 4] + [1] * 3 + [5] + [6] + [1] * 2 + [0]
+
+SPRUSTON_DEFAULT_TOKEN_LABELS = ["Teleport", "Gray", "IndNear", "IndFar", "R1", "R2", "Water"]
+
+
+class Spruston2ACDCRule(IntegerStringGenerator):
+    """
+    Discrete sensory-symbol sequences for the two-alternative cue–delay–choice (2ACDC) corridor task,
+    matching the paper's next-symbol LM setup for transformers/RNNs (near vs far trials concatenated).
+    """
+
+    def __init__(
+        self,
+        min_value: int = 0,
+        max_value: int = 6,
+        sequence_length: int | None = None,
+        token_labels: list[str] | None = None,
+    ):
+        super().__init__(min_value, max_value, sequence_length)
+        self.token_labels = token_labels or SPRUSTON_DEFAULT_TOKEN_LABELS
+
+    def generate_sequence(self, length: int) -> list[int]:
+        if length <= 0:
+            return []
+        out: list[int] = []
+        while len(out) < length:
+            trial = SPRUSTON_NEAR_TRIAL if random.random() < 0.5 else SPRUSTON_FAR_TRIAL
+            out.extend(trial)
+        return out[:length]
+
+    def verify_sequence(self, sequence: list) -> tuple[list[int], bool]:
+        return [1] * len(sequence), True
+
+    def valence_mask(self, sequence: list) -> list[bool]:
+        return [False] * len(sequence)
+
+
 def main():
     generator = OddEvenIndexRule(min_value=0, max_value=20)
     sequences = generator.generate_dataset(5, min_length=10, max_length=20)
