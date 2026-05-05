@@ -5,6 +5,7 @@ import random
 import torch
 
 from config_loader import get_generator_from_config
+from IntegerStringGenerator import SPRUSTON_NEAR_TRIAL, SPRUSTON_DEFAULT_TOKEN_LABELS
 from checkpoint import (
     load_checkpoint,
     get_plots_dir,
@@ -45,6 +46,45 @@ from plotting import (
     plot_probability_heatmap_with_values,
     plot_per_token_frozen_output,
 )
+
+
+_LEGACY_SPRUSTON_LABEL_TO_ID = {
+    "Teleport": 0,
+    "Gray": 1,
+    "IndNear": 2,
+    "IndFar": 3,
+    "R1": 4,
+    "R2": 5,
+    "Water": 6,
+}
+
+
+def _normalize_spruston_e0_sequences(raw: list, decode_fn):
+    """E0 may be legacy decoded strings or token-index lists; map both to current display tokens."""
+    out = []
+    for seq in raw:
+        if not seq:
+            out.append([])
+            continue
+        first = seq[0]
+        if isinstance(first, str) and first in _LEGACY_SPRUSTON_LABEL_TO_ID:
+            ids = [_LEGACY_SPRUSTON_LABEL_TO_ID[t] for t in seq]
+            out.append(decode_fn(ids))
+        elif isinstance(first, int):
+            out.append(decode_fn(seq))
+        else:
+            out.append(seq)
+    return out
+
+
+def _resolve_stoi(stoi: dict, t) -> int:
+    """Map decoded token or string key into vocab index."""
+    if t in stoi:
+        return stoi[t]
+    key = str(t)
+    if key in stoi:
+        return stoi[key]
+    raise KeyError(t)
 
 
 def _has_odd_number(decoded_tokens: list) -> bool:
@@ -229,6 +269,12 @@ def visualize_from_checkpoint(
     data_config = config["data"]
     training_config = config.get("training", {})
 
+    labels_override = data_config.get("token_labels")
+    if isinstance(labels_override, list) and len(labels_override) == vocab_size:
+        itos = {i: labels_override[i] for i in range(vocab_size)}
+        stoi = {labels_override[i]: i for i in range(vocab_size)}
+        decode = create_decode_from_itos(itos)
+
     plots_dir = get_plots_dir(config_name_actual, step, subfolder=plots_subfolder)
     plots_dir.mkdir(parents=True, exist_ok=True)
     plots_dir = str(plots_dir)
@@ -276,7 +322,11 @@ def visualize_from_checkpoint(
         sample = model.generate(start, max_new_tokens=seq_length - 1)[0].tolist()
         generated_sequences.append(decode(sample))
 
-    generated_sequences_e0 = checkpoint_data.get("generated_sequences_e0") or []
+    generated_sequences_e0_raw = checkpoint_data.get("generated_sequences_e0") or []
+    if data_config.get("generator_type") == "Spruston2ACDC":
+        generated_sequences_e0 = _normalize_spruston_e0_sequences(generated_sequences_e0_raw, decode)
+    else:
+        generated_sequences_e0 = generated_sequences_e0_raw
     with open(os.path.join(plots_dir, "generated_integer_sequence.txt"), "w", encoding="utf-8") as f:
         if generated_sequences_e0:
             f.write("E0\n")
@@ -333,57 +383,66 @@ def visualize_from_checkpoint(
     if fixed_sequence_decoded is not None and sequence_seed is None and sequence_index is None and stoi is not None:
         # Use the explicitly requested sequence (e.g. "10 + 10 6 + 6 4 8") as token ids
         try:
-            consistent_sequence = [stoi[str(t)] for t in fixed_sequence_decoded]
+            consistent_sequence = [_resolve_stoi(stoi, t) for t in fixed_sequence_decoded]
         except KeyError as e:
             print(f"Warning: fixed_sequence_decoded token not in vocab: {e}; falling back to seed/index selection")
             consistent_sequence = None
     else:
         consistent_sequence = None
     if consistent_sequence is None:
-        # Pick deterministically: sort so order does not depend on train_sequences iteration
-        seed_for_seq = 43 if sequence_seed is None else sequence_seed
-        random.seed(seed_for_seq)
-        valid_sequences = sorted(
-            [seq for seq in train_sequences if len(seq) >= 7],
-            key=lambda s: tuple(s),
-        )  # Need at least 7 tokens for pattern with 2 plus signs
-        if valid_sequences:
-            # Try indices until we find a sequence with 2 plus signs, each followed by different even numbers
-            start_idx = (sequence_index if sequence_index is not None else 0) % len(valid_sequences)
-            for k in range(len(valid_sequences)):
-                idx = (start_idx + k) % len(valid_sequences)
-                cand = valid_sequences[idx]
-                decoded_cand = decode(cand)
-                if _has_two_plus_with_different_evens(decoded_cand):
-                    consistent_sequence = cand
-                    if k > 0:
-                        print(f"Reseed: using sequence index {idx} (first with pattern: 2 plus signs, each followed by different even numbers)")
-                    break
-            else:
-                # Fallback: try the old pattern if new one doesn't match
-                valid_sequences_old = sorted(
-                    [seq for seq in train_sequences if len(seq) >= 3],
-                    key=lambda s: tuple(s),
-                )
-                if valid_sequences_old:
-                    for k in range(len(valid_sequences_old)):
-                        idx = (start_idx + k) % len(valid_sequences_old)
-                        cand = valid_sequences_old[idx]
-                        decoded_cand = decode(cand)
-                        if _starts_with_even_odd_plus(decoded_cand):
-                            consistent_sequence = cand
-                            print(f"Warning: no sequence with 2 plus signs pattern found; using sequence with pattern [even, odd, '+']")
-                            break
-                    else:
-                        consistent_sequence = valid_sequences_old[start_idx] if valid_sequences_old else valid_sequences[start_idx]
-                        print("Warning: no matching pattern found; using default sequence")
+        if data_config.get("generator_type") == "Spruston2ACDC" and stoi is not None:
+            labels = data_config.get("token_labels") or SPRUSTON_DEFAULT_TOKEN_LABELS
+            demo_labels = [labels[i] for i in SPRUSTON_NEAR_TRIAL[:block_size]]
+            try:
+                consistent_sequence = [_resolve_stoi(stoi, t) for t in demo_labels]
+            except KeyError:
+                consistent_sequence = None
+
+        if consistent_sequence is None:
+            # Pick deterministically: sort so order does not depend on train_sequences iteration
+            seed_for_seq = 43 if sequence_seed is None else sequence_seed
+            random.seed(seed_for_seq)
+            valid_sequences = sorted(
+                [seq for seq in train_sequences if len(seq) >= 7],
+                key=lambda s: tuple(s),
+            )  # Need at least 7 tokens for pattern with 2 plus signs
+            if valid_sequences:
+                # Try indices until we find a sequence with 2 plus signs, each followed by different even numbers
+                start_idx = (sequence_index if sequence_index is not None else 0) % len(valid_sequences)
+                for k in range(len(valid_sequences)):
+                    idx = (start_idx + k) % len(valid_sequences)
+                    cand = valid_sequences[idx]
+                    decoded_cand = decode(cand)
+                    if _has_two_plus_with_different_evens(decoded_cand):
+                        consistent_sequence = cand
+                        if k > 0:
+                            print(f"Reseed: using sequence index {idx} (first with pattern: 2 plus signs, each followed by different even numbers)")
+                        break
                 else:
-                    consistent_sequence = valid_sequences[start_idx]
-                    print("Warning: no matching pattern found; using default sequence")
-        elif train_sequences:
-            consistent_sequence = train_sequences[0]
-        else:
-            consistent_sequence = []
+                    # Fallback: try the old pattern if new one doesn't match
+                    valid_sequences_old = sorted(
+                        [seq for seq in train_sequences if len(seq) >= 3],
+                        key=lambda s: tuple(s),
+                    )
+                    if valid_sequences_old:
+                        for k in range(len(valid_sequences_old)):
+                            idx = (start_idx + k) % len(valid_sequences_old)
+                            cand = valid_sequences_old[idx]
+                            decoded_cand = decode(cand)
+                            if _starts_with_even_odd_plus(decoded_cand):
+                                consistent_sequence = cand
+                                print(f"Warning: no sequence with 2 plus signs pattern found; using sequence with pattern [even, odd, '+']")
+                                break
+                        else:
+                            consistent_sequence = valid_sequences_old[start_idx] if valid_sequences_old else valid_sequences[start_idx]
+                            print("Warning: no matching pattern found; using default sequence")
+                    else:
+                        consistent_sequence = valid_sequences[start_idx]
+                        print("Warning: no matching pattern found; using default sequence")
+            elif train_sequences:
+                consistent_sequence = train_sequences[0]
+            else:
+                consistent_sequence = []
     
     # Print which sequence is being used for consistency
     decoded_consistent = decode(consistent_sequence)
@@ -397,12 +456,17 @@ def visualize_from_checkpoint(
     X_consistent = seq_tensor
     X_list = [X_consistent, X_consistent, X_consistent]  # Use same sequence 3 times for multi-sequence plots
 
-    # Hardcoded demo sequence for figures 13–17, 18, and frozen_output supp (length 8): final token is '+' and NOT immediately after another '+'
-    _demo_decoded = [4, 1, "+", 4, 6, 9, 5, "+"]
+    # Demo sequence for figures 13–17, 18 (plus-last-even default); Spruston uses a near-trial prefix.
+    if data_config.get("generator_type") == "Spruston2ACDC" and stoi is not None:
+        labels = data_config.get("token_labels") or SPRUSTON_DEFAULT_TOKEN_LABELS
+        lim = min(8, block_size, len(SPRUSTON_NEAR_TRIAL))
+        _demo_decoded = [labels[i] for i in SPRUSTON_NEAR_TRIAL[:lim]]
+    else:
+        _demo_decoded = [4, 1, "+", 4, 6, 9, 5, "+"]
     _stoi = stoi if stoi is not None else {str(itos[i]): i for i in range(len(itos))}
     demo_sequence = None
     try:
-        _demo_ids = [_stoi[str(t)] for t in _demo_decoded]
+        _demo_ids = [_resolve_stoi(_stoi, t) for t in _demo_decoded]
         demo_sequence = _demo_ids[:block_size]
         X_demo = torch.tensor(demo_sequence, dtype=torch.long).unsqueeze(0)
         X_list_demo = [X_demo, X_demo, X_demo]
@@ -442,14 +506,14 @@ def visualize_from_checkpoint(
     # plot_attention_matrix moved to supplementary
     if _plot("qk_embedding_space.png"):
         plot_qk_embedding_space(model, itos, save_path=_plot_path("qk_embedding_space.png"))
-    if _plot("qk_embedding_space_plus5_focus.png"):
+    if _plot("qk_embedding_space_plus5_focus.png") and stoi is not None and "+" in stoi:
         plot_qk_embedding_space_focused_query(
             model, itos, token_str="+", position=5,
             save_path=_plot_path("qk_embedding_space_plus5_focus.png"),
         )
     # Optional combined figure (09 + 10 as a single panel)
     path_qk_combined = _plot_path_if_in_manifest("qk_embedding_space_combined.png", manifest, config_name_actual, plots_dir)
-    if path_qk_combined and _plot("qk_embedding_space_combined.png"):
+    if path_qk_combined and _plot("qk_embedding_space_combined.png") and stoi is not None and "+" in stoi:
         plot_qk_embedding_space_combined(
             model, itos, token_str="+", position=5,
             save_path=path_qk_combined,

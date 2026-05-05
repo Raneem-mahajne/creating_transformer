@@ -66,6 +66,29 @@ def build_encoder_for_integers(min_value: int = 0, max_value: int = 20):
     return encode, decode, vocab_size, index_to_string, string_to_index
 
 
+def build_encoder_from_token_labels(labels: list[str]):
+    """
+    Encoder for configs whose sequences are already token indices 0..V-1 (e.g. Spruston 2ACDC symbols).
+
+    Args:
+        labels: Human-readable name per index (labels[i] == symbol for token id i).
+
+    Returns:
+        encode, decode, vocab_size, index_to_string, string_to_index
+    """
+    vocab_size = len(labels)
+    index_to_string = {i: labels[i] for i in range(vocab_size)}
+    string_to_index = {labels[i]: i for i in range(vocab_size)}
+
+    def encode(tokens: list[int]) -> list[int]:
+        return list(tokens)
+
+    def decode(token_indices) -> list[str]:
+        return [index_to_string[int(i)] for i in token_indices]
+
+    return encode, decode, vocab_size, index_to_string, string_to_index
+
+
 def build_encoder_with_operators(min_value: int, max_value: int, operators: list[str]):
     """
     Build encoder/decoder for mixed vocabulary (integers + operators).

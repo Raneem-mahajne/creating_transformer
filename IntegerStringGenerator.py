@@ -1354,17 +1354,31 @@ class Lucky7Rule(IntegerStringGenerator):
         return mask
 
 
-# Sun et al. (Spruston lab) 2ACDC symbolic sequences — vanilla RNN encoding from Methods (Nature 2025).
-SPRUSTON_NEAR_TRIAL = [1] * 6 + [2] * 4 + [1] * 3 + [4] + [6] + [1] * 3 + [5, 5] + [1] * 2 + [0]
-SPRUSTON_FAR_TRIAL = [1] * 6 + [3] * 4 + [1] * 3 + [4, 4] + [1] * 3 + [5] + [6] + [1] * 2 + [0]
+def _collapse_repeat_symbols(seq: list[int]) -> list[int]:
+    """One token per contiguous same-symbol stretch (segment-level timeline, not per-grid-bin)."""
+    if not seq:
+        return []
+    out = [seq[0]]
+    for x in seq[1:]:
+        if x != out[-1]:
+            out.append(x)
+    return out
 
-SPRUSTON_DEFAULT_TOKEN_LABELS = ["Teleport", "Gray", "IndNear", "IndFar", "R1", "R2", "Water"]
+
+# Paper Methods use repeated symbols per corridor bin; we collapse runs to one symbol per segment for readability.
+_SPRUSTON_NEAR_TRIAL_EXPANDED = [1] * 6 + [2] * 4 + [1] * 3 + [4] + [6] + [1] * 3 + [5, 5] + [1] * 2 + [0]
+_SPRUSTON_FAR_TRIAL_EXPANDED = [1] * 6 + [3] * 4 + [1] * 3 + [4, 4] + [1] * 3 + [5] + [6] + [1] * 2 + [0]
+SPRUSTON_NEAR_TRIAL = _collapse_repeat_symbols(_SPRUSTON_NEAR_TRIAL_EXPANDED)
+SPRUSTON_FAR_TRIAL = _collapse_repeat_symbols(_SPRUSTON_FAR_TRIAL_EXPANDED)
+
+SPRUSTON_DEFAULT_TOKEN_LABELS = ["T", "G", "I1", "I2", "R1", "R2", "W"]
 
 
 class Spruston2ACDCRule(IntegerStringGenerator):
     """
-    Discrete sensory-symbol sequences for the two-alternative cue–delay–choice (2ACDC) corridor task,
-    matching the paper's next-symbol LM setup for transformers/RNNs (near vs far trials concatenated).
+    Discrete sensory-symbol sequences for the 2ACDC corridor task (near vs far trials concatenated).
+    Uses one symbol per homogeneous segment along the track (repeated corridor bins collapsed),
+    not one timestep per original 10 cm bin.
     """
 
     def __init__(

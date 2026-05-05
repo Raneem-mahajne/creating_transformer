@@ -1,0 +1,36 @@
+# Spruston lab 2ACDC discrete-symbol LM (Sun et al., Nature 2025) — GPT-micro-scale transformer replica.
+name: spruston_2acdc
+
+data:
+  generator_type: Spruston2ACDC
+  min_value: 0
+  max_value: 6
+  num_sequences: 400
+  min_length: 400
+  max_length: 1200
+  # Segment-level symbols (contiguous identical cues collapsed): T teleport, G gray, I1/I2 indicators, R1/R2, W water
+  token_labels:
+    - T
+    - G
+    - I1
+    - I2
+    - R1
+    - R2
+    - W
+
+model:
+  n_embd: 2
+  block_size: 12
+  num_heads: 1
+  head_size: 2
+  n_layer: 1
+  ffwd_mult: 16
+  use_residual: true
+
+training:
+  max_steps: 25000
+  batch_size: 16
+  learning_rate: 0.0003
+  eval_interval: 500
+  eval_iterations: 15
+  checkpoint_interval: 2500

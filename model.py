@@ -54,22 +54,71 @@ class FeedForward(nn.Module):
         return self.net(x)
 
 
+class TransformerBlock(nn.Module):
+    """Pre-LN transformer block (self-attention + FFN)."""
+
+    def __init__(
+        self,
+        n_embd: int,
+        num_heads: int,
+        head_size: int,
+        block_size: int,
+        ffwd_mult: int,
+    ):
+        super().__init__()
+        self.ln1 = nn.LayerNorm(n_embd)
+        self.sa_heads = MultiHeadAttention(num_heads, n_embd, head_size, block_size)
+        self.ln2 = nn.LayerNorm(n_embd)
+        self.ffwd = FeedForward(n_embd, ffwd_mult)
+
+    def forward(self, x):
+        attn_out, wei = self.sa_heads(self.ln1(x))
+        x = x + attn_out
+        x = x + self.ffwd(self.ln2(x))
+        return x, wei
+
+
 class BigramLanguageModel(nn.Module):
     """
     - token_embedding: maps token id -> embedding vector (n_embd)
     - lm_head: maps attention output -> logits over vocab
     - use_residual: if False, disable residual connections (no x+attn, no x+ffwd)
     """
-    def __init__(self, vocab_size: int, n_embd: int, block_size: int, num_heads: int, head_size: int, use_residual: bool = True):
+    def __init__(
+        self,
+        vocab_size: int,
+        n_embd: int,
+        block_size: int,
+        num_heads: int,
+        head_size: int,
+        use_residual: bool = True,
+        n_layer: int = 1,
+        ffwd_mult: int = 16,
+    ):
         super().__init__()
         self.token_embedding = nn.Embedding(vocab_size, n_embd)           # (vocab, n_embd)
         self.position_embedding_table = nn.Embedding(block_size, n_embd)  # (block_size, n_embd)
-        self.sa_heads = MultiHeadAttention(num_heads, n_embd, head_size, block_size)
-        # Projection removed: with single head and head_size=n_embd, attention output already matches n_embd
-        self.ffwd = FeedForward(n_embd, ffwd_mult=16)
-        self.lm_head = nn.Linear(n_embd, vocab_size)
         self.block_size = block_size
         self.use_residual = use_residual
+        self.n_layer = n_layer
+
+        if n_layer == 1:
+            self.blocks = None
+            self.sa_heads = MultiHeadAttention(num_heads, n_embd, head_size, block_size)
+            self.ffwd = FeedForward(n_embd, ffwd_mult=ffwd_mult)
+            self.ln_f = nn.Identity()
+        else:
+            self.blocks = nn.ModuleList(
+                [
+                    TransformerBlock(n_embd, num_heads, head_size, block_size, ffwd_mult)
+                    for _ in range(n_layer)
+                ]
+            )
+            self.ln_f = nn.LayerNorm(n_embd)
+            self.sa_heads = self.blocks[-1].sa_heads
+            self.ffwd = self.blocks[-1].ffwd
+
+        self.lm_head = nn.Linear(n_embd, vocab_size)
 
     def forward(self, idx: torch.Tensor, targets: torch.Tensor | None = None, return_wei: bool = False):
         B, T = idx.shape
@@ -80,14 +129,19 @@ class BigramLanguageModel(nn.Module):
 
         x = token_emb + pos_emb  # (B,T,n_embd)
 
-        attn_out, wei = self.sa_heads(x)  # (B,T,n_embd)
-        if self.use_residual:
-            x = x + attn_out
-            x = x + self.ffwd(x)
+        wei = None
+        if self.blocks is None:
+            attn_out, wei = self.sa_heads(x)  # (B,T,n_embd)
+            if self.use_residual:
+                x = x + attn_out
+                x = x + self.ffwd(x)
+            else:
+                x = attn_out
+                x = self.ffwd(x)
         else:
-            # No residuals: just pass through attention then FFN
-            x = attn_out
-            x = self.ffwd(x)
+            for block in self.blocks:
+                x, wei = block(x)
+            x = self.ln_f(x)
 
         logits = self.lm_head(x)  # (B,T,vocab)
 

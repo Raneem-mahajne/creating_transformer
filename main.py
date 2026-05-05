@@ -3,7 +3,7 @@ import numpy as np
 import os
 import random
 import sys
-from IntegerStringGenerator import OperatorBasedGenerator
+from IntegerStringGenerator import OperatorBasedGenerator, SPRUSTON_DEFAULT_TOKEN_LABELS
 from config_loader import load_config, get_generator_from_config
 
 # Import from refactored modules
@@ -12,6 +12,7 @@ from data import (
     generate_integer_string_data,
     build_encoder_for_integers,
     build_encoder_with_operators,
+    build_encoder_from_token_labels,
     split_train_val_sequences,
     get_batch_from_sequences,
 )
@@ -188,10 +189,13 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
                         generate_journal=journal, only_figures=only_figures,
                     )
             else:
-                # Default run: use fixed sequence "4 9 + 4 5 1 + 4" for main plots
+                # Default run: fixed demo for plus-last-even; Spruston 2ACDC uses near-trial labels inside visualize.py.
+                fixed_demo = None
+                if config["data"].get("generator_type") != "Spruston2ACDC":
+                    fixed_demo = [4, 9, "+", 4, 10, 7, "+", 10]  # from _try_seeds.py seed 20
                 visualize_from_checkpoint(
                     config_name_actual, checkpoint_data, config, step=step,
-                    fixed_sequence_decoded=[4, 9, "+", 4, 10, 7, "+", 10],  # from _try_seeds.py seed 20
+                    fixed_sequence_decoded=fixed_demo,
                     generate_journal=journal, only_figures=only_figures,
                 )
         return
@@ -238,6 +242,11 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
             )
             print("Vocabulary size:", vocab_size)
             print("Vocabulary (integers + operators):", [itos[i] for i in range(vocab_size)])
+        elif data_config.get("generator_type") == "Spruston2ACDC":
+            labels = data_config.get("token_labels") or SPRUSTON_DEFAULT_TOKEN_LABELS
+            encode, decode, vocab_size, itos, stoi = build_encoder_from_token_labels(labels)
+            print("Vocabulary size:", vocab_size)
+            print("Vocabulary (2ACDC symbols):", [itos[i] for i in range(vocab_size)])
         else:
             encode, decode, vocab_size, itos, stoi = build_encoder_for_integers(min_value=min_value, max_value=max_value)
             print("Vocabulary size:", vocab_size)
@@ -276,7 +285,16 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
         head_size = model_config['head_size']
         use_residual = model_config.get('use_residual', True)
         
-        model = BigramLanguageModel(vocab_size, n_embd, block_size, num_heads, head_size, use_residual=use_residual)
+        model = BigramLanguageModel(
+            vocab_size,
+            n_embd,
+            block_size,
+            num_heads,
+            head_size,
+            use_residual=use_residual,
+            n_layer=model_config.get("n_layer", 1),
+            ffwd_mult=model_config.get("ffwd_mult", 16),
+        )
         optimizer = torch.optim.AdamW(model.parameters(), lr=training_config['learning_rate'])
 
         # Generate "before training" sequences (E0) without perturbing RNG state for training
@@ -289,7 +307,10 @@ def main(config_name: str = "copy_modulo", force_retrain: bool = False, visualiz
             start_token = random.randint(0, vocab_size - 1)
             start = torch.tensor([[start_token]], dtype=torch.long)
             sample = model.generate(start, max_new_tokens=seq_length - 1)[0].tolist()
-            generated_sequences_e0.append(decode(sample))
+            if data_config.get("generator_type") == "Spruston2ACDC":
+                generated_sequences_e0.append(sample)
+            else:
+                generated_sequences_e0.append(decode(sample))
         random.setstate(py_state)
         np.random.set_state(np_state)
         torch.random.set_rng_state(torch_state)

@@ -5,11 +5,11 @@ import yaml
 import os
 from pathlib import Path
 from IntegerStringGenerator import (
-    OddEvenIndexRule, EvenToOddTransitionRule, EvenRepeatLastOddRule, 
-    EvenAbsDiffRule, CopyModuloRule, SuccessorRule, ConditionalTransformRule, 
+    OddEvenIndexRule, EvenToOddTransitionRule, EvenRepeatLastOddRule,
+    EvenAbsDiffRule, CopyModuloRule, SuccessorRule, ConditionalTransformRule,
     LookupPermutationRule, ParityBasedRule, EvenGreaterThan10Rule, TwoTokenParityRule,
     IntegerStringGenerator, OperatorBasedGenerator, PlusMeansEvenRule, PlusMaxOfTwoRule,
-    PlusLastEvenRule, StepBackRule, Lucky7Rule
+    PlusLastEvenRule, StepBackRule, Lucky7Rule, Spruston2ACDCRule,
 )
 
 
@@ -105,6 +105,13 @@ def get_generator_from_config(config: dict) -> IntegerStringGenerator:
     elif generator_type == "Lucky7Rule":
         seven_probability = data_config.get('seven_probability', 0.25)
         return Lucky7Rule(min_value=min_value, max_value=max_value, seven_probability=seven_probability)
+    elif generator_type == "Spruston2ACDC":
+        labels = data_config.get("token_labels")
+        return Spruston2ACDCRule(
+            min_value=0,
+            max_value=6,
+            token_labels=labels,
+        )
     else:
         raise ValueError(f"Unknown generator type: {generator_type}")
 
