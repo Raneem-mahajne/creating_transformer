@@ -1,0 +1,21 @@
+{
+  "name": "stat_shared_letters",
+  "complexity": "shared_letters",
+  "words": [
+    "cat",
+    "hat",
+    "map"
+  ],
+  "delimiter": "|",
+  "alphabet": [
+    "a",
+    "c",
+    "h",
+    "m",
+    "p",
+    "t",
+    "|"
+  ],
+  "num_states": 10,
+  "num_accepting": 3
+}

@@ -1,0 +1,27 @@
+{
+  "vocab_size": 7,
+  "step": 200,
+  "steps_for_plot": [
+    0,
+    200
+  ],
+  "train_loss_history": [
+    2.2692348957061768,
+    1.7197961807250977
+  ],
+  "val_loss_history": [
+    2.270150661468506,
+    1.7149423360824585
+  ],
+  "rule_error_history": [
+    0.9636363636363636,
+    0.762589928057554
+  ],
+  "model_config": {
+    "n_embd": 2,
+    "block_size": 16,
+    "num_heads": 1,
+    "head_size": 2
+  },
+  "eval_interval": 200
+}

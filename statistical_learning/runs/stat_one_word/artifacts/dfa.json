@@ -1,0 +1,52 @@
+{
+  "words": [
+    "cat"
+  ],
+  "delimiter": "|",
+  "states": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "start": 0,
+  "accepting": [
+    3
+  ],
+  "alphabet": [
+    "a",
+    "c",
+    "t",
+    "|"
+  ],
+  "transitions": {
+    "0,c": 1,
+    "1,a": 2,
+    "2,t": 3,
+    "3,|": 0
+  },
+  "state_metadata": {
+    "0": {
+      "depth": 0,
+      "words_ending": [],
+      "is_terminal": false
+    },
+    "1": {
+      "depth": 1,
+      "words_ending": [],
+      "is_terminal": false
+    },
+    "2": {
+      "depth": 2,
+      "words_ending": [],
+      "is_terminal": false
+    },
+    "3": {
+      "depth": 3,
+      "words_ending": [
+        "cat"
+      ],
+      "is_terminal": true
+    }
+  }
+}

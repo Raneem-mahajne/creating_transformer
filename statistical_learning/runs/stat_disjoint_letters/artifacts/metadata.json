@@ -1,0 +1,24 @@
+{
+  "name": "stat_disjoint_letters",
+  "complexity": "disjoint_letters",
+  "words": [
+    "cat",
+    "mop",
+    "red"
+  ],
+  "delimiter": "|",
+  "alphabet": [
+    "a",
+    "c",
+    "d",
+    "e",
+    "m",
+    "o",
+    "p",
+    "r",
+    "t",
+    "|"
+  ],
+  "num_states": 10,
+  "num_accepting": 3
+}

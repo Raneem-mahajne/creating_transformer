@@ -1,0 +1,22 @@
+digraph trie {
+  node [shape=circle];
+  root [label=root];
+  root -> n1 [label="c"];
+  root [label="root"];
+  n2 -> n3 [label="a"];
+  n2 [label="n2"];
+  n4 -> n5 [label="t"];
+  n4 [label="n4"];
+  root -> n7 [label="h"];
+  root [label="root"];
+  n8 -> n9 [label="a"];
+  n8 [label="n8"];
+  n10 -> n11 [label="t"];
+  n10 [label="n10"];
+  root -> n13 [label="m"];
+  root [label="root"];
+  n14 -> n15 [label="a"];
+  n14 [label="n14"];
+  n16 -> n17 [label="p"];
+  n16 [label="n16"];
+}

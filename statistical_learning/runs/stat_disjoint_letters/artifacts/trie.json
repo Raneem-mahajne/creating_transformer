@@ -1,0 +1,60 @@
+{
+  "words": [
+    "cat",
+    "mop",
+    "red"
+  ],
+  "root": {
+    "terminal": false,
+    "children": {
+      "c": {
+        "terminal": false,
+        "children": {
+          "a": {
+            "terminal": false,
+            "children": {
+              "t": {
+                "terminal": true,
+                "children": {},
+                "word": "cat",
+                "word_id": 0
+              }
+            }
+          }
+        }
+      },
+      "m": {
+        "terminal": false,
+        "children": {
+          "o": {
+            "terminal": false,
+            "children": {
+              "p": {
+                "terminal": true,
+                "children": {},
+                "word": "mop",
+                "word_id": 1
+              }
+            }
+          }
+        }
+      },
+      "r": {
+        "terminal": false,
+        "children": {
+          "e": {
+            "terminal": false,
+            "children": {
+              "d": {
+                "terminal": true,
+                "children": {},
+                "word": "red",
+                "word_id": 2
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

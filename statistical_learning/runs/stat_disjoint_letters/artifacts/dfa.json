@@ -1,0 +1,110 @@
+{
+  "words": [
+    "cat",
+    "mop",
+    "red"
+  ],
+  "delimiter": "|",
+  "states": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "start": 0,
+  "accepting": [
+    7,
+    8,
+    9
+  ],
+  "alphabet": [
+    "a",
+    "c",
+    "d",
+    "e",
+    "m",
+    "o",
+    "p",
+    "r",
+    "t",
+    "|"
+  ],
+  "transitions": {
+    "0,c": 1,
+    "0,m": 2,
+    "0,r": 3,
+    "1,a": 4,
+    "2,o": 5,
+    "3,e": 6,
+    "4,t": 7,
+    "5,p": 8,
+    "6,d": 9,
+    "7,|": 0,
+    "8,|": 0,
+    "9,|": 0
+  },
+  "state_metadata": {
+    "0": {
+      "depth": 0,
+      "words_ending": [],
+      "is_terminal": false
+    },
+    "1": {
+      "depth": 1,
+      "words_ending": [],
+      "is_terminal": false
+    },
+    "2": {
+      "depth": 1,
+      "words_ending": [],
+      "is_terminal": false
+    },
+    "3": {
+      "depth": 1,
+      "words_ending": [],
+      "is_terminal": false
+    },
+    "4": {
+      "depth": 2,
+      "words_ending": [],
+      "is_terminal": false
+    },
+    "5": {
+      "depth": 2,
+      "words_ending": [],
+      "is_terminal": false
+    },
+    "6": {
+      "depth": 2,
+      "words_ending": [],
+      "is_terminal": false
+    },
+    "7": {
+      "depth": 3,
+      "words_ending": [
+        "cat"
+      ],
+      "is_terminal": true
+    },
+    "8": {
+      "depth": 3,
+      "words_ending": [
+        "mop"
+      ],
+      "is_terminal": true
+    },
+    "9": {
+      "depth": 3,
+      "words_ending": [
+        "red"
+      ],
+      "is_terminal": true
+    }
+  }
+}

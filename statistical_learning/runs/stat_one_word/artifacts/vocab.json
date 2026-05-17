@@ -1,0 +1,13 @@
+{
+  "alphabet": [
+    "a",
+    "c",
+    "t",
+    "|"
+  ],
+  "delimiter": "|",
+  "words": [
+    "cat"
+  ],
+  "complexity": "one_word"
+}

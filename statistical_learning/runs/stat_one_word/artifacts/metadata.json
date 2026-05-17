@@ -1,0 +1,16 @@
+{
+  "name": "stat_one_word",
+  "complexity": "one_word",
+  "words": [
+    "cat"
+  ],
+  "delimiter": "|",
+  "alphabet": [
+    "a",
+    "c",
+    "t",
+    "|"
+  ],
+  "num_states": 4,
+  "num_accepting": 1
+}

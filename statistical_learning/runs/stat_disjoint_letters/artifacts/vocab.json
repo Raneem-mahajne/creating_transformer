@@ -1,0 +1,21 @@
+{
+  "alphabet": [
+    "a",
+    "c",
+    "d",
+    "e",
+    "m",
+    "o",
+    "p",
+    "r",
+    "t",
+    "|"
+  ],
+  "delimiter": "|",
+  "words": [
+    "cat",
+    "mop",
+    "red"
+  ],
+  "complexity": "disjoint_letters"
+}

@@ -1,0 +1,18 @@
+{
+  "alphabet": [
+    "a",
+    "c",
+    "h",
+    "m",
+    "p",
+    "t",
+    "|"
+  ],
+  "delimiter": "|",
+  "words": [
+    "cat",
+    "hat",
+    "map"
+  ],
+  "complexity": "shared_letters"
+}
