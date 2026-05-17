@@ -126,7 +126,6 @@ P(t_{i+1} \mid \mathbf{h}_i) &= \mathrm{softmax}\!\left(\mathbf{h}_i \, W_{\math
 \end{aligned}
 $$
 
-
 ![Figure 1. Architecture of the minimal transformer. Every component operates entirely in $\mathbb{R}^2$.](plus_last_even/plots/a4/01_architecture_overview.png)
 
 ---

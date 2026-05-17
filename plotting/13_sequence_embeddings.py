@@ -76,6 +76,20 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
         for pos_idx in range(block_size):
             idx = token_idx * block_size + pos_idx
             all_combined_emb[idx] = all_token_emb[token_idx] + all_pos_emb[pos_idx]
+
+    # Match Figure 5 (plot_embeddings_pca): RdBu_r heatmaps; black token/position
+    # scatter labels; token+position labels = blend(YlOrRd token, cool position).
+    token_cmap = plt.cm.get_cmap("YlOrRd")
+    token_colors = [token_cmap(0.3 + 0.6 * i / max(vocab_size - 1, 1)) for i in range(vocab_size)]
+    pos_cmap = plt.cm.get_cmap("cool")
+    pos_colors = [pos_cmap(0.2 + 0.7 * i / max(block_size - 1, 1)) for i in range(block_size)]
+
+    def blend_colors(token_color, pos_color, token_weight=0.6):
+        tc = np.array(mcolors.to_rgb(token_color))
+        pc = np.array(mcolors.to_rgb(pos_color))
+        return tuple(token_weight * tc + (1 - token_weight) * pc)
+
+    _cbar_kw = {"shrink": 0.75, "aspect": 18, "pad": 0.02} if _u._JOURNAL_MODE else {"pad": 0.02}
     
     # Create figure: 2 rows, 3 columns with equal row heights
     if _u._JOURNAL_MODE:
@@ -91,8 +105,16 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
         _axis_fs = 10 if _u._JOURNAL_MODE else 12
         # Column 1: Token embeddings heatmap
         ax1 = fig.add_subplot(gs[0, 0])
-        sns.heatmap(token_emb_np, cmap="viridis", xticklabels=list(range(n_embd)),
-                    yticklabels=tokens, cbar=True, ax=ax1)
+        sns.heatmap(
+            token_emb_np,
+            cmap="RdBu_r",
+            center=0,
+            xticklabels=list(range(n_embd)),
+            yticklabels=tokens,
+            cbar=True,
+            cbar_kws=_cbar_kw,
+            ax=ax1,
+        )
         ax1.set_title("Token Embeddings", fontsize=_title_fs, fontweight='bold', pad=6)
         ax1.set_xlabel("Embedding Dim", fontsize=_axis_fs)
         ax1.set_ylabel("Token", fontsize=_axis_fs)
@@ -100,8 +122,16 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
         # Column 2: Position embeddings heatmap
         ax2 = fig.add_subplot(gs[0, 1])
         pos_labels = [f"p{i}" for i in range(T)]
-        sns.heatmap(pos_emb_np, cmap="viridis", xticklabels=list(range(n_embd)),
-                    yticklabels=pos_labels, cbar=True, ax=ax2)
+        sns.heatmap(
+            pos_emb_np,
+            cmap="RdBu_r",
+            center=0,
+            xticklabels=list(range(n_embd)),
+            yticklabels=pos_labels,
+            cbar=True,
+            cbar_kws=_cbar_kw,
+            ax=ax2,
+        )
         ax2.set_title("Position Embeddings", fontsize=_title_fs, fontweight='bold', pad=6)
         ax2.set_xlabel("Embedding Dim", fontsize=_axis_fs)
         ax2.set_ylabel("Position", fontsize=_axis_fs)
@@ -109,8 +139,16 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
         # Column 3: Combined embeddings heatmap
         ax3 = fig.add_subplot(gs[0, 2])
         labels = [_token_pos_label(tokens[i], i) for i in range(T)]
-        sns.heatmap(combined_emb_np, cmap="viridis", xticklabels=list(range(n_embd)),
-                    yticklabels=labels, cbar=True, ax=ax3)
+        sns.heatmap(
+            combined_emb_np,
+            cmap="RdBu_r",
+            center=0,
+            xticklabels=list(range(n_embd)),
+            yticklabels=labels,
+            cbar=True,
+            cbar_kws=_cbar_kw,
+            ax=ax3,
+        )
         ax3.set_title("Token+Position Embeddings", fontsize=_title_fs, fontweight='bold', pad=6, loc='right')
         ax3.set_xlabel("Embedding Dim", fontsize=_axis_fs)
         ax3.set_ylabel("Token+Position", fontsize=_axis_fs)
@@ -163,13 +201,13 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
                 all_token_emb[token_idx, 1],
                 token_str,
                 fontsize=_scatter_bg,
-                alpha=0.5,
+                alpha=0.45,
                 ha="center",
                 va="center",
-                color="dimgray",
+                color="black",
                 zorder=1,
             )
-        # Foreground: tokens from THIS sequence (unchanged labels)
+        # Foreground: tokens from THIS sequence (Figure 5 token scatter = black)
         ax4.scatter(token_emb_np[:, 0], token_emb_np[:, 1], s=0, alpha=0, zorder=2)
         for i, token in enumerate(tokens):
             ax4.text(
@@ -180,7 +218,7 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
                 fontweight="bold",
                 ha="center",
                 va="center",
-                color="orange",
+                color="black",
                 zorder=3,
             )
         ax4.set_title("Token Embeddings (2D)", fontsize=_title_fs, fontweight='bold', pad=6)
@@ -202,13 +240,13 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
                 all_pos_emb[pos_idx, 1],
                 _pos_only_label(pos_idx),
                 fontsize=_scatter_bg,
-                alpha=0.55,
+                alpha=0.45,
                 ha="center",
                 va="center",
-                color="dimgray",
+                color="black",
                 zorder=1,
             )
-        # Foreground: positions used in THIS sequence
+        # Foreground: positions used in THIS sequence (Figure 5 position scatter = black)
         ax5.scatter(pos_emb_np[:, 0], pos_emb_np[:, 1], s=0, alpha=0, zorder=2)
         for i in range(T):
             ax5.text(
@@ -219,7 +257,7 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
                 fontweight="bold",
                 ha="center",
                 va="center",
-                color="teal",
+                color="black",
                 zorder=3,
             )
         ax5.set_title("Position Embeddings (2D)", fontsize=_title_fs, fontweight='bold', pad=6)
@@ -247,6 +285,7 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
             for pos_idx in range(block_size):
                 idx = token_idx * block_size + pos_idx
                 label = _token_pos_label(token_str, pos_idx)
+                bg_rgb = blend_colors(token_colors[token_idx], pos_colors[pos_idx])
                 ax6.text(
                     all_combined_emb[idx, 0],
                     all_combined_emb[idx, 1],
@@ -255,12 +294,14 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
                     alpha=0.4,
                     ha="center",
                     va="center",
-                    color="dimgray",
+                    color=bg_rgb,
                     zorder=1,
                 )
-        # Foreground: (token, position) pairs from THIS sequence
+        # Foreground: (token, position) pairs from THIS sequence (Figure 5 blended colors)
         ax6.scatter(combined_emb_np[:, 0], combined_emb_np[:, 1], s=0, alpha=0, zorder=2)
         for i in range(T):
+            tid = int(X[0, i].item())
+            fg_rgb = blend_colors(token_colors[tid], pos_colors[i])
             ax6.text(
                 combined_emb_np[i, 0],
                 combined_emb_np[i, 1],
@@ -269,7 +310,7 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
                 fontweight="bold",
                 ha="center",
                 va="center",
-                color="indigo",
+                color=fg_rgb,
                 zorder=3,
             )
         ax6.set_title("Token+Position\nEmbeddings (2D)", fontsize=_title_fs, fontweight='bold', pad=6)
