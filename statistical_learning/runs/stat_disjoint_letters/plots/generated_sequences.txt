@@ -1,0 +1,11 @@
+# Generated sequences (8 samples)
+# Each line is one sequence; characters joined verbatim.
+
+[00] catmopredmopmopmopredcatredcatmopcatmopcatredredmopredmopcat
+[01] catcatredmopmopcatmopredredredcatcatredcatmopcatmopcatmopcat
+[02] redmopcatcatmopredredcatmopcatcatmopcatcatcatmopcatredmopmop
+[03] mopcatredredcatmopredredmopcatmopcatredcatmopcatcatmopredred
+[04] mopmopcatmopmopcatmopredmopmopcatcatcatredredmopcatcatcatcat
+[05] catcatcatmopmopcatmopredredcatmopcatredredcatmopcatredcatmop
+[06] catmopredredredcatredredredredmopmopcatcatredcatmopredredmop
+[07] mopredcatcatredcatredcatmopmopredcatredredredredmopredmopcat

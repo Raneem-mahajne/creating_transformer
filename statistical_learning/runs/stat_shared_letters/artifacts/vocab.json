@@ -5,14 +5,12 @@
     "h",
     "m",
     "p",
-    "t",
-    "|"
+    "t"
   ],
-  "delimiter": "|",
   "words": [
     "cat",
     "hat",
     "map"
   ],
-  "complexity": "shared_letters"
+  "vocabulary_type": "shared_letters"
 }

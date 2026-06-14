@@ -1,0 +1,60 @@
+{
+  "words": [
+    "cat",
+    "hat",
+    "map"
+  ],
+  "root": {
+    "terminal": false,
+    "children": {
+      "c": {
+        "terminal": false,
+        "children": {
+          "a": {
+            "terminal": false,
+            "children": {
+              "t": {
+                "terminal": true,
+                "children": {},
+                "word": "cat",
+                "word_id": 0
+              }
+            }
+          }
+        }
+      },
+      "h": {
+        "terminal": false,
+        "children": {
+          "a": {
+            "terminal": false,
+            "children": {
+              "t": {
+                "terminal": true,
+                "children": {},
+                "word": "hat",
+                "word_id": 1
+              }
+            }
+          }
+        }
+      },
+      "m": {
+        "terminal": false,
+        "children": {
+          "a": {
+            "terminal": false,
+            "children": {
+              "p": {
+                "terminal": true,
+                "children": {},
+                "word": "map",
+                "word_id": 2
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

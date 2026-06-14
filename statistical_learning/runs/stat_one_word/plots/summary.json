@@ -1,0 +1,21 @@
+{
+  "num_sequences": 8,
+  "ground_truth_words": [
+    "cat"
+  ],
+  "learned_words": [
+    "cat"
+  ],
+  "missing_words": [],
+  "spurious_words": [],
+  "total_words_generated": 160,
+  "valid_word_count": 160,
+  "invalid_word_count": 0,
+  "heatmap_stats": {
+    "constrained_total": 400,
+    "constrained_correct": 400,
+    "constrained_incorrect": 0,
+    "constrained_accuracy": 1.0
+  },
+  "config_name": "stat_one_word"
+}

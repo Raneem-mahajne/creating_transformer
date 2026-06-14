@@ -1,0 +1,18 @@
+{
+  "num_sequences": 8,
+  "ground_truth_words": [
+    "cat",
+    "mop",
+    "red"
+  ],
+  "learned_words": [
+    "cat",
+    "mop",
+    "red"
+  ],
+  "missing_words": [],
+  "spurious_words": [],
+  "total_words_generated": 160,
+  "valid_word_count": 160,
+  "invalid_word_count": 0
+}

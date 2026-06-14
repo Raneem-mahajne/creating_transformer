@@ -1,0 +1,9 @@
+{
+  "total_words": 160,
+  "valid": {
+    "cat": 60,
+    "mop": 51,
+    "red": 49
+  },
+  "invalid": {}
+}

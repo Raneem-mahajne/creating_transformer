@@ -1,20 +1,18 @@
 {
   "name": "stat_shared_letters",
-  "complexity": "shared_letters",
+  "vocabulary_type": "shared_letters",
   "words": [
     "cat",
     "hat",
     "map"
   ],
-  "delimiter": "|",
   "alphabet": [
     "a",
     "c",
     "h",
     "m",
     "p",
-    "t",
-    "|"
+    "t"
   ],
   "num_states": 10,
   "num_accepting": 3

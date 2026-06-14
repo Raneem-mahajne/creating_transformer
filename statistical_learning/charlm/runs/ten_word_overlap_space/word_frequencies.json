@@ -1,0 +1,19 @@
+{
+  "total_words": 2000,
+  "valid_count": 2000,
+  "invalid_count": 0,
+  "validity_rate": 1.0,
+  "valid_frequencies": {
+    "cat": 189,
+    "hat": 259,
+    "mat": 165,
+    "rat": 183,
+    "met": 222,
+    "pet": 178,
+    "net": 221,
+    "ate": 180,
+    "eat": 219,
+    "tea": 184
+  },
+  "invalid_frequencies": {}
+}

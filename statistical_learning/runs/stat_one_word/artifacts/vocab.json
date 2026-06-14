@@ -2,12 +2,10 @@
   "alphabet": [
     "a",
     "c",
-    "t",
-    "|"
+    "t"
   ],
-  "delimiter": "|",
   "words": [
     "cat"
   ],
-  "complexity": "one_word"
+  "vocabulary_type": "one_word"
 }

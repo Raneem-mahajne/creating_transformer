@@ -1,0 +1,10 @@
+digraph trie {
+  node [shape=circle];
+  root [label=root];
+  root -> n1 [label="c"];
+  root [label="root"];
+  n2 -> n3 [label="a"];
+  n2 [label="n2"];
+  n4 -> n5 [label="t"];
+  n4 [label="n4"];
+}

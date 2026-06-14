@@ -1,4 +1,11 @@
-"""Prefix DFA from trie with delimiter reset for corpus sampling."""
+"""Cyclic concatenation DFA built from a prefix-free word trie.
+
+Sequences are raw concatenations of vocabulary words with no separator
+(e.g. "cathatmap"). The automaton walks the trie while reading a word and,
+on reaching a terminal (end of a word), restarts a new word by following the
+root's first-character transitions. For a prefix-free vocabulary terminal
+nodes have no children, so the result is a deterministic cyclic DFA.
+"""
 from __future__ import annotations
 
 from collections import deque
@@ -15,11 +22,10 @@ class DFA:
     alphabet: list[str]
     transitions: dict[tuple[int, str], int]
     state_metadata: dict[int, dict] = field(default_factory=dict)
-    delimiter: str = "|"
 
 
-def dfa_from_trie(root: TrieNode, words: list[str], delimiter: str) -> DFA:
-    """Build DFA whose states are trie nodes; accepting states are terminals."""
+def dfa_from_trie(root: TrieNode, words: list[str]) -> DFA:
+    """Build a cyclic DFA over the concatenation language (w1|w2|...)+."""
     id_map: dict[int, int] = {}  # id(node) -> state_id
     nodes: list[TrieNode] = []
     queue: deque[TrieNode] = deque([root])
@@ -56,18 +62,20 @@ def dfa_from_trie(root: TrieNode, words: list[str], delimiter: str) -> DFA:
             alphabet_chars.add(ch)
             transitions[(state_id, ch)] = id_map[id(child)]
 
-    alphabet_chars.add(delimiter)
+    # Concatenation: after finishing a word (terminal state), the next character
+    # starts a new word, so restart by following the root's first-char edges.
+    root_state = id_map[id(root)]
     for acc in accepting:
-        transitions[(acc, delimiter)] = id_map[id(root)]
+        for ch, child in root.children.items():
+            transitions[(acc, ch)] = id_map[id(child)]
 
     return DFA(
         states=list(range(len(nodes))),
-        start=id_map[id(root)],
+        start=root_state,
         accepting=sorted(accepting),
         alphabet=sorted(alphabet_chars),
         transitions=transitions,
         state_metadata=state_metadata,
-        delimiter=delimiter,
     )
 
 
@@ -91,7 +99,6 @@ def dfa_to_dict(dfa: DFA, words: list[str]) -> dict:
     transitions = {f"{s},{ch}": t for (s, ch), t in dfa.transitions.items()}
     return {
         "words": words,
-        "delimiter": dfa.delimiter,
         "states": dfa.states,
         "start": dfa.start,
         "accepting": dfa.accepting,
@@ -103,7 +110,6 @@ def dfa_to_dict(dfa: DFA, words: list[str]) -> dict:
 
 def dict_to_dfa(data: dict) -> tuple[DFA, list[str]]:
     words = list(data["words"])
-    delimiter = data["delimiter"]
     transitions: dict[tuple[int, str], int] = {}
     for key, target in data["transitions"].items():
         s_str, ch = key.split(",", 1)
@@ -116,11 +122,10 @@ def dict_to_dfa(data: dict) -> tuple[DFA, list[str]]:
         alphabet=list(data["alphabet"]),
         transitions=transitions,
         state_metadata=metadata,
-        delimiter=delimiter,
     )
     return dfa, words
 
 
-def build_dfa(words: list[str], delimiter: str) -> DFA:
+def build_dfa(words: list[str]) -> DFA:
     root = build_trie(words)
-    return dfa_from_trie(root, words, delimiter)
+    return dfa_from_trie(root, words)

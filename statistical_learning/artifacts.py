@@ -7,7 +7,7 @@ from pathlib import Path
 from statistical_learning.dfa import build_dfa, dfa_to_dict, dict_to_dfa
 from statistical_learning.encoder import build_alphabet, build_char_encoder
 from statistical_learning.trie import build_trie, trie_to_dict
-from statistical_learning.word_sets import validate_words
+from statistical_learning.word_sets import describe_vocabulary, validate_vocabulary
 
 PACKAGE_DIR = Path(__file__).resolve().parent
 
@@ -23,14 +23,15 @@ def get_artifacts_dir(config_name: str) -> Path:
 def build_and_save_all(config: dict) -> Path:
     name = config["name"]
     words = list(config["words"])
-    complexity = config["complexity"]
-    delimiter = config.get("delimiter", "|")
 
-    validate_words(words, complexity)
+    validate_vocabulary(words)
+    vocabulary_type = (
+        config.get("vocabulary_type") or config.get("complexity") or describe_vocabulary(words)
+    )
 
     root = build_trie(words)
-    dfa = build_dfa(words, delimiter)
-    alphabet = build_alphabet(words, delimiter)
+    dfa = build_dfa(words)
+    alphabet = build_alphabet(words)
 
     out_dir = get_artifacts_dir(name)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -45,9 +46,8 @@ def build_and_save_all(config: dict) -> Path:
         json.dump(
             {
                 "alphabet": alphabet,
-                "delimiter": delimiter,
                 "words": words,
-                "complexity": complexity,
+                "vocabulary_type": vocabulary_type,
             },
             f,
             indent=2,
@@ -55,9 +55,8 @@ def build_and_save_all(config: dict) -> Path:
 
     metadata = {
         "name": name,
-        "complexity": complexity,
+        "vocabulary_type": vocabulary_type,
         "words": words,
-        "delimiter": delimiter,
         "alphabet": alphabet,
         "num_states": len(dfa.states),
         "num_accepting": len(dfa.accepting),

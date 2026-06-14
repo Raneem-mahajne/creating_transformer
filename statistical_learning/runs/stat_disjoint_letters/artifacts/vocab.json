@@ -8,14 +8,12 @@
     "o",
     "p",
     "r",
-    "t",
-    "|"
+    "t"
   ],
-  "delimiter": "|",
   "words": [
     "cat",
     "mop",
     "red"
   ],
-  "complexity": "disjoint_letters"
+  "vocabulary_type": "disjoint_letters"
 }

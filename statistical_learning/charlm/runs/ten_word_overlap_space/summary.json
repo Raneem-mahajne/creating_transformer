@@ -1,0 +1,38 @@
+{
+  "regime": "ten_word_overlap",
+  "word_space": true,
+  "vocabulary": [
+    "cat",
+    "hat",
+    "mat",
+    "rat",
+    "met",
+    "pet",
+    "net",
+    "ate",
+    "eat",
+    "tea"
+  ],
+  "alphabet": [
+    " ",
+    "a",
+    "c",
+    "e",
+    "h",
+    "m",
+    "n",
+    "p",
+    "r",
+    "t"
+  ],
+  "corpus_chars": 50000,
+  "final_train_loss": 0.5699692368507385,
+  "final_val_loss": 0.6090277433395386,
+  "sample_chars": 8000,
+  "validity_rate": 1.0,
+  "valid_count": 2000,
+  "invalid_count": 0,
+  "missing_words": [],
+  "spurious_words": [],
+  "invalid_word_types": []
+}

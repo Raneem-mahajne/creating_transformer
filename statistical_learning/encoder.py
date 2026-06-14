@@ -1,11 +1,10 @@
 """Character-level encoder for statistical-learning corpora."""
 
 
-def build_alphabet(words: list[str], delimiter: str) -> list[str]:
+def build_alphabet(words: list[str]) -> list[str]:
     chars = set()
     for w in words:
         chars.update(w)
-    chars.add(delimiter)
     return sorted(chars)
 
 

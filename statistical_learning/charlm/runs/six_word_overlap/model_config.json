@@ -1,0 +1,20 @@
+{
+  "alphabet": [
+    "a",
+    "b",
+    "c",
+    "h",
+    "m",
+    "n",
+    "o",
+    "t"
+  ],
+  "vocab_size": 8,
+  "n_embd": 2,
+  "block_size": 40,
+  "num_heads": 1,
+  "head_size": 2,
+  "n_layer": 2,
+  "use_layernorm": true,
+  "use_residual": true
+}

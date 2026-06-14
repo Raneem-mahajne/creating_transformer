@@ -1,0 +1,26 @@
+{
+  "words": [
+    "cat"
+  ],
+  "root": {
+    "terminal": false,
+    "children": {
+      "c": {
+        "terminal": false,
+        "children": {
+          "a": {
+            "terminal": false,
+            "children": {
+              "t": {
+                "terminal": true,
+                "children": {},
+                "word": "cat",
+                "word_id": 0
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

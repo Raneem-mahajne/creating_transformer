@@ -135,6 +135,8 @@ def load_checkpoint(config_name: str, step: int | None = None) -> dict | None:
         num_heads=mc["num_heads"],
         head_size=mc["head_size"],
         use_residual=mc.get("use_residual", True),
+        n_layer=mc.get("n_layer", 1),
+        use_layernorm=mc.get("use_layernorm", False),
     )
     state = torch.load(checkpoint_dir / "model.pt", weights_only=True)
     model.load_state_dict(state, strict=False)

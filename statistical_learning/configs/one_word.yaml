@@ -1,16 +1,18 @@
 name: stat_one_word
-complexity: one_word
+vocabulary_type: one_word
 words: ["cat"]
-delimiter: "|"
 data:
   num_sequences: 2000
   min_length: 40
   max_length: 120
 model:
-  n_embd: 2
+  n_embd: 16
   block_size: 16
-  num_heads: 1
-  head_size: 2
+  num_heads: 4
+  head_size: 4
+  n_layer: 2
+  use_layernorm: true
+  use_residual: true
 training:
   max_steps: 10000
   batch_size: 8

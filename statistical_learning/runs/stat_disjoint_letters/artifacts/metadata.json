@@ -1,12 +1,11 @@
 {
   "name": "stat_disjoint_letters",
-  "complexity": "disjoint_letters",
+  "vocabulary_type": "disjoint_letters",
   "words": [
     "cat",
     "mop",
     "red"
   ],
-  "delimiter": "|",
   "alphabet": [
     "a",
     "c",
@@ -16,8 +15,7 @@
     "o",
     "p",
     "r",
-    "t",
-    "|"
+    "t"
   ],
   "num_states": 10,
   "num_accepting": 3

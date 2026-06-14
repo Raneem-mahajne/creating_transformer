@@ -23,18 +23,19 @@ from statistical_learning.checkpoint import get_checkpoint_dir, load_checkpoint,
 from statistical_learning.config_loader import load_config
 from statistical_learning.dfa import build_dfa
 from statistical_learning.encoder import build_alphabet, build_char_encoder
+from statistical_learning.word_sets import describe_vocabulary, validate_vocabulary
 from statistical_learning.generator import WordCorpusGenerator
 from statistical_learning.plotting.export_dot import export_dfa_dot, export_trie_dot
 from statistical_learning.trie import build_trie
+from statistical_learning.visualize import visualize_from_checkpoint
 
 
-def train(config: dict, force_retrain: bool = False) -> None:
+def train(config: dict, force_retrain: bool = False, run_visualize: bool = True) -> None:
     config_name = config["name"]
     data_config = config["data"]
     model_config = config["model"]
     training_config = config["training"]
     words = list(config["words"])
-    delimiter = config.get("delimiter", "|")
 
     checkpoint_data = None
     if not force_retrain:
@@ -42,6 +43,8 @@ def train(config: dict, force_retrain: bool = False) -> None:
 
     if checkpoint_data is not None:
         print("Using existing checkpoint. Pass --force-retrain to retrain.")
+        if run_visualize:
+            visualize_from_checkpoint(config)
         return
 
     checkpoint_base = get_checkpoint_dir(config_name)
@@ -56,7 +59,7 @@ def train(config: dict, force_retrain: bool = False) -> None:
     export_trie_dot(root, artifacts_dir / "trie.dot")
     export_dfa_dot(dfa, artifacts_dir / "dfa.dot")
 
-    generator = WordCorpusGenerator(words, delimiter, dfa=dfa)
+    generator = WordCorpusGenerator(words, dfa=dfa)
     sequences = generator.generate_dataset(
         num_sequences=data_config["num_sequences"],
         min_length=data_config["min_length"],
@@ -64,7 +67,7 @@ def train(config: dict, force_retrain: bool = False) -> None:
     )
     print(f"Generated {len(sequences)} sequences")
 
-    alphabet = build_alphabet(words, delimiter)
+    alphabet = build_alphabet(words)
     encode, decode, vocab_size, itos, stoi = build_char_encoder(alphabet)
     print("Vocabulary size:", vocab_size)
     print("Alphabet:", alphabet)
@@ -78,9 +81,12 @@ def train(config: dict, force_retrain: bool = False) -> None:
     num_heads = model_config["num_heads"]
     head_size = model_config["head_size"]
     use_residual = model_config.get("use_residual", True)
+    n_layer = model_config.get("n_layer", 1)
+    use_layernorm = model_config.get("use_layernorm", False)
 
     model = BigramLanguageModel(
-        vocab_size, n_embd, block_size, num_heads, head_size, use_residual=use_residual
+        vocab_size, n_embd, block_size, num_heads, head_size,
+        use_residual=use_residual, n_layer=n_layer, use_layernorm=use_layernorm,
     )
     optimizer = torch.optim.AdamW(model.parameters(), lr=training_config["learning_rate"])
 
@@ -163,42 +169,113 @@ def train(config: dict, force_retrain: bool = False) -> None:
         step=None,
     )
 
+    if run_visualize:
+        visualize_from_checkpoint(config)
+
 
 def artifacts_only(config: dict) -> None:
     artifacts_dir = build_and_save_all(config)
     words = list(config["words"])
-    delimiter = config.get("delimiter", "|")
     root = build_trie(words)
-    dfa = build_dfa(words, delimiter)
+    dfa = build_dfa(words)
     export_trie_dot(root, artifacts_dir / "trie.dot")
     export_dfa_dot(dfa, artifacts_dir / "dfa.dot")
     print(f"DOT files: {artifacts_dir / 'trie.dot'}, {artifacts_dir / 'dfa.dot'}")
+
+
+DEFAULT_DATA = {"num_sequences": 2000, "min_length": 40, "max_length": 120}
+DEFAULT_MODEL = {
+    "n_embd": 16,
+    "block_size": 16,
+    "num_heads": 4,
+    "head_size": 4,
+    "n_layer": 2,
+    "use_layernorm": True,
+    "use_residual": True,
+}
+DEFAULT_TRAINING = {
+    "max_steps": 10000,
+    "batch_size": 8,
+    "learning_rate": 0.001,
+    "eval_interval": 200,
+    "eval_iterations": 50,
+    "checkpoint_interval": 100,
+}
+
+
+def build_inline_config(name: str, words: list[str]) -> dict:
+    """Build a config for an arbitrary vocabulary passed on the CLI (no YAML needed)."""
+    validate_vocabulary(words)
+    return {
+        "name": name,
+        "vocabulary_type": describe_vocabulary(words),
+        "words": words,
+        "data": dict(DEFAULT_DATA),
+        "model": dict(DEFAULT_MODEL),
+        "training": dict(DEFAULT_TRAINING),
+    }
+
+
+def _arg_value(argv: list[str], flag: str) -> str | None:
+    if flag in argv:
+        idx = argv.index(flag)
+        if idx + 1 < len(argv):
+            return argv[idx + 1]
+    return None
 
 
 def main() -> None:
     argv = sys.argv[1:]
     if not argv or argv[0] in ("-h", "--help"):
         print(
-            "Usage: python -m statistical_learning.main <config_name> [--artifacts-only] [--force-retrain]\n"
-            "  config_name: one_word | disjoint_letters | shared_letters"
+            "Usage: python -m statistical_learning.main <config_name> [options]\n"
+            "  config_name: one_word | disjoint_letters | shared_letters | any saved config\n"
+            "Options:\n"
+            "  --words a,b,c            train on an arbitrary (prefix-free) vocabulary, no YAML needed\n"
+            "  --name NAME              run/output name when using --words (default: stat_custom)\n"
+            "  --artifacts-only         only build trie/DFA/vocab artifacts, no training\n"
+            "  --force-retrain          delete existing checkpoints and train from scratch\n"
+            "  --visualize              load a trained checkpoint and produce plots only\n"
+            "  --step N                 with --visualize, use checkpoint at step N (default: final)\n"
+            "  --no-visualize           after training, skip the visualization pass\n"
+            "  --max-steps N            cap training steps (smoke test)"
         )
         sys.exit(0 if argv and argv[0] in ("-h", "--help") else 1)
 
-    config_name = argv[0]
     artifacts_only_flag = "--artifacts-only" in argv
     force_retrain = "--force-retrain" in argv
+    visualize_only = "--visualize" in argv
+    run_visualize = "--no-visualize" not in argv
 
-    config = load_config(config_name)
+    step: int | None = None
+    step_arg = _arg_value(argv, "--step")
+    if step_arg is not None:
+        step = int(step_arg)
+
+    words_arg = _arg_value(argv, "--words")
+    if words_arg is not None:
+        words = [w.strip() for w in words_arg.split(",") if w.strip()]
+        name = _arg_value(argv, "--name") or "stat_custom"
+        config = build_inline_config(name, words)
+    else:
+        config = load_config(argv[0])
+
     if "--max-steps" in argv:
-        idx = argv.index("--max-steps")
-        if idx + 1 < len(argv):
-            config["training"]["max_steps"] = int(argv[idx + 1])
-    print(f"Loaded config: {config['name']} (complexity={config['complexity']})")
+        max_arg = _arg_value(argv, "--max-steps")
+        if max_arg is not None:
+            config["training"]["max_steps"] = int(max_arg)
+    print(
+        f"Loaded config: {config['name']} "
+        f"(vocabulary_type={config.get('vocabulary_type') or describe_vocabulary(config['words'])}, "
+        f"words={config['words']})"
+    )
 
     if artifacts_only_flag:
         artifacts_only(config)
+    elif visualize_only:
+        visualize_from_checkpoint(config, step=step)
     else:
-        train(config, force_retrain=force_retrain)
+        train(config, force_retrain=force_retrain, run_visualize=run_visualize)
 
 
 if __name__ == "__main__":

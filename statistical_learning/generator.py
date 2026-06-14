@@ -1,4 +1,4 @@
-"""Corpus generator: repeated words separated by a delimiter."""
+"""Corpus generator: random words concatenated with no separator."""
 from __future__ import annotations
 
 import random
@@ -7,10 +7,9 @@ from statistical_learning.dfa import DFA, build_dfa
 
 
 class WordCorpusGenerator:
-    def __init__(self, words: list[str], delimiter: str = "|", dfa: DFA | None = None):
+    def __init__(self, words: list[str], dfa: DFA | None = None):
         self.words = list(words)
-        self.delimiter = delimiter
-        self.dfa = dfa if dfa is not None else build_dfa(words, delimiter)
+        self.dfa = dfa if dfa is not None else build_dfa(words)
 
     def _legal_chars(self, state: int) -> list[str]:
         return sorted(ch for (s, ch) in self.dfa.transitions if s == state)
@@ -28,8 +27,6 @@ class WordCorpusGenerator:
                 if len(out) >= length:
                     return out
                 out.append(ch)
-            if len(out) < length:
-                out.append(self.delimiter)
         return out
 
     def generate_dataset(

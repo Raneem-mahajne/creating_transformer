@@ -1,0 +1,34 @@
+{
+  "vocab_size": 9,
+  "step": 400,
+  "steps_for_plot": [
+    0,
+    200,
+    400
+  ],
+  "train_loss_history": [
+    2.3478524684906006,
+    0.4414505660533905,
+    0.39429664611816406
+  ],
+  "val_loss_history": [
+    2.3350369930267334,
+    0.43916037678718567,
+    0.38802483677864075
+  ],
+  "rule_error_history": [
+    0.8881987577639752,
+    0.08571428571428572,
+    0.027624309392265192
+  ],
+  "model_config": {
+    "n_embd": 16,
+    "block_size": 16,
+    "num_heads": 4,
+    "head_size": 4,
+    "n_layer": 2,
+    "use_layernorm": true,
+    "use_residual": true
+  },
+  "eval_interval": 200
+}
