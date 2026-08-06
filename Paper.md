@@ -23,7 +23,7 @@ We can take advantage of this direct visibility to demonstrate how the informati
 
 ### 1.1 Related work
 
-Much of the work in the mechanistic interpretability literature focuses on large language models and tries to interpret attention in terms of linguistic relationships or specific circuits (Vaswani et al., 2017; Clark et al., 2019; Vig, 2019; Wang, 2022; Liu, 2022). However, such work rarely traces the full forward pass end-to-end in a directly visualizable space; our contribution is a worked geometric walkthrough of one such model. Other work on small models has analyzed how geometric structure in embedding space emerges during training on modular arithmetic (Nanda et al., 2023; Musat, 2024; Gromov, 2023; Zhong et al., 2023; Welch Labs 2025), and algorithmic descriptions of transformer computations have been formalized via languages such as RASP (Weiss et al., 2021).
+Much of the work in the mechanistic interpretability literature focuses on large language models and tries to interpret attention in terms of linguistic relationships or specific circuits (Vaswani et al., 2017; Clark et al., 2019; Vig, 2019; Wang, 2022; Liu, 2022). However, such work rarely traces the full forward pass end-to-end in a directly visualizable space; our contribution is a worked geometric walkthrough of one such model. Other work takes a more mathematical approach to deconstructing the operations performed by each part of the transformer (Elhage et al., 2021). Other work on small models has analyzed how geometric structure in embedding space emerges during training on modular arithmetic (Nanda et al., 2023; Musat, 2024; Gromov, 2023; Zhong et al., 2023; Welch Labs 2025), and algorithmic descriptions of transformer computations have been formalized via languages such as RASP (Weiss et al., 2021).
 
 ## 2. Methods
 
@@ -394,6 +394,8 @@ Nearly all code — including the transformer model, training pipeline, and figu
 - Caucheteux, C., Gramfort, A., & King, J.-R. (2021). GPT-2's activations predict the degree of semantic comprehension in the human brain. *bioRxiv*. https://doi.org/10.1101/2021.04.20.440622
 
 - Doerig, A., Kietzmann, T. C., Allen, E., et al. (2025). High-level visual representations in the human brain are aligned with large language models. *Nature Machine Intelligence*, *7*, 1220–1234. https://doi.org/10.1038/s42256-025-01072-0
+
+- Elhage, N., et al. (2021). A mathematical framework for transformer circuits. *Transformer Circuits Thread*. https://transformer-circuits.pub/2021/framework/index.html
 
 - Gromov, A. (2023). Grokking modular arithmetic. *arXiv preprint* arXiv:2301.02679v1. https://arxiv.org/pdf/2301.02679
 

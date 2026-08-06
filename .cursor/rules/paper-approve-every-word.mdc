@@ -1,0 +1,18 @@
+---
+description: Paper text changes require exact user-approved wording
+alwaysApply: true
+---
+
+# Paper text: approve every word
+
+When editing [Paper.md](Paper.md), [paper.tex](paper.tex), [paper_standalone.tex](paper_standalone.tex), or any derived PDF/source of the paper:
+
+1. **Do not change any prose** (including citations, related work, abstract, discussion, captions) unless the user has approved the **exact words** to insert, delete, or replace.
+2. Before applying a change, show the user:
+   - the **exact BEFORE** string (full sentence or minimal contiguous span), and
+   - the **exact AFTER** string (full sentence or minimal contiguous span),
+   with **no paraphrasing, no ellipses, no “something like”**.
+3. Wait for explicit approval (e.g. “yes”, “approved”, “do it”) of that exact wording. If they edit your proposal, use **their** wording only.
+4. Prefer **citation-only** edits: add/remove a parenthetical cite or a References entry. Do not rewrite surrounding sentences unless the user supplies the full replacement sentence.
+5. Typos and formatting fixes also require the same BEFORE/AFTER approval unless the user explicitly says “fix all typos” or equivalent for a scoped list they already approved.
+6. Creating auxiliary files (e.g. `References.md`) is fine; syncing those into the paper still requires approved exact wording.
