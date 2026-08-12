@@ -77,21 +77,21 @@ body {
   min-height: 0;
   justify-content: space-between;
 }
-.col-1 { flex: 2.21; }
-.col-2 { flex: 2.05; }
-.col-3 { flex: 1.94; }
-.col-4 { flex: 1.81; }
+.col-1 { flex: 1.87; }
+.col-2 { flex: 2.19; }
+.col-3 { flex: 2.03; }
+.col-4 { flex: 2.35; }
 
-/* ===== Section labels ===== */
-.section-label {
+/* ===== Card title bars ===== */
+.card .card-title {
   background: var(--navy);
   color: #fff;
-  font-size: 13pt;
+  font-size: 14pt;
   font-weight: 800;
-  padding: 1.5mm 3.5mm;
-  border-radius: 1.5mm;
-  border-left: 3mm solid var(--gold);
-  flex-shrink: 0;
+  padding: 2mm 3.5mm;
+  border-left: 3.5mm solid var(--gold);
+  border-radius: 1.5mm 1.5mm 0 0;
+  margin: -2.5mm -2.5mm 2mm -2.5mm;
 }
 
 /* ===== Cards: figure + caption, natural height ===== */
@@ -102,6 +102,7 @@ body {
   padding: 2.5mm;
 }
 .card img { width: 100%; height: auto; display: block; border-radius: 1mm; }
+.card.arch img { max-height: 215mm; width: auto; max-width: 100%; margin: 0 auto; }
 .card .cap { font-size: 10.5pt; color: var(--text-light); line-height: 1.3; margin-top: 1.5mm; }
 .card .cap b { color: var(--navy); font-weight: 900; }
 
@@ -164,76 +165,87 @@ body {
       <h2>Abstract</h2>
       <p>We present a framework for building and interpreting minimal transformer models trained on procedurally-generated integer sequences. As a pedagogical case study, we apply it to one minimal model on a single synthetic retrieval task. By constraining the embedding dimension and head size to $2$, we enable full two-dimensional visualization of every internal representation. Embeddings, query/key/value transforms, attention outputs, residual streams, and the language-model head's decision boundaries can all be seen directly. We argue that, in this setting, the learned geometry can be read as an algorithm. The arrangement of points and boundaries in $\mathbb{R}^2$ can be read as a step-by-step procedure. Using a simple task where the model must produce the most recent even number whenever it sees the '+' operator, we visually walk through every step of the transformer's computation. We show how the model embeds the tokens and their respective positions in the sequence, transforms them via the Q, K, and V matrices, uses the dot product between the Q and K representations to form the attention matrix, and uses the attention matrix to select values that move the representation of each input token to the region of the domain of the LM head that will correctly predict the next token. We introduce a suite of interpretability visualizations that make the algorithmic interpretation of this procedure explicit, and provide training evolution animations showing how the algorithmic geometry emerges during learning. The framework offers a pedagogical and experimental testbed to explore how transformers use informational geometry to solve tasks.</p>
     </div>
-    <div class="section-label">Model &amp; Task</div>
-    <div class="card">
+    <div class="card arch">
+      <div class="card-title">Model Architecture</div>
       <img src="fig01.png" alt="Figure 1">
       <div class="cap"><b>Figure 1.</b> Architecture of the minimal transformer. Every component operates entirely in $\mathbb{R}^2$.</div>
     </div>
     <div class="card">
+      <div class="card-title">Training Data</div>
       <img src="fig02.png" alt="Figure 2">
       <div class="cap"><b>Figure 2.</b> Sample training sequences as heatmaps. Green: constrained position (immediately after <code>+</code>) with the correct next token (the most recent even number). Gray: unconstrained position (any token is valid).</div>
     </div>
-  </div>
-
-  <div class="col col-2">
-    <div class="section-label">The Model Learns the Rule</div>
     <div class="card">
+      <div class="card-title">Learning Curve</div>
       <img src="fig03.png" alt="Figure 3">
       <div class="cap"><b>Figure 3.</b> Training dynamics over 20,000 steps. Left axis: cross-entropy loss. Right axis: rule error — the fraction of constrained positions (tokens immediately following <code>+</code>) where the model's top predicted token is not the target (the most recent even number). Rule error near 90% is chance level; near 0% indicates the rule is learned.</div>
     </div>
     <div class="card">
+      <div class="card-title">Generated Sequences</div>
       <img src="fig04.png" alt="Figure 4">
       <div class="cap"><b>Figure 4.</b> Model-generated sequences at initialization (top) vs. after training (bottom). Green = correct at constrained positions (after <code>+</code>), red = wrong at constrained positions, gray = unconstrained. Top: at step 0, constrained positions are mostly red (random predictions). Bottom: after training, constrained positions are mostly green (correct "last even" outputs).</div>
     </div>
-    <div class="section-label">The Learned Geometry</div>
+  </div>
+
+  <div class="col col-2">
     <div class="card">
+      <div class="card-title">Learned Embeddings</div>
       <img src="fig05.png" alt="Figure 5">
       <div class="cap"><b>Figure 5.</b> Learned embeddings. (a) Token embeddings $\mathbf{x}_i$ shown as heatmap. (b) Position embeddings $\mathbf{p}_i$ shown as heatmap. (c) Combined token+position embeddings shown as scatterplot. (d) Positions $\mathbf{p}_i$ shown as scatterplot. (e) Token+position embeddings $\mathbf{e}_i$ shown as scatterplot. Positions are indicated as subscripts next to each token e.g. $+_5$ is the <code>+</code> token at position 5.</div>
     </div>
     <div class="card">
+      <div class="card-title">Q, K, V Projections</div>
       <img src="fig06.png" alt="Figure 6">
       <div class="cap"><b>Figure 6.</b> QKV projections. (a) Original combined token+position embeddings (as in Figure 5e). (b) Query-space (blue), with $W_Q$ inset. (c) Key-space (red), with $W_K$ inset. (d) Value-space (green), with $W_V$ inset. All 96 token+position points in each panel.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Who Attends to Whom: Query–Key Geometry</div>
+      <img src="fig07.png" alt="Figure 7">
+      <div class="cap"><b>Figure 7.</b> Query–key geometry in Q/K space. <b>Top:</b> joint query–key space (blue: queries; red: keys; labels show token and position). <b>Bottom:</b> Focus on the query $+_5$ (blue); background color indicates the dot product of the $+_5$ query with every point in space. Keys with position $\geq 5$ are grayed due to the causal mask.</div>
     </div>
   </div>
 
   <div class="col col-3">
     <div class="card">
-      <img src="fig07.png" alt="Figure 7">
-      <div class="cap"><b>Figure 7.</b> Query–key geometry in Q/K space. <b>Top:</b> joint query–key space (blue: queries; red: keys; labels show token and position). <b>Bottom:</b> Focus on the query $+_5$ (blue); background color indicates the dot product of the $+_5$ query with every point in space. Keys with position $\geq 5$ are grayed due to the causal mask.</div>
-    </div>
-    <div class="card">
+      <div class="card-title">QK Scores for <code>+</code> Queries</div>
       <img src="fig08.png" alt="Figure 8">
       <div class="cap"><b>Figure 8.</b> Pre-softmax query–key scores $QK^\top$, restricted to <code>+</code> queries. Each subplot shows an 8×8 matrix of dot products: <code>+</code> query positions (rows) vs. key positions (columns) for a particular key token.</div>
     </div>
     <div class="card">
+      <div class="card-title">Output Probability Landscape</div>
       <img src="fig09.png" alt="Figure 9">
       <div class="cap"><b>Figure 9.</b> Output probability landscape (per-unit view). Each subplot shows the softmax probability $P(\text{next} = \text{token})$ over the 2D plane for one output token (digits 0–10 and the <code>+</code> operator).</div>
     </div>
     <div class="card">
+      <div class="card-title">Output Landscape Summary</div>
       <img src="fig10.png" alt="Figure 10">
       <div class="cap"><b>Figure 10.</b> Output landscape summary (summary of Figure 9). (a) Entropy of the output distribution (nats); high in the indifference region (top half), near zero in even-number target zones (bottom half). (b) Argmax prediction map: color and annotation indicate which token has the highest predicted probability at each point. (c) Argmax map with combined embeddings $\mathbf{e}_i$ overlaid. (d) Argmax map with value-transformed vectors $\mathbf{v}_j$ overlaid.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Tracing a Sequence <code>4 1 + 4 6 9 5 +</code>: Embeddings</div>
+      <img src="fig11.png" alt="Figure 11">
+      <div class="cap"><b>Figure 11.</b> Embeddings for the demo sequence <code>4 1 + 4 6 9 5 +</code>. <b>a-c:</b> Embedding heatmaps for tokens, positions and token+position. <b>d–f:</b> 2D scatter plot views of tokens, positions, and token+position combinations, shown over a backdrop of all possible tokens, positions, and token+position embeddings (light gray).</div>
     </div>
   </div>
 
   <div class="col col-4">
-    <div class="section-label">Tracing a Sequence: <code>4 1 + 4 6 9 5 +</code></div>
     <div class="card">
-      <img src="fig11.png" alt="Figure 11">
-      <div class="cap"><b>Figure 11.</b> Embeddings for the demo sequence <code>4 1 + 4 6 9 5 +</code>. <b>a-c:</b> Embedding heatmaps for tokens, positions and token+position. <b>d–f:</b> 2D scatter plot views of tokens, positions, and token+position combinations, shown over a backdrop of all possible tokens, positions, and token+position embeddings (light gray).</div>
-    </div>
-    <div class="card">
+      <div class="card-title">Tracing: Q &amp; K</div>
       <img src="fig12.png" alt="Figure 12">
       <div class="cap"><b>Figure 12.</b> Q and K for the demo sequence. (a) Q heatmap, (b) K heatmap, (c) scatterplot of queries (blue), and keys (red) for tokens within our test sequence against a backdrop of all 96 possible queries and keys (gray).</div>
     </div>
     <div class="card">
+      <div class="card-title">Tracing: Attention Computation</div>
       <img src="fig13.png" alt="Figure 13">
       <div class="cap"><b>Figure 13.</b> Attention computation for the demo sequence. (a) The background of each panel displays the dot product of a specific query (blue) in the test sequence with every point in space (green = high, white = low). The unmasked (red) and masked (gray) keys are overlaid on this space to show their dot products with the selected query. (b) The masked $Q \cdot K^\top$ matrix, (c) the attention matrix after normalization by $\sqrt{d_k}$ and applying softmax.</div>
     </div>
     <div class="card">
+      <div class="card-title">Tracing: Values &amp; Attention Output</div>
       <img src="fig14.png" alt="Figure 14">
       <div class="cap"><b>Figure 14.</b> Values and attention output for the demo sequence. (a) Attention weight matrix as in Figure 13c, (b) Values for each digit shown as heatmaps. (c) Attention outputs shown as heatmaps. (d) Values shown as scatter plot. (e) Attention output shown as scatter plot.</div>
     </div>
     <div class="card">
+      <div class="card-title">Tracing: Next-Token Prediction</div>
       <img src="fig15.png" alt="Figure 15">
       <div class="cap"><b>Figure 15.</b> Predicting the next token by summing the input embeddings and attention vectors. (a) Top: Heatmaps illustrating the 2D values for the input embeddings ($\mathbf{e}$) for each token in the test sequence. Bottom: Input embeddings in the 2D output space, where the background colors represent the most likely next-token prediction. (b) Top: The attention vectors ($\mathrm{Attn}(\mathbf{e})$). Bottom: The attention weights shown as arrows from the origin. (c) Top: The sum of the input embeddings and the attention vectors ($\mathbf{z}$) as heatmap. Bottom: Input embeddings (white annotations) are moved by the attention vectors (arrows) to the correct region for predicting the next token.</div>
     </div>
