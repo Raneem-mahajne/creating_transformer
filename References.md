@@ -28,8 +28,17 @@ Links were checked with HTTP HEAD/GET on 2026-08-06; status notes are at the bot
 - Elhage, N., et al. (2021). A mathematical framework for transformer circuits. *Transformer Circuits Thread*.  
   [Article](https://transformer-circuits.pub/2021/framework/index.html)
 
-- Geva, M., Schuster, R., Berant, J., & Levy, O. (2021). Transformer feed-forward layers are key-value memories. *EMNLP*.  
+- Geva, M., Schuster, R., Berant, J., & Levy, O. (2021). Transformer feed-forward layers are key-value memories. *EMNLP*, 5484–5495.  
   [ACL Anthology](https://aclanthology.org/2021.emnlp-main.446/) · [PDF](https://aclanthology.org/2021.emnlp-main.446.pdf) · [arXiv](https://arxiv.org/abs/2012.14913)
+
+- Geva, M., Caciularu, A., Wang, K., & Goldberg, Y. (2022). Transformer feed-forward layers build predictions by promoting concepts in the vocabulary space. *EMNLP*, 30–45.  
+  [ACL Anthology](https://aclanthology.org/2022.emnlp-main.3/) · [PDF](https://aclanthology.org/2022.emnlp-main.3.pdf) · [arXiv](https://arxiv.org/abs/2203.14680)
+
+- Belrose, N., Furman, Z., Smith, L., Halawi, D., Ostrovsky, I., McKinney, L., Biderman, S., & Steinhardt, J. (2023). Eliciting latent predictions from transformers with the tuned lens. *arXiv preprint* arXiv:2303.08112.  
+  [arXiv](https://arxiv.org/abs/2303.08112) · [PDF](https://arxiv.org/pdf/2303.08112)
+
+- nostalgebraist. (2020). Interpreting GPT: The logit lens. LessWrong.  
+  [LessWrong](https://www.lesswrong.com/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens)
 
 ### Toy models, grokking, and geometric algorithms
 

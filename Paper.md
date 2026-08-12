@@ -102,7 +102,7 @@ Thus $\mathrm{Attn}(\mathbf{e})_i$ is the "message" delivered to position $i$ by
 $$
 \mathbf{z}_i = \mathbf{e}_i + \mathrm{Attn}(\mathbf{e})_i.
 $$
-So $\mathbf{z}_i$ is the quantity that is passed into the feedforward network. (Note that the feedforward network itself can be interpreted as a key-value operation over its inputs; see Geva et al., 2021).
+So $\mathbf{z}_i$ is the quantity that is passed into the feedforward network. (Note that the feedforward network itself can be interpreted as a key-value operation over its inputs; see Geva et al., 2021, 2022).
 
 **Second residual.** The feedforward network (FFN) is applied to $\mathbf{z}_i$, and its output is added back to $\mathbf{z}_i$ (the second residual connection). The resulting **hidden state** passed to the LM head is
 $$
@@ -233,7 +233,7 @@ In other words, $\mathbf{z}_i$ can be thought of as being the sum of two constit
 
 Panels (c) and (d) of Figure 10 overlay the embeddings $\mathbf{e}_i$ and the values $\mathbf{v}_j$, respectively, on the argmax map (panel b) to reveal where they sit relative to the output network's decision regions. In panel (c), the 96 combined embeddings $\mathbf{e}_i$ (12 tokens $\times$ 8 positions) are plotted. The digit embeddings generally fall in the high-entropy indifference region in the upper half-plane (visible in panel a), where no specific retrieval is triggered. In contrast, all `+` embeddings land in the lower half-plane — inside the strong prediction region — which provides a geometric head start for the algorithm: the model has already categorized `+` as requiring an even-number output based on token identity and position alone. However, because the embeddings lack the context of the rest of the string, it can identify the "type" of output needed (even/odd/`+`) but cannot resolve the specific value. This defines the attention layer's objective: it must look back to find the most recent even number and produce a value vector that, when added to the residual stream, nudges the representation into the correct even-number target zone.
 
-Panel (d) shows the value-transformed vectors $\mathbf{v}_j = W_V \mathbf{e}_j$ for all 96 combined token+position embeddings, overlaid on the same argmax map. We observe that the ordering of the value vectors on the plane in Figure 10d is the same ordering as the even-digit prediction zones in Figure 10b. This illustrates that the purpose of the value vectors is to nudge the embeddings towards a particular zone in order to produce the correct output. However, *which* value specifically will be chosen depends on the attention matrix which requires a specific sequence.
+Panel (d) shows the value-transformed vectors $\mathbf{v}_j = W_V \mathbf{e}_j$ for all 96 combined token+position embeddings, overlaid on the same argmax map. We observe that the ordering of the value vectors on the plane in Figure 10d is the same ordering as the even-digit prediction zones in Figure 10b. This overlay reads $\mathbf{v}_j$ against a landscape whose native input is $\mathbf{z}_i$, a technique similar in spirit to the "logit lens" used to probe intermediate layers in large language models (nostalgebraist, 2020; Geva et al., 2021, 2022; Belrose et al., 2023). This illustrates that the purpose of the value vectors is to nudge the embeddings towards a particular zone in order to produce the correct output. However, *which* value specifically will be chosen depends on the attention matrix which requires a specific sequence.
 (Per-unit heatmaps with embedding and value overlays are included in the Supplementary Figures.)
 
 ![Output Landscape Summary](plus_last_even/plots/a4/07_output_landscape_summary.png)
@@ -391,13 +391,17 @@ Nearly all code — including the transformer model, training pipeline, and figu
 
 - Clark, K., Khandelwal, U., Levy, O., & Manning, C. D. (2019). What does BERT look at? An analysis of BERT's attention. *ACL Workshop on BlackboxNLP*.
 
+- Belrose, N., Furman, Z., Smith, L., Halawi, D., Ostrovsky, I., McKinney, L., Biderman, S., & Steinhardt, J. (2023). Eliciting latent predictions from transformers with the tuned lens. *arXiv preprint* arXiv:2303.08112. https://arxiv.org/abs/2303.08112
+
 - Caucheteux, C., Gramfort, A., & King, J.-R. (2021). GPT-2's activations predict the degree of semantic comprehension in the human brain. *bioRxiv*. https://doi.org/10.1101/2021.04.20.440622
 
 - Doerig, A., Kietzmann, T. C., Allen, E., et al. (2025). High-level visual representations in the human brain are aligned with large language models. *Nature Machine Intelligence*, *7*, 1220–1234. https://doi.org/10.1038/s42256-025-01072-0
 
 - Elhage, N., et al. (2021). A mathematical framework for transformer circuits. *Transformer Circuits Thread*. https://transformer-circuits.pub/2021/framework/index.html
 
-- Geva, M., Schuster, R., Berant, J., & Levy, O. (2021). Transformer feed-forward layers are key-value memories. *EMNLP*. https://aclanthology.org/2021.emnlp-main.446/
+- Geva, M., Schuster, R., Berant, J., & Levy, O. (2021). Transformer feed-forward layers are key-value memories. *EMNLP*, 5484–5495. https://aclanthology.org/2021.emnlp-main.446/
+
+- Geva, M., Caciularu, A., Wang, K., & Goldberg, Y. (2022). Transformer feed-forward layers build predictions by promoting concepts in the vocabulary space. *EMNLP*, 30–45. https://aclanthology.org/2022.emnlp-main.3/
 
 - Gromov, A. (2023). Grokking modular arithmetic. *arXiv preprint* arXiv:2301.02679v1. https://arxiv.org/pdf/2301.02679
 
@@ -410,6 +414,8 @@ Nearly all code — including the transformer model, training pipeline, and figu
 - Musat, T. (2024). Clustering and alignment: Understanding the training dynamics in modular addition. *arXiv preprint* arXiv:2408.09414v2.
 
 - Nanda, N., Chan, L., Liberum, T., Smith, J., & Steinhardt, J. (2023). Progress measures for grokking via mechanistic interpretability. *arXiv preprint* arXiv:2301.05217v1. https://arxiv.org/pdf/2301.05217v1
+
+- nostalgebraist. (2020). Interpreting GPT: The logit lens. LessWrong. https://www.lesswrong.com/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens
 
 - Radford, A., Narasimhan, K., Salimans, T., & Sutskever, I. (2018). Improving language understanding by generative pre-training. OpenAI. https://cdn.openai.com/research-covers/language-unsupervised/language_understanding_paper.pdf
 
