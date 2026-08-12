@@ -102,7 +102,7 @@ Thus $\mathrm{Attn}(\mathbf{e})_i$ is the "message" delivered to position $i$ by
 $$
 \mathbf{z}_i = \mathbf{e}_i + \mathrm{Attn}(\mathbf{e})_i.
 $$
-So $\mathbf{z}_i$ is the quantity that is passed into the feedforward network.
+So $\mathbf{z}_i$ is the quantity that is passed into the feedforward network. (Note that the feedforward network itself can be interpreted as a key-value operation over its inputs; see Geva et al., 2021).
 
 **Second residual.** The feedforward network (FFN) is applied to $\mathbf{z}_i$, and its output is added back to $\mathbf{z}_i$ (the second residual connection). The resulting **hidden state** passed to the LM head is
 $$
@@ -396,6 +396,8 @@ Nearly all code — including the transformer model, training pipeline, and figu
 - Doerig, A., Kietzmann, T. C., Allen, E., et al. (2025). High-level visual representations in the human brain are aligned with large language models. *Nature Machine Intelligence*, *7*, 1220–1234. https://doi.org/10.1038/s42256-025-01072-0
 
 - Elhage, N., et al. (2021). A mathematical framework for transformer circuits. *Transformer Circuits Thread*. https://transformer-circuits.pub/2021/framework/index.html
+
+- Geva, M., Schuster, R., Berant, J., & Levy, O. (2021). Transformer feed-forward layers are key-value memories. *EMNLP*. https://aclanthology.org/2021.emnlp-main.446/
 
 - Gromov, A. (2023). Grokking modular arithmetic. *arXiv preprint* arXiv:2301.02679v1. https://arxiv.org/pdf/2301.02679
 

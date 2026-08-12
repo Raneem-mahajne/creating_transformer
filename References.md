@@ -25,6 +25,12 @@ Links were checked with HTTP HEAD/GET on 2026-08-06; status notes are at the bot
 - Wang, K., Variengien, A., Conmy, A., Shlegeris, B., & Steinhardt, J. (2022). Interpretability in the wild: A circuit for indirect object identification in GPT-2 small. *ICLR 2023* (arXiv 2022).  
   [arXiv](https://arxiv.org/abs/2211.00593) · [PDF](https://arxiv.org/pdf/2211.00593)
 
+- Elhage, N., et al. (2021). A mathematical framework for transformer circuits. *Transformer Circuits Thread*.  
+  [Article](https://transformer-circuits.pub/2021/framework/index.html)
+
+- Geva, M., Schuster, R., Berant, J., & Levy, O. (2021). Transformer feed-forward layers are key-value memories. *EMNLP*.  
+  [ACL Anthology](https://aclanthology.org/2021.emnlp-main.446/) · [PDF](https://aclanthology.org/2021.emnlp-main.446.pdf) · [arXiv](https://arxiv.org/abs/2012.14913)
+
 ### Toy models, grokking, and geometric algorithms
 
 - Gromov, A. (2023). Grokking modular arithmetic. *arXiv*.  
@@ -44,6 +50,9 @@ Links were checked with HTTP HEAD/GET on 2026-08-06; status notes are at the bot
 
 - Weiss, G., Goldberg, Y., & Yahav, E. (2021). Thinking like transformers. *ICML*.  
   [PMLR](https://proceedings.mlr.press/v139/weiss21a.html) · [PDF](https://proceedings.mlr.press/v139/weiss21a/weiss21a.pdf) · [arXiv](https://arxiv.org/abs/2106.06981)
+
+- Zhong, Z., Liu, Z., Tegmark, M., & Andreas, J. (2023). The clock and the pizza: Two stories in mechanistic explanation of neural networks. *NeurIPS*.  
+  [arXiv](https://arxiv.org/abs/2306.17844) · [PDF](https://arxiv.org/pdf/2306.17844) · [OpenReview](https://openreview.net/forum?id=S5wmbQc1We)
 
 ### Dimensionality reduction (mentioned as *not* needed here)
 
@@ -73,20 +82,11 @@ Links were checked with HTTP HEAD/GET on 2026-08-06; status notes are at the bot
 
 These are the strongest non-gobbledygook matches to the paper’s core claim (geometry readable as algorithm in small transformers).
 
-- Elhage, N., et al. (2021). A mathematical framework for transformer circuits. *Transformer Circuits Thread*.  
-  [Article](https://transformer-circuits.pub/2021/framework/index.html)
-
-- Geva, M., Schuster, R., Berant, J., & Levy, O. (2021). Transformer feed-forward layers are key-value memories. *EMNLP*.  
-  [ACL Anthology](https://aclanthology.org/2021.emnlp-main.446/) · [PDF](https://aclanthology.org/2021.emnlp-main.446.pdf) · [arXiv](https://arxiv.org/abs/2012.14913)
-
 - Lindner, D., Kramár, J., Farquhar, S., Rahtz, M., McGrath, T., & Mikulik, V. (2023). Tracr: Compiled transformers as a laboratory for interpretability. *NeurIPS*.  
   [arXiv](https://arxiv.org/abs/2301.05062) · [PDF](https://arxiv.org/pdf/2301.05062)
 
 - Power, A., Burda, Y., Edwards, H., Babuschkin, I., & Misra, V. (2022). Grokking: Generalization beyond overfitting on small algorithmic datasets. *arXiv*.  
   [arXiv](https://arxiv.org/abs/2201.02177) · [PDF](https://arxiv.org/pdf/2201.02177)
-
-- Zhong, Z., Liu, Z., Tegmark, M., & Andreas, J. (2023). The clock and the pizza: Two stories in mechanistic explanation of neural networks. *NeurIPS*.  
-  [arXiv](https://arxiv.org/abs/2306.17844) · [PDF](https://arxiv.org/pdf/2306.17844) · [OpenReview](https://openreview.net/forum?id=S5wmbQc1We)
 
 ---
 
