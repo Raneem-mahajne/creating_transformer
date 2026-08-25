@@ -23,7 +23,7 @@ We can take advantage of this direct visibility to demonstrate how the informati
 
 ### 1.1 Related work
 
-Much of the work in the mechanistic interpretability literature focuses on large language models and tries to interpret attention in terms of linguistic relationships or specific circuits (Vaswani et al., 2017; Clark et al., 2019; Vig, 2019; Wang, 2022; Liu, 2022). However, such work rarely traces the full forward pass end-to-end in a directly visualizable space; our contribution is a worked geometric walkthrough of one such model. Other work takes a more mathematical approach to deconstructing the operations performed by each part of the transformer (Elhage et al., 2021), or explores how features are compressed into fewer dimensions (Elhage et al., 2022). Other work on small models has analyzed how geometric structure in embedding space emerges during training on arithmetic tasks (Nanda et al., 2023; Musat, 2024; Gromov, 2023; Zhong et al., 2023; Welch Labs 2025; Power et al., 2022; Quirke & Barez, 2024), and algorithmic descriptions of transformer computations have been formalized via languages such as RASP (Weiss et al., 2021; Friedman et al., 2023; Zhou et al., 2024; Lindner et al., 2023).
+Much of the work in the mechanistic interpretability literature focuses on large language models and tries to interpret attention in terms of linguistic relationships (Clark et al., 2019; Vig, 2019; Wang, 2022). However, such work rarely traces the full forward pass end-to-end in a directly visualizable space; our contribution is a worked geometric walkthrough of one such model. Other work takes a more mathematical approach to deconstructing the operations performed by each part of the transformer (Elhage et al., 2021), or explores how features are compressed into fewer dimensions (Elhage et al., 2022). Other work has analyzed how geometric structure in embedding space emerges during training on arithmetic tasks (Nanda et al., 2023; Musat, 2024; Gromov, 2023; Zhong et al., 2023; Welch Labs 2025; Power et al., 2022; Quirke & Barez, 2024; Liu, 2022; Hanna et al., 2023). A different approach to interpretability attempts to formalize transformer computations into human-readable languages such as RASP (Weiss et al., 2021; Friedman et al., 2023; Zhou et al., 2024; Lindner et al., 2023).
 
 ## 2. Methods
 
@@ -408,6 +408,8 @@ Nearly all code — including the transformer model, training pipeline, and figu
 - Geva, M., Caciularu, A., Wang, K., & Goldberg, Y. (2022). Transformer feed-forward layers build predictions by promoting concepts in the vocabulary space. *EMNLP*, 30–45. https://aclanthology.org/2022.emnlp-main.3/
 
 - Gromov, A. (2023). Grokking modular arithmetic. *arXiv preprint* arXiv:2301.02679v1. https://arxiv.org/pdf/2301.02679
+
+- Hanna, M., Liu, O., & Variengien, A. (2023). How does GPT-2 compute greater-than?: Interpreting mathematical abilities in a pre-trained language model. *NeurIPS*. https://arxiv.org/abs/2305.00586
 
 - Hosseini, E. A., Schrimpf, M., Zhang, Y., Bowman, S., Zaslavsky, N., & Fedorenko, E. (2022). Artificial neural network language models predict human brain responses to language even after a developmentally realistic amount of training. *bioRxiv*. https://doi.org/10.1101/2022.10.04.510681
 

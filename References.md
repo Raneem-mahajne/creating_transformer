@@ -25,6 +25,9 @@ Links were checked with HTTP HEAD/GET on 2026-08-06; status notes are at the bot
 - Wang, K., Variengien, A., Conmy, A., Shlegeris, B., & Steinhardt, J. (2022). Interpretability in the wild: A circuit for indirect object identification in GPT-2 small. *ICLR 2023* (arXiv 2022).  
   [arXiv](https://arxiv.org/abs/2211.00593) · [PDF](https://arxiv.org/pdf/2211.00593)
 
+- Hanna, M., Liu, O., & Variengien, A. (2023). How does GPT-2 compute greater-than?: Interpreting mathematical abilities in a pre-trained language model. *NeurIPS*.  
+  [arXiv](https://arxiv.org/abs/2305.00586) · [PDF](https://arxiv.org/pdf/2305.00586)
+
 - Elhage, N., et al. (2021). A mathematical framework for transformer circuits. *Transformer Circuits Thread*.  
   [Article](https://transformer-circuits.pub/2021/framework/index.html)
 
