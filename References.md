@@ -51,6 +51,9 @@ Links were checked with HTTP HEAD/GET on 2026-08-06; status notes are at the bot
 - Gromov, A. (2023). Grokking modular arithmetic. *arXiv*.  
   [arXiv](https://arxiv.org/abs/2301.02679) · [PDF](https://arxiv.org/pdf/2301.02679)
 
+- Lindner, D., Kramár, J., Farquhar, S., Rahtz, M., McGrath, T., & Mikulik, V. (2023). Tracr: Compiled transformers as a laboratory for interpretability. *NeurIPS*.  
+  [arXiv](https://arxiv.org/abs/2301.05062) · [PDF](https://arxiv.org/pdf/2301.05062)
+
 - Liu, Z., Kitouni, O., Nolte, N., Michaud, E. J., Tegmark, M., & Williams, M. (2022). Towards understanding grokking: An effective theory of representation learning. *NeurIPS*.  
   [arXiv](https://arxiv.org/abs/2205.10343) · [PDF](https://arxiv.org/pdf/2205.10343)
 
@@ -99,15 +102,6 @@ Links were checked with HTTP HEAD/GET on 2026-08-06; status notes are at the bot
 
 - Sun, W., Winnubst, J., Natrajan, M., et al. (2025). Learning produces an orthogonalized state machine in the hippocampus. *Nature*, *640*, 165–175.  
   [DOI](https://doi.org/10.1038/s41586-024-08548-w)
-
----
-
-## Closely related (not yet in the paper)
-
-These are the strongest non-gobbledygook matches to the paper’s core claim (geometry readable as algorithm in small transformers).
-
-- Lindner, D., Kramár, J., Farquhar, S., Rahtz, M., McGrath, T., & Mikulik, V. (2023). Tracr: Compiled transformers as a laboratory for interpretability. *NeurIPS*.  
-  [arXiv](https://arxiv.org/abs/2301.05062) · [PDF](https://arxiv.org/pdf/2301.05062)
 
 ---
 
