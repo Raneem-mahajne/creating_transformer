@@ -28,6 +28,9 @@ Links were checked with HTTP HEAD/GET on 2026-08-06; status notes are at the bot
 - Elhage, N., et al. (2021). A mathematical framework for transformer circuits. *Transformer Circuits Thread*.  
   [Article](https://transformer-circuits.pub/2021/framework/index.html)
 
+- Elhage, N., et al. (2022). Toy models of superposition. *Transformer Circuits Thread*.  
+  [Article](https://transformer-circuits.pub/2022/toy_model/index.html)
+
 - Geva, M., Schuster, R., Berant, J., & Levy, O. (2021). Transformer feed-forward layers are key-value memories. *EMNLP*, 5484–5495.  
   [ACL Anthology](https://aclanthology.org/2021.emnlp-main.446/) · [PDF](https://aclanthology.org/2021.emnlp-main.446.pdf) · [arXiv](https://arxiv.org/abs/2012.14913)
 

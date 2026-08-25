@@ -309,8 +309,6 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
         ax.plot([skip_x, plus1_cx], [plus1_y + r_plus, plus1_y + r_plus],
                 color=C_RESID, lw=_resid_lw, linestyle='--', zorder=2, clip_on=False)
         draw_arrow(plus1_cx, plus1_y + r_plus, plus1_cx, plus1_y - r_plus, color=C_RESID, lw=_resid_lw, shrinkA=0, shrinkB=0)
-        ax.text(skip_x - 4, (plus_y + plus1_y) / 2, 'skip', ha='right', va='center',
-                fontsize=_resid_fs, color=C_RESID, fontfamily='sans-serif', fontstyle='italic', zorder=4)
         y_plus1_b = plus1_y + r_plus
         y += 2 * r_plus + vgap * 1.5
 
@@ -336,8 +334,6 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
         ax.plot([skip_x, plus2_cx], [plus2_y + r_plus, plus2_y + r_plus],
                 color=C_RESID, lw=_resid_lw, linestyle='--', zorder=2, clip_on=False)
         draw_arrow(plus2_cx, plus2_y + r_plus, plus2_cx, plus2_y - r_plus, color=C_RESID, lw=_resid_lw, shrinkA=0, shrinkB=0)
-        ax.text(skip_x - 4, (plus1_y + plus2_y) / 2, 'skip', ha='right', va='center',
-                fontsize=_resid_fs, color=C_RESID, fontfamily='sans-serif', fontstyle='italic', zorder=4)
         y_plus2_b = plus2_y + r_plus
         y += 2 * r_plus + vgap * 1.5
 

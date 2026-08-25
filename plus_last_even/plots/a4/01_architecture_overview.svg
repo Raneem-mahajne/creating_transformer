@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
   "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="622.656pt" height="1396.8pt" viewBox="0 0 622.656 1396.8" xmlns="http://www.w3.org/2000/svg" version="1.1">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="969.984pt" height="1396.8pt" viewBox="0 0 969.984 1396.8" xmlns="http://www.w3.org/2000/svg" version="1.1">
  <metadata>
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
@@ -22,13 +22,13 @@
  <g id="figure_1">
   <g id="patch_1">
    <path d="M 0 1396.8 
-L 622.656 1396.8 
-L 622.656 0 
+L 969.984 1396.8 
+L 969.984 0 
 L 0 0 
 z
 " style="fill: #ffffff"/>
   </g>
-  <g id="axes_1">
+  <g id="axes_1" transform="translate(18,0) scale(1.5,1)">
   <g id="line2d_1">
   <path d="M 274.464 325.152 
   L 57.888 325.152 
@@ -60,7 +60,7 @@ L 292.896 154.656
 " clip-path="url(#pb73fe0bd0a)" style="fill: none; stroke: #34495e; stroke-width: 1.8; stroke-linecap: round"/>
    </g>
    <g id="line2d_7">
-    <path d="M 200.736 258.7968 
+    <path d="M 200.736 274.7968 
 L 200.736 277.2288 
 " clip-path="url(#pb73fe0bd0a)" style="fill: none; stroke: #34495e; stroke-width: 1.8; stroke-linecap: round"/>
    </g>
@@ -70,7 +70,7 @@ L 292.896 277.2288
 " clip-path="url(#pb73fe0bd0a)" style="fill: none; stroke: #34495e; stroke-width: 1.8; stroke-linecap: round"/>
    </g>
    <g id="line2d_9">
-    <path d="M 394.272 258.7968 
+    <path d="M 394.272 274.7968 
 L 394.272 277.2288 
 " clip-path="url(#pb73fe0bd0a)" style="fill: none; stroke: #34495e; stroke-width: 1.8; stroke-linecap: round"/>
    </g>
@@ -90,9 +90,7 @@ L 394.272 366.624
 " clip-path="url(#pb73fe0bd0a)" style="fill: none; stroke: #34495e; stroke-width: 1.8; stroke-linecap: round"/>
    </g>
    <g id="line2d_12">
-    <path d="M 509.472 65.2608 
-L 594.2592 65.2608 
-" clip-path="url(#pb73fe0bd0a)" style="fill: none; stroke: #34495e; stroke-opacity: 0.3; stroke-width: 0.5; stroke-linecap: square"/>
+    <path d="M 71.712 1179.8 L 156.499 1179.8" clip-path="url(#pb73fe0bd0a)" style="fill: none; stroke: #34495e; stroke-opacity: 0.3; stroke-width: 0.5; stroke-linecap: square"/>
    </g>
    <g id="patch_2">
     <path d="M 211.7952 44.064 
@@ -111,10 +109,10 @@ z
     <path d="M 131.616 196.128 
 L 269.856 196.128 
 Q 279.072 196.128 279.072 205.344 
-L 279.072 249.5808 
-Q 279.072 258.7968 269.856 258.7968 
-L 131.616 258.7968 
-Q 122.4 258.7968 122.4 249.5808 
+L 279.072 265.5808 
+Q 279.072 274.7968 269.856 274.7968 
+L 131.616 274.7968 
+Q 122.4 274.7968 122.4 265.5808 
 L 122.4 205.344 
 Q 122.4 196.128 131.616 196.128 
 z
@@ -124,10 +122,10 @@ z
     <path d="M 325.152 196.128 
 L 463.392 196.128 
 Q 472.608 196.128 472.608 205.344 
-L 472.608 249.5808 
-Q 472.608 258.7968 463.392 258.7968 
-L 325.152 258.7968 
-Q 315.936 258.7968 315.936 249.5808 
+L 472.608 265.5808 
+Q 472.608 274.7968 463.392 274.7968 
+L 325.152 274.7968 
+Q 315.936 274.7968 315.936 265.5808 
 L 315.936 205.344 
 Q 315.936 196.128 325.152 196.128 
 z
@@ -251,17 +249,7 @@ z
 " clip-path="url(#pb73fe0bd0a)" style="fill: #d5f5e3; stroke: #34495e; stroke-width: 1.5; stroke-linejoin: miter"/>
    </g>
    <g id="patch_14">
-    <path d="M 505.7856 39.456 
-L 597.9456 39.456 
-Q 603.4752 39.456 603.4752 44.9856 
-L 603.4752 153.7344 
-Q 603.4752 159.264 597.9456 159.264 
-L 505.7856 159.264 
-Q 500.256 159.264 500.256 153.7344 
-L 500.256 44.9856 
-Q 500.256 39.456 505.7856 39.456 
-z
-" clip-path="url(#pb73fe0bd0a)" style="fill: #f8f9fa; stroke: #34495e; stroke-width: 1.5; stroke-linejoin: miter"/>
+    <path d="M 68.0256 1154 L 160.186 1154 Q 165.715 1154 165.715 1159.53 L 165.715 1268.28 Q 165.715 1273.81 160.186 1273.81 L 68.0256 1273.81 Q 62.496 1273.81 62.496 1268.28 L 62.496 1159.53 Q 62.496 1154 68.0256 1154 z" clip-path="url(#pb73fe0bd0a)" style="fill: #f8f9fa; stroke: #34495e; stroke-width: 1.5; stroke-linejoin: miter"/>
    </g>
   <g id="patch_15">
   <path d="M 65.2608 1285.872 
@@ -487,7 +475,7 @@ L 390.260032 1176.7104
 L 385.060032 1179.3104 
 " style="fill: none; stroke: #34495e; stroke-width: 1.8; stroke-linecap: round"/>
    </g>
-   <g id="patch_37">
+   <g id="patch_37" transform="translate(292.896,0) scale(0.666667,1) translate(-292.896,0)">
     <path d="M 292.896 306.72 
 C 297.784224 306.72 302.472896 308.662112 305.929392 312.118608 
 C 309.385888 315.575104 311.328 320.263776 311.328 325.152 
@@ -499,8 +487,9 @@ C 274.464 320.263776 276.406112 315.575104 279.862608 312.118608
 C 283.319104 308.662112 288.007776 306.72 292.896 306.72 
 z
 " clip-path="url(#pb73fe0bd0a)" style="fill: #ffffff; stroke: #34495e; stroke-width: 1.8; stroke-linejoin: miter"/>
+    <path d="M 284.396 322.752 L 301.396 322.752 L 301.396 327.552 L 284.396 327.552 Z M 290.496 316.652 L 295.296 316.652 L 295.296 333.652 L 290.496 333.652 Z" style="fill: #34495e"/>
    </g>
-   <g id="patch_38">
+   <g id="patch_38" transform="translate(292.896,0) scale(0.666667,1) translate(-292.896,0)">
     <path d="M 292.896 713.1456 
 C 297.784224 713.1456 302.472896 715.087712 305.929392 718.544208 
 C 309.385888 722.000704 311.328 726.689376 311.328 731.5776 
@@ -512,8 +501,9 @@ C 274.464 726.689376 276.406112 722.000704 279.862608 718.544208
 C 283.319104 715.087712 288.007776 713.1456 292.896 713.1456 
 z
 " clip-path="url(#pb73fe0bd0a)" style="fill: #ffffff; stroke: #34495e; stroke-width: 1.8; stroke-linejoin: miter"/>
+    <path d="M 284.396 729.178 L 301.396 729.178 L 301.396 733.978 L 284.396 733.978 Z M 290.496 723.078 L 295.296 723.078 L 295.296 740.078 L 290.496 740.078 Z" style="fill: #34495e"/>
    </g>
-   <g id="patch_39">
+   <g id="patch_39" transform="translate(292.896,0) scale(0.666667,1) translate(-292.896,0)">
     <path d="M 292.896 936.1728 
 C 297.784224 936.1728 302.472896 938.114912 305.929392 941.571408 
 C 309.385888 945.027904 311.328 949.716576 311.328 954.6048 
@@ -525,6 +515,7 @@ C 274.464 949.716576 276.406112 945.027904 279.862608 941.571408
 C 283.319104 938.114912 288.007776 936.1728 292.896 936.1728 
 z
 " clip-path="url(#pb73fe0bd0a)" style="fill: #ffffff; stroke: #34495e; stroke-width: 1.8; stroke-linejoin: miter"/>
+    <path d="M 284.396 952.205 L 301.396 952.205 L 301.396 957.005 L 284.396 957.005 Z M 290.496 946.105 L 295.296 946.105 L 295.296 963.105 L 290.496 963.105 Z" style="fill: #34495e"/>
    </g>
    <g id="patch_40">
     <path d="M 177.696 378.6048 
@@ -593,7 +584,7 @@ z
    </g>
    <g id="text_1">
    <!-- h -->
-  <g style="fill: #34495e" transform="translate(308 988) scale(0.14 -0.14)">
+  <g style="fill: #34495e" transform="translate(308.000000 988) scale(0.093333 -0.14)">
      <defs>
       <path id="Georgia-Italic-65" d="M 2894 2503 
 Q 2894 2172 2686 1934 
@@ -633,543 +624,9 @@ z
      <use xlink:href="#SegoeUI-Bold-68"/>
     </g>
    </g>
-  <g id="text_2" style="display: none;">
-    <!-- skip around -->
-    <g style="fill: #27ae60" transform="translate(32.290956 563.878581) rotate(-90) scale(0.09 -0.09)">
-     <defs>
-      <path id="Georgia-Italic-28" d="M 2844 4788 
-L 2794 4534 
-Q 2391 4463 2036 4114 
-Q 1681 3766 1416 3172 
-Q 1181 2653 1050 1978 
-Q 919 1303 919 691 
-Q 919 75 1114 -319 
-Q 1309 -713 1747 -794 
-L 1694 -1025 
-Q 1047 -944 690 -444 
-Q 334 56 334 903 
-Q 334 2459 1057 3551 
-Q 1781 4644 2844 4788 
-z
-" transform="scale(0.015625)"/>
-      <path id="Georgia-Italic-73" d="M 1131 -91 
-Q 669 -91 361 73 
-Q 53 238 53 503 
-Q 53 628 143 737 
-Q 234 847 366 847 
-Q 491 847 567 789 
-Q 644 731 688 653 
-Q 734 572 770 459 
-Q 806 347 831 275 
-Q 878 222 961 176 
-Q 1044 131 1200 131 
-Q 1538 131 1711 300 
-Q 1884 469 1884 756 
-Q 1884 969 1721 1095 
-Q 1559 1222 1238 1328 
-Q 1122 1366 965 1442 
-Q 809 1519 716 1606 
-Q 603 1706 534 1843 
-Q 466 1981 466 2169 
-Q 466 2569 823 2861 
-Q 1181 3153 1703 3153 
-Q 1825 3153 1965 3140 
-Q 2106 3128 2275 3072 
-Q 2422 3022 2525 2923 
-Q 2628 2825 2628 2669 
-Q 2628 2541 2542 2436 
-Q 2456 2331 2316 2331 
-Q 2200 2331 2125 2381 
-Q 2050 2431 2000 2516 
-Q 1950 2600 1919 2697 
-Q 1888 2794 1850 2888 
-Q 1791 2913 1744 2922 
-Q 1697 2931 1619 2931 
-Q 1313 2931 1155 2767 
-Q 997 2603 997 2378 
-Q 997 2159 1139 2048 
-Q 1281 1938 1609 1819 
-Q 2034 1666 2226 1469 
-Q 2419 1272 2419 981 
-Q 2419 506 2053 207 
-Q 1688 -91 1131 -91 
-z
-" transform="scale(0.015625)"/>
-      <path id="Georgia-Italic-6b" d="M 3347 2797 
-Q 3347 2659 3239 2542 
-Q 3131 2425 2972 2425 
-Q 2869 2425 2769 2453 
-Q 2669 2481 2550 2538 
-Q 2378 2441 2195 2298 
-Q 2013 2156 1797 1953 
-Q 1975 1491 2098 1195 
-Q 2222 900 2309 713 
-Q 2422 478 2558 379 
-Q 2694 281 2856 281 
-Q 2931 281 3062 304 
-Q 3194 328 3266 353 
-L 3219 147 
-Q 2928 28 2762 -12 
-Q 2597 -53 2428 -53 
-Q 2228 -53 2086 58 
-Q 1944 169 1813 459 
-Q 1684 738 1584 1008 
-Q 1484 1278 1388 1519 
-L 1022 1206 
-L 753 0 
-L 172 0 
-L 1100 4022 
-Q 1122 4119 1130 4156 
-Q 1138 4194 1138 4250 
-Q 1138 4363 1100 4423 
-Q 1063 4484 994 4516 
-Q 928 4544 828 4553 
-Q 728 4563 625 4575 
-L 669 4766 
-L 1828 4838 
-L 1859 4791 
-L 1097 1538 
-L 1109 1538 
-Q 1463 1919 1752 2198 
-Q 2041 2478 2356 2769 
-Q 2581 2975 2712 3051 
-Q 2844 3128 2994 3128 
-Q 3153 3128 3250 3039 
-Q 3347 2950 3347 2797 
-z
-" transform="scale(0.015625)"/>
-      <path id="Georgia-Italic-69" d="M 1722 341 
-L 1675 141 
-Q 1388 25 1216 -20 
-Q 1044 -66 922 -66 
-Q 672 -66 547 64 
-Q 422 194 422 384 
-Q 422 456 434 534 
-Q 447 613 475 731 
-L 806 2059 
-Q 831 2169 854 2294 
-Q 878 2419 878 2506 
-Q 878 2681 820 2739 
-Q 763 2797 584 2797 
-Q 516 2797 402 2775 
-Q 288 2753 228 2738 
-L 275 2938 
-Q 519 3047 712 3100 
-Q 906 3153 1019 3153 
-Q 1275 3153 1390 3031 
-Q 1506 2909 1506 2703 
-Q 1506 2647 1493 2550 
-Q 1481 2453 1456 2356 
-L 1122 1028 
-Q 1091 906 1067 789 
-Q 1044 672 1044 597 
-Q 1044 419 1123 353 
-Q 1203 288 1381 288 
-Q 1441 288 1552 303 
-Q 1663 319 1722 341 
-z
-M 1944 4334 
-Q 1944 4156 1828 4023 
-Q 1713 3891 1541 3891 
-Q 1381 3891 1265 4017 
-Q 1150 4144 1150 4306 
-Q 1150 4478 1265 4606 
-Q 1381 4734 1541 4734 
-Q 1719 4734 1831 4614 
-Q 1944 4494 1944 4334 
-z
-" transform="scale(0.015625)"/>
-      <path id="Georgia-Italic-70" d="M 3481 1959 
-Q 3481 1541 3334 1166 
-Q 3188 791 2944 516 
-Q 2672 213 2355 66 
-Q 2038 -81 1703 -81 
-Q 1434 -81 1262 -15 
-Q 1091 50 956 147 
-L 775 -672 
-Q 756 -750 745 -819 
-Q 734 -888 734 -928 
-Q 734 -1013 795 -1063 
-Q 856 -1113 934 -1134 
-Q 1013 -1159 1109 -1171 
-Q 1206 -1184 1284 -1191 
-L 1241 -1388 
-L -481 -1388 
-L -438 -1191 
-Q -338 -1184 -250 -1175 
-Q -163 -1166 -84 -1144 
-Q 13 -1116 70 -1039 
-Q 128 -963 153 -850 
-L 806 2025 
-Q 831 2144 853 2264 
-Q 875 2384 875 2472 
-Q 875 2647 820 2706 
-Q 766 2766 584 2766 
-Q 516 2766 409 2739 
-Q 303 2713 244 2697 
-L 291 2897 
-Q 528 3003 718 3061 
-Q 909 3119 1044 3119 
-Q 1263 3119 1375 3008 
-Q 1488 2897 1516 2700 
-L 1541 2700 
-Q 1753 2897 1995 3025 
-Q 2238 3153 2478 3153 
-Q 2953 3153 3217 2829 
-Q 3481 2506 3481 1959 
-z
-M 2506 669 
-Q 2666 925 2752 1251 
-Q 2838 1578 2838 1944 
-Q 2838 2109 2808 2276 
-Q 2778 2444 2713 2553 
-Q 2644 2675 2525 2742 
-Q 2406 2809 2213 2809 
-Q 2069 2809 1895 2721 
-Q 1722 2634 1472 2394 
-L 1072 622 
-Q 1094 444 1264 289 
-Q 1434 134 1675 134 
-Q 1922 134 2137 278 
-Q 2353 422 2506 669 
-z
-" transform="scale(0.015625)"/>
-      <path id="Georgia-Italic-20" transform="scale(0.015625)"/>
-      <path id="Georgia-Italic-61" d="M 2175 413 
-L 2153 413 
-Q 2084 356 1989 270 
-Q 1894 184 1766 106 
-Q 1644 28 1500 -30 
-Q 1356 -88 1188 -88 
-Q 734 -88 476 237 
-Q 219 563 219 1125 
-Q 219 1513 362 1878 
-Q 506 2244 759 2534 
-Q 1000 2813 1331 2983 
-Q 1663 3153 2013 3153 
-Q 2234 3153 2436 3093 
-Q 2638 3034 2753 2959 
-L 3325 3106 
-L 3363 3059 
-L 2888 1044 
-Q 2863 947 2836 808 
-Q 2809 669 2809 603 
-Q 2809 425 2884 362 
-Q 2959 300 3138 300 
-Q 3197 300 3306 319 
-Q 3416 338 3475 359 
-L 3428 159 
-Q 3147 47 3009 -3 
-Q 2872 -53 2675 -53 
-Q 2450 -53 2319 78 
-Q 2188 209 2175 413 
-z
-M 2622 2388 
-Q 2622 2491 2600 2584 
-Q 2578 2678 2509 2759 
-Q 2447 2838 2337 2884 
-Q 2228 2931 2063 2931 
-Q 1834 2931 1618 2781 
-Q 1403 2631 1231 2378 
-Q 1069 2141 966 1803 
-Q 863 1466 863 1119 
-Q 863 928 884 781 
-Q 906 634 969 513 
-Q 1028 394 1140 328 
-Q 1253 263 1425 263 
-Q 1600 263 1792 361 
-Q 1984 459 2225 706 
-L 2622 2388 
-z
-" transform="scale(0.015625)"/>
-      <path id="Georgia-Italic-72" d="M 2981 2644 
-Q 2981 2556 2956 2451 
-Q 2931 2347 2884 2278 
-Q 2828 2194 2761 2148 
-Q 2694 2103 2569 2103 
-Q 2400 2103 2315 2187 
-Q 2231 2272 2231 2375 
-Q 2231 2472 2278 2592 
-Q 2325 2713 2375 2831 
-Q 2338 2831 2252 2811 
-Q 2166 2791 2044 2731 
-Q 1922 2672 1767 2553 
-Q 1613 2434 1438 2238 
-L 934 0 
-L 353 0 
-L 809 2025 
-Q 825 2100 854 2250 
-Q 884 2400 884 2472 
-Q 884 2647 825 2706 
-Q 766 2766 588 2766 
-Q 519 2766 412 2742 
-Q 306 2719 247 2703 
-L 294 2903 
-Q 538 3013 725 3066 
-Q 913 3119 1047 3119 
-Q 1297 3119 1403 2983 
-Q 1509 2847 1509 2575 
-L 1528 2575 
-Q 1900 2897 2092 3025 
-Q 2284 3153 2494 3153 
-Q 2594 3153 2687 3128 
-Q 2781 3103 2847 3044 
-Q 2916 2978 2948 2892 
-Q 2981 2806 2981 2644 
-z
-" transform="scale(0.015625)"/>
-      <path id="Georgia-Italic-6f" d="M 3228 1925 
-Q 3228 1556 3103 1187 
-Q 2978 819 2741 541 
-Q 2500 253 2161 79 
-Q 1822 -94 1375 -94 
-Q 856 -94 532 240 
-Q 209 575 209 1141 
-Q 209 1556 346 1915 
-Q 484 2275 716 2547 
-Q 950 2819 1295 2986 
-Q 1641 3153 2044 3153 
-Q 2600 3153 2914 2814 
-Q 3228 2475 3228 1925 
-z
-M 2591 2044 
-Q 2591 2488 2433 2709 
-Q 2275 2931 1978 2931 
-Q 1719 2931 1489 2772 
-Q 1259 2613 1094 2253 
-Q 966 1981 906 1648 
-Q 847 1316 847 1034 
-Q 847 588 1001 358 
-Q 1156 128 1469 128 
-Q 1747 128 1962 303 
-Q 2178 478 2313 747 
-Q 2447 1009 2519 1348 
-Q 2591 1688 2591 2044 
-z
-" transform="scale(0.015625)"/>
-      <path id="Georgia-Italic-75" d="M 2209 438 
-L 2191 438 
-Q 2047 322 1915 225 
-Q 1784 128 1656 63 
-Q 1506 -13 1384 -45 
-Q 1263 -78 1066 -78 
-Q 766 -78 600 95 
-Q 434 269 434 550 
-Q 434 625 446 728 
-Q 459 831 506 1034 
-L 750 2025 
-Q 781 2163 801 2269 
-Q 822 2375 822 2472 
-Q 822 2647 764 2705 
-Q 706 2763 528 2763 
-Q 459 2763 353 2738 
-Q 247 2713 188 2697 
-L 234 2897 
-Q 478 3006 664 3062 
-Q 850 3119 963 3119 
-Q 1213 3119 1330 3001 
-Q 1447 2884 1447 2669 
-Q 1447 2613 1434 2516 
-Q 1422 2419 1397 2322 
-L 1119 1166 
-Q 1088 1034 1067 920 
-Q 1047 806 1047 747 
-Q 1047 538 1137 416 
-Q 1228 294 1425 294 
-Q 1625 294 1836 398 
-Q 2047 503 2259 716 
-L 2806 3069 
-L 3350 3106 
-L 3388 3059 
-L 2922 1047 
-Q 2891 919 2866 789 
-Q 2841 659 2841 606 
-Q 2841 428 2917 364 
-Q 2994 300 3172 300 
-Q 3231 300 3340 319 
-Q 3450 338 3509 359 
-L 3463 159 
-Q 3203 53 3029 0 
-Q 2856 -53 2709 -53 
-Q 2456 -53 2332 94 
-Q 2209 241 2209 438 
-z
-" transform="scale(0.015625)"/>
-      <path id="Georgia-Italic-6e" d="M 3591 363 
-L 3544 163 
-Q 3263 50 3106 -1 
-Q 2950 -53 2791 -53 
-Q 2541 -53 2416 76 
-Q 2291 206 2291 397 
-Q 2291 466 2303 548 
-Q 2316 631 2344 744 
-L 2650 1909 
-Q 2684 2044 2704 2153 
-Q 2725 2263 2725 2328 
-Q 2725 2538 2625 2659 
-Q 2525 2781 2328 2781 
-Q 2138 2781 1900 2656 
-Q 1663 2531 1453 2294 
-L 925 0 
-L 344 0 
-L 809 2025 
-Q 825 2100 854 2242 
-Q 884 2384 884 2472 
-Q 884 2647 825 2706 
-Q 766 2766 588 2766 
-Q 519 2766 412 2742 
-Q 306 2719 247 2703 
-L 294 2903 
-Q 538 3013 725 3066 
-Q 913 3119 1047 3119 
-Q 1294 3119 1400 2984 
-Q 1506 2850 1513 2613 
-L 1531 2613 
-Q 1875 2888 2125 3020 
-Q 2375 3153 2694 3153 
-Q 2994 3153 3162 2979 
-Q 3331 2806 3331 2525 
-Q 3331 2469 3314 2325 
-Q 3297 2181 3259 2041 
-L 2997 1038 
-Q 2969 938 2942 808 
-Q 2916 678 2916 606 
-Q 2916 428 2994 364 
-Q 3072 300 3250 300 
-Q 3309 300 3420 320 
-Q 3531 341 3591 363 
-z
-" transform="scale(0.015625)"/>
-      <path id="Georgia-Italic-64" d="M 2203 428 
-L 2181 428 
-Q 2113 369 2003 273 
-Q 1894 178 1775 106 
-Q 1625 13 1498 -37 
-Q 1372 -88 1188 -88 
-Q 734 -88 476 239 
-Q 219 566 219 1128 
-Q 219 1522 358 1887 
-Q 497 2253 738 2538 
-Q 972 2813 1301 2983 
-Q 1631 3153 1991 3153 
-Q 2206 3153 2418 3097 
-Q 2631 3041 2769 2959 
-L 3013 4022 
-Q 3031 4106 3039 4153 
-Q 3047 4200 3047 4256 
-Q 3047 4369 3001 4428 
-Q 2956 4488 2875 4516 
-Q 2800 4544 2669 4553 
-Q 2538 4563 2431 4575 
-L 2475 4766 
-L 3741 4838 
-L 3772 4791 
-L 2906 1044 
-Q 2881 941 2854 808 
-Q 2828 675 2828 606 
-Q 2828 428 2903 364 
-Q 2978 300 3156 300 
-Q 3216 300 3325 319 
-Q 3434 338 3494 359 
-L 3447 159 
-Q 3184 41 3012 -6 
-Q 2841 -53 2694 -53 
-Q 2469 -53 2336 64 
-Q 2203 181 2203 428 
-z
-M 2644 2419 
-Q 2638 2509 2597 2595 
-Q 2556 2681 2494 2750 
-Q 2422 2828 2308 2879 
-Q 2194 2931 2038 2931 
-Q 1797 2931 1583 2781 
-Q 1369 2631 1206 2381 
-Q 1050 2141 956 1802 
-Q 863 1463 863 1122 
-Q 863 931 884 784 
-Q 906 638 969 513 
-Q 1028 397 1137 330 
-Q 1247 263 1428 263 
-Q 1600 263 1801 366 
-Q 2003 469 2250 725 
-L 2644 2419 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#Georgia-Italic-73" transform="translate(37.5 0)"/>
-     <use xlink:href="#Georgia-Italic-6b" transform="translate(80.615234 0)"/>
-     <use xlink:href="#Georgia-Italic-69" transform="translate(133.398438 0)"/>
-     <use xlink:href="#Georgia-Italic-70" transform="translate(163.134766 0)"/>
-     <use xlink:href="#Georgia-Italic-20" transform="translate(220.947266 0)"/>
-     <use xlink:href="#Georgia-Italic-61" transform="translate(245.068359 0)"/>
-     <use xlink:href="#Georgia-Italic-72" transform="translate(302.34375 0)"/>
-     <use xlink:href="#Georgia-Italic-6f" transform="translate(348.486328 0)"/>
-     <use xlink:href="#Georgia-Italic-75" transform="translate(402.197266 0)"/>
-     <use xlink:href="#Georgia-Italic-6e" transform="translate(459.716797 0)"/>
-     <use xlink:href="#Georgia-Italic-64" transform="translate(518.701172 0)"/>
-    </g>
-   </g>
-  <g id="text_3" style="display: none;">
-    <!-- attention -->
-    <g style="fill: #27ae60" transform="translate(14.081894 642.702581) rotate(-90) scale(0.09 -0.09)">
-     <defs>
-      <path id="Georgia-Italic-74" d="M 947 -66 
-Q 650 -66 512 54 
-Q 375 175 375 400 
-Q 375 472 384 536 
-Q 394 600 409 681 
-L 894 2769 
-L 338 2769 
-L 403 3053 
-L 972 3053 
-L 1191 3969 
-L 1753 3969 
-L 1541 3053 
-L 2413 3053 
-L 2347 2769 
-L 1481 2769 
-L 1081 1047 
-Q 1053 928 1034 817 
-Q 1016 706 1016 628 
-Q 1016 456 1102 376 
-Q 1188 297 1413 297 
-Q 1494 297 1641 317 
-Q 1788 338 1869 369 
-L 1816 141 
-Q 1597 56 1403 -5 
-Q 1209 -66 947 -66 
-z
-" transform="scale(0.015625)"/>
-      <path id="Georgia-Italic-29" d="M 2225 2859 
-Q 2225 1303 1501 211 
-Q 778 -881 -284 -1025 
-L -234 -772 
-Q 169 -700 523 -351 
-Q 878 -3 1144 591 
-Q 1375 1109 1508 1784 
-Q 1641 2459 1641 3072 
-Q 1641 3688 1445 4081 
-Q 1250 4475 813 4556 
-L 866 4788 
-Q 1513 4706 1869 4206 
-Q 2225 3706 2225 2859 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#Georgia-Italic-61"/>
-     <use xlink:href="#Georgia-Italic-74" transform="translate(57.275391 0)"/>
-     <use xlink:href="#Georgia-Italic-74" transform="translate(91.992188 0)"/>
-     <use xlink:href="#Georgia-Italic-65" transform="translate(126.708984 0)"/>
-     <use xlink:href="#Georgia-Italic-6e" transform="translate(173.876953 0)"/>
-     <use xlink:href="#Georgia-Italic-74" transform="translate(232.861328 0)"/>
-     <use xlink:href="#Georgia-Italic-69" transform="translate(267.578125 0)"/>
-     <use xlink:href="#Georgia-Italic-6f" transform="translate(297.314453 0)"/>
-     <use xlink:href="#Georgia-Italic-6e" transform="translate(351.025391 0)"/>
-    </g>
-   </g>
    <g id="text_4">
    <!-- z -->
- <g style="fill: #2980b9" transform="translate(308 772) scale(0.14 -0.14)">
+ <g style="fill: #2980b9" transform="translate(308.000000 772) scale(0.093333 -0.14)">
      <defs>
       <path id="Georgia-Italic-7a" d="M 2919 3059 
 L 2878 2875 
@@ -1201,128 +658,9 @@ z
      <use xlink:href="#Georgia-Italic-7a"/>
     </g>
    </g>
-  <g id="text_5" style="display: none;">
-    <!-- skip around -->
-    <g style="fill: #2980b9" transform="translate(32.290956 886.438581) rotate(-90) scale(0.09 -0.09)">
-     <use xlink:href="#Georgia-Italic-73" transform="translate(37.5 0)"/>
-     <use xlink:href="#Georgia-Italic-6b" transform="translate(80.615234 0)"/>
-     <use xlink:href="#Georgia-Italic-69" transform="translate(133.398438 0)"/>
-     <use xlink:href="#Georgia-Italic-70" transform="translate(163.134766 0)"/>
-     <use xlink:href="#Georgia-Italic-20" transform="translate(220.947266 0)"/>
-     <use xlink:href="#Georgia-Italic-61" transform="translate(245.068359 0)"/>
-     <use xlink:href="#Georgia-Italic-72" transform="translate(302.34375 0)"/>
-     <use xlink:href="#Georgia-Italic-6f" transform="translate(348.486328 0)"/>
-     <use xlink:href="#Georgia-Italic-75" transform="translate(402.197266 0)"/>
-     <use xlink:href="#Georgia-Italic-6e" transform="translate(459.716797 0)"/>
-     <use xlink:href="#Georgia-Italic-64" transform="translate(518.701172 0)"/>
-    </g>
-   </g>
-  <g id="text_6" style="display: none;">
-    <!-- FFN -->
-    <g style="fill: #2980b9" transform="translate(14.690097 965.262581) rotate(-90) scale(0.09 -0.09)">
-     <defs>
-      <path id="Georgia-Italic-46" d="M 4388 4434 
-L 4131 3325 
-L 3897 3325 
-Q 3884 3659 3754 3904 
-Q 3625 4150 3438 4178 
-Q 3341 4191 3211 4197 
-Q 3081 4203 2913 4203 
-L 2153 4203 
-L 1738 2400 
-L 2247 2400 
-Q 2428 2400 2578 2439 
-Q 2728 2478 2869 2603 
-Q 2941 2669 3030 2816 
-Q 3119 2963 3172 3128 
-L 3409 3128 
-L 3009 1388 
-L 2772 1388 
-Q 2775 1425 2779 1475 
-Q 2784 1525 2784 1584 
-Q 2784 1672 2771 1784 
-Q 2759 1897 2725 1953 
-Q 2641 2081 2506 2122 
-Q 2372 2163 2188 2163 
-L 1678 2163 
-L 1322 609 
-Q 1316 584 1312 557 
-Q 1309 531 1309 506 
-Q 1309 438 1337 386 
-Q 1366 334 1434 294 
-Q 1484 269 1631 241 
-Q 1778 213 1872 206 
-L 1822 0 
-L -109 0 
-L -59 206 
-Q 38 213 191 227 
-Q 344 241 400 263 
-Q 509 306 565 386 
-Q 622 466 647 575 
-L 1394 3806 
-Q 1400 3838 1404 3867 
-Q 1409 3897 1409 3928 
-Q 1409 3991 1386 4036 
-Q 1363 4081 1288 4119 
-Q 1219 4156 1084 4187 
-Q 950 4219 859 4228 
-L 909 4434 
-L 4388 4434 
-z
-" transform="scale(0.015625)"/>
-      <path id="Georgia-Italic-4e" d="M 5497 4434 
-L 5447 4228 
-Q 5363 4225 5169 4178 
-Q 4975 4131 4888 4081 
-Q 4753 4003 4667 3783 
-Q 4581 3563 4500 3219 
-L 3747 -44 
-L 3466 -44 
-L 1647 3700 
-L 1091 1281 
-Q 1053 1119 1028 953 
-Q 1003 788 1003 684 
-Q 1003 575 1025 508 
-Q 1047 441 1084 397 
-Q 1138 331 1350 272 
-Q 1563 213 1631 206 
-L 1584 0 
-L -234 0 
-L -188 206 
-Q -84 216 116 267 
-Q 316 319 381 366 
-Q 506 450 593 639 
-Q 681 828 775 1247 
-L 1272 3397 
-Q 1294 3500 1303 3573 
-Q 1313 3647 1313 3709 
-Q 1313 3784 1295 3851 
-Q 1278 3919 1216 3994 
-Q 1106 4119 948 4167 
-Q 791 4216 666 4228 
-L 716 4434 
-L 1988 4434 
-L 3675 969 
-L 4184 3178 
-Q 4222 3344 4247 3501 
-Q 4272 3659 4272 3772 
-Q 4272 3875 4251 3945 
-Q 4231 4016 4191 4050 
-Q 4116 4116 3937 4164 
-Q 3759 4213 3644 4228 
-L 3694 4434 
-L 5497 4434 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#Georgia-Italic-46"/>
-     <use xlink:href="#Georgia-Italic-46" transform="translate(59.912109 0)"/>
-     <use xlink:href="#Georgia-Italic-4e" transform="translate(119.824219 0)"/>
-    </g>
-   </g>
    <g id="text_7">
     <!-- Input -->
-    <g style="fill: #34495e" transform="translate(272.606 73.9513) scale(0.16 -0.16)">
+    <g style="fill: #34495e" transform="translate(269.816923 72.561136) scale(0.182187 -0.273280)">
      <defs>
       <path id="SegoeUI-Bold-49" d="M 1522 0 
 L 513 0 
@@ -1420,7 +758,7 @@ z
    </g>
    <g id="text_8">
     <!-- Tokens -->
-    <g style="fill: #34495e" transform="translate(266.986 94.2265) scale(0.16 -0.16)">
+    <g style="fill: #34495e" transform="translate(263.419795 95.269360) scale(0.182187 -0.273280)">
      <defs>
       <path id="SegoeUI-Bold-54" d="M 3659 3659 
 L 2381 3659 
@@ -1541,7 +879,7 @@ z
    </g>
    <g id="text_9">
     <!-- (4,8) -->
-    <g style="fill: #555555" transform="translate(281.505375 117.167475) scale(0.12 -0.12)">
+    <g style="fill: #555555" transform="translate(279.981157 120.962720) scale(0.136640 -0.204960)">
      <defs>
       <path id="SegoeUI-28" d="M 1863 -1019 
 L 1406 -1019 
@@ -1670,7 +1008,7 @@ z
    </g>
    <g id="text_10">
     <!-- Token Emb -->
-    <g style="fill: #34495e" transform="translate(164.734125 220.896988) scale(0.14 -0.14)">
+    <g style="fill: #34495e" transform="translate(159.776308 216.500000) scale(0.159413 -0.239120)">
      <defs>
       <path id="SegoeUI-Bold-20" transform="scale(0.015625)"/>
       <path id="SegoeUI-Bold-45" d="M 3200 0 
@@ -1755,7 +1093,7 @@ z
    </g>
    <g id="text_11">
     <!-- x -->
-    <g style="fill: #555555" transform="translate(197.777484 240.907891) scale(0.13 -0.13)">
+    <g style="fill: #555555" transform="translate(197.329486 234.000000) scale(0.148027 -0.222040)">
      <defs>
       <path id="SegoeUI-Italic-78" d="M 1747 1563 
 L 2484 0 
@@ -1792,7 +1130,7 @@ z
    </g>
    <g id="text_12">
     <!-- (12,2) -->
-    <g style="fill: #555555" transform="translate(188.5485 254.897163) scale(0.1 -0.1)">
+    <g style="fill: #555555" transform="translate(186.904536 247.000000) scale(0.113867 -0.170800)">
      <defs>
       <path id="SegoeUI-31" d="M 2263 0 
 L 1750 0 
@@ -1859,7 +1197,7 @@ z
    </g>
    <g id="text_13">
     <!-- Position Emb -->
-    <g style="fill: #34495e" transform="translate(351.193562 220.896988) scale(0.14 -0.14)">
+    <g style="fill: #34495e" transform="translate(345.254647 216.500000) scale(0.159413 -0.239120)">
      <defs>
       <path id="SegoeUI-Bold-50" d="M 1522 1544 
 L 1522 0 
@@ -1913,7 +1251,7 @@ z
    </g>
    <g id="text_14">
     <!-- p -->
-    <g style="fill: #555555" transform="translate(390.748797 240.907891) scale(0.13 -0.13)">
+    <g style="fill: #555555" transform="translate(390.294602 234.000000) scale(0.148027 -0.222040)">
      <defs>
       <path id="SegoeUI-Italic-70" d="M 3225 2081 
 Q 3225 1850 3175 1601 
@@ -1974,7 +1312,7 @@ z
    </g>
    <g id="text_15">
     <!-- (8,2) -->
-    <g style="fill: #555555" transform="translate(384.779812 254.897163) scale(0.1 -0.1)">
+    <g style="fill: #555555" transform="translate(383.509605 247.000000) scale(0.113867 -0.170800)">
      <use xlink:href="#SegoeUI-28"/>
      <use xlink:href="#SegoeUI-38" transform="translate(30.175781 0)"/>
      <use xlink:href="#SegoeUI-2c" transform="translate(84.082031 0)"/>
@@ -1982,9 +1320,9 @@ z
      <use xlink:href="#SegoeUI-29" transform="translate(159.667969 0)"/>
     </g>
    </g>
-   <g id="text_16">
+   <g id="text_16" style="display: none;">
     <!-- + -->
-    <g style="fill: #34495e" transform="translate(285.118656 330.765437) scale(0.22 -0.22)">
+    <g style="fill: #34495e" transform="translate(287.703000 342.000) scale(0.146667 -0.22)">
      <defs>
       <path id="SegoeUI-Bold-2b" d="M 3788 1516 
 L 2584 1516 
@@ -2002,12 +1340,11 @@ L 3788 1516
 z
 " transform="scale(0.015625)"/>
      </defs>
-     <use xlink:href="#SegoeUI-Bold-2b"/>
     </g>
    </g>
    <g id="text_17">
     <!-- e = x + p -->
-    <g style="fill: #555555" transform="translate(322.3872 334.656637) scale(0.12 -0.12)">
+    <g style="fill: #555555" transform="translate(322.387200 330.000) scale(0.186667 -0.28)">
      <defs>
       <path id="SegoeUI-Italic-65" d="M 2994 2450 
 Q 2994 2197 2881 1989 
@@ -2096,7 +1433,7 @@ z
    </g>
    <g id="text_18">
     <!-- (4, 8, 2) -->
-    <g style="fill: #555555" transform="translate(322.3872 348.900363) scale(0.1 -0.1)">
+    <g style="fill: #555555" transform="translate(322.387200 362.000) scale(0.133333 -0.20)">
      <defs>
       <path id="SegoeUI-20" transform="scale(0.015625)"/>
      </defs>
@@ -2113,7 +1450,7 @@ z
    </g>
    <g id="text_19">
     <!-- $W_Q$ -->
-    <g style="fill: #34495e" transform="translate(180.53 392.0324) scale(0.14 -0.14)">
+    <g style="fill: #34495e" transform="translate(178.061820 392.537344) scale(0.159413 -0.239120)">
      <defs>
       <path id="DejaVuSans-Oblique-57" d="M 616 4666 
 L 1228 4666 
@@ -2170,7 +1507,7 @@ z
    </g>
    <g id="text_20">
     <!-- $W_K$ -->
-    <g style="fill: #34495e" transform="translate(282.536 392.605525) scale(0.14 -0.14)">
+    <g style="fill: #34495e" transform="translate(280.149902 393.180224) scale(0.159413 -0.239120)">
      <defs>
       <path id="DejaVuSans-Oblique-4b" d="M 1081 4666 
 L 1716 4666 
@@ -2193,7 +1530,7 @@ z
    </g>
    <g id="text_21">
     <!-- $W_V$ -->
-    <g style="fill: #34495e" transform="translate(383.772 392.605525) scale(0.14 -0.14)">
+    <g style="fill: #34495e" transform="translate(381.319823 393.180224) scale(0.159413 -0.239120)">
      <defs>
       <path id="DejaVuSans-Oblique-56" d="M 1319 0 
 L 500 4666 
@@ -2212,7 +1549,7 @@ z
    </g>
    <g id="text_22">
     <!-- Q -->
-    <g style="fill: #34495e" transform="translate(185.45375 448.1209) scale(0.16 -0.16)">
+    <g style="fill: #34495e" transform="translate(184.576846 447.836768) scale(0.182187 -0.273280)">
      <defs>
       <path id="SegoeUI-Bold-51" d="M 2406 -78 
 Q 1444 -78 838 547 
@@ -2246,7 +1583,7 @@ z
    </g>
    <g id="text_23">
     <!-- 2→2 -->
-    <g style="fill: #555555" transform="translate(180.844844 469.885119) scale(0.11 -0.11)">
+    <g style="fill: #555555" transform="translate(179.405590 472.212448) scale(0.125253 -0.187880)">
      <defs>
       <path id="SegoeUI-2192" d="M 722 2075 
 L 4441 2075 
@@ -2269,7 +1606,7 @@ z
    </g>
    <g id="text_24">
     <!-- K -->
-    <g style="fill: #34495e" transform="translate(287.70475 448.1209) scale(0.16 -0.16)">
+    <g style="fill: #34495e" transform="translate(286.970154 447.836768) scale(0.182187 -0.273280)">
      <defs>
       <path id="SegoeUI-Bold-4b" d="M 4238 0 
 L 2963 0 
@@ -2295,7 +1632,7 @@ z
    </g>
    <g id="text_25">
     <!-- 2→2 -->
-    <g style="fill: #555555" transform="translate(282.220844 469.885119) scale(0.11 -0.11)">
+    <g style="fill: #555555" transform="translate(280.781590 472.212448) scale(0.125253 -0.187880)">
      <use xlink:href="#SegoeUI-32"/>
      <use xlink:href="#SegoeUI-2192" transform="translate(53.90625 0)"/>
      <use xlink:href="#SegoeUI-32" transform="translate(140.185547 0)"/>
@@ -2303,7 +1640,7 @@ z
    </g>
    <g id="text_26">
     <!-- V -->
-    <g style="fill: #34495e" transform="translate(388.93575 448.1209) scale(0.16 -0.16)">
+    <g style="fill: #34495e" transform="translate(388.200114 447.836768) scale(0.182187 -0.273280)">
      <defs>
       <path id="SegoeUI-Bold-56" d="M 4244 4481 
 L 2700 0 
@@ -2324,7 +1661,7 @@ z
    </g>
    <g id="text_27">
     <!-- 2→2 -->
-    <g style="fill: #555555" transform="translate(383.596844 469.885119) scale(0.11 -0.11)">
+    <g style="fill: #555555" transform="translate(382.157590 472.212448) scale(0.125253 -0.187880)">
      <use xlink:href="#SegoeUI-32"/>
      <use xlink:href="#SegoeUI-2192" transform="translate(53.90625 0)"/>
      <use xlink:href="#SegoeUI-32" transform="translate(140.185547 0)"/>
@@ -2332,7 +1669,7 @@ z
    </g>
    <g id="text_28">
     <!-- QKᵀ / √dₖ  →  Mask  →  Softmax -->
-    <g style="fill: #34495e" transform="translate(204.4635 564.143475) scale(0.12 -0.12)">
+    <g style="fill: #34495e" transform="translate(192.205475 564.842144) scale(0.136640 -0.204960)">
      <defs>
       <path id="SegoeUI-Bold-1d40" d="M 2106 3916 
 L 1428 3916 
@@ -2596,7 +1933,7 @@ z
    </g>
    <g id="text_29">
     <!-- Attention Weights -->
-    <g style="fill: #555555" transform="translate(231.079984 603.292706) scale(0.13 -0.13)">
+    <g style="fill: #555555" transform="translate(231.079984 603.293) scale(0.086667 -0.13)">
      <defs>
       <path id="Georgia-BoldItalic-41" d="M 2788 1784 
 L 2516 3400 
@@ -3025,7 +2362,7 @@ z
    </g>
    <g id="text_30">
     <!-- Weights × V -->
-    <g style="fill: #34495e" transform="translate(252.433812 653.093481) scale(0.14 -0.14)">
+    <g style="fill: #34495e" transform="translate(246.827287 653.849312) scale(0.159413 -0.239120)">
      <defs>
       <path id="SegoeUI-Bold-57" d="M 6375 4481 
 L 5191 0 
@@ -3133,7 +2470,7 @@ z
    </g>
    <g id="text_31">
     <!-- Attn(e) -->
-    <g style="fill: #555555" transform="translate(268.631703 692.687906) scale(0.13 -0.13)">
+    <g style="fill: #555555" transform="translate(268.631703 692.688) scale(0.086667 -0.13)">
      <defs>
       <path id="Georgia-BoldItalic-28" d="M 2084 -1025 
 Q 1738 -978 1413 -831 
@@ -3183,15 +2520,15 @@ z
      <use xlink:href="#Georgia-BoldItalic-29" transform="translate(328.613281 0)"/>
     </g>
    </g>
-   <g id="text_32">
+   <g id="text_32" style="display: none;">
     <!-- + -->
-    <g style="fill: #34495e" transform="translate(285.118656 737.191038) scale(0.22 -0.22)">
+    <g style="fill: #34495e" transform="translate(287.703000 748.400) scale(0.146667 -0.22)">
      <use xlink:href="#SegoeUI-Bold-2b"/>
     </g>
    </g>
    <g id="text_33">
     <!-- Feed-Forward -->
-    <g style="fill: #34495e" transform="translate(243.862406 830.329744) scale(0.15 -0.15)">
+    <g style="fill: #34495e" transform="translate(237.131107 828.190400) scale(0.170800 -0.256200)">
      <defs>
       <path id="SegoeUI-Bold-46" d="M 3103 3659 
 L 1522 3659 
@@ -3270,7 +2607,7 @@ z
    </g>
    <g id="text_34">
     <!-- Linear(2,32) -->
-    <g style="fill: #555555" transform="translate(264.869203 858.800319) scale(0.11 -0.11)">
+    <g style="fill: #555555" transform="translate(261.033626 860.076800) scale(0.125253 -0.187880)">
      <defs>
       <path id="SegoeUI-4c" d="M 2913 0 
 L 588 0 
@@ -3432,7 +2769,7 @@ z
    </g>
    <g id="text_35">
     <!-- ReLU→Linear(32,2) -->
-    <g style="fill: #555555" transform="translate(247.816625 884.605119) scale(0.11 -0.11)">
+    <g style="fill: #555555" transform="translate(241.616557 888.978400) scale(0.125253 -0.187880)">
      <defs>
       <path id="SegoeUI-52" d="M 3800 0 
 L 3175 0 
@@ -3506,15 +2843,15 @@ z
      <use xlink:href="#SegoeUI-29" transform="translate(789.429688 0)"/>
     </g>
    </g>
-   <g id="text_36">
+   <g id="text_36" style="display: none;">
     <!-- + -->
-    <g style="fill: #34495e" transform="translate(285.118656 960.218237) scale(0.22 -0.22)">
+    <g style="fill: #34495e" transform="translate(287.703000 971.500) scale(0.146667 -0.22)">
      <use xlink:href="#SegoeUI-Bold-2b"/>
     </g>
    </g>
    <g id="text_37">
     <!-- LM Head -->
-    <g style="fill: #34495e" transform="translate(261.330375 1044.140944) scale(0.15 -0.15)">
+    <g style="fill: #34495e" transform="translate(257.021059 1043.714432) scale(0.170800 -0.256200)">
      <defs>
       <path id="SegoeUI-Bold-4c" d="M 3181 0 
 L 513 0 
@@ -3552,7 +2889,7 @@ z
    </g>
    <g id="text_38">
     <!-- Linear(2,12) -->
-    <g style="fill: #555555" transform="translate(264.869203 1068.925119) scale(0.11 -0.11)">
+    <g style="fill: #555555" transform="translate(261.033626 1071.479232) scale(0.125253 -0.187880)">
      <use xlink:href="#SegoeUI-4c"/>
      <use xlink:href="#SegoeUI-69" transform="translate(47.070312 0)"/>
      <use xlink:href="#SegoeUI-6e" transform="translate(71.289062 0)"/>
@@ -3569,7 +2906,7 @@ z
    </g>
    <g id="text_39">
     <!-- Softmax -->
-    <g style="fill: #34495e" transform="translate(265.213187 1182.125787) scale(0.14 -0.14)">
+    <g style="fill: #34495e" transform="translate(261.379109 1182.780352) scale(0.159413 -0.239120)">
      <use xlink:href="#SegoeUI-Bold-53"/>
      <use xlink:href="#SegoeUI-Bold-6f" transform="translate(56.054688 0)"/>
      <use xlink:href="#SegoeUI-Bold-66" transform="translate(115.6875 0)"/>
@@ -3581,7 +2918,7 @@ z
    </g>
    <g id="text_40">
     <!-- P(next) -->
-    <g style="fill: #34495e" transform="translate(431.938106 1173.831387) scale(0.14 -0.14)">
+    <g style="fill: #34495e" transform="translate(428.673055 1173.484352) scale(0.159413 -0.239120)">
      <defs>
       <path id="SegoeUI-Bold-28" d="M 2309 -1019 
 L 1503 -1019 
@@ -3613,7 +2950,7 @@ z
    </g>
    <g id="text_41">
     <!-- (4,8,12) -->
-    <g style="fill: #555555" transform="translate(438.455294 1195.184319) scale(0.11 -0.11)">
+    <g style="fill: #555555" transform="translate(436.070545 1197.396352) scale(0.125253 -0.187880)">
      <use xlink:href="#SegoeUI-28"/>
      <use xlink:href="#SegoeUI-34" transform="translate(30.175781 0)"/>
      <use xlink:href="#SegoeUI-2c" transform="translate(84.082031 0)"/>
@@ -3626,7 +2963,7 @@ z
    </g>
    <g id="text_42">
     <!-- Notation -->
-    <g style="fill: #34495e" transform="translate(522.335444 61.460188) scale(0.14 -0.14)">
+    <g style="fill: #34495e" transform="translate(103.993882 1176.004200) scale(0.093333 -0.14)">
      <defs>
       <path id="SegoeUI-Bold-4e" d="M 4544 0 
 L 3525 0 
@@ -3660,7 +2997,7 @@ z
    </g>
    <g id="text_43">
     <!-- B=4 -->
-    <g style="fill: #555555" transform="translate(541.985366 85.577919) scale(0.11 -0.11)">
+    <g style="fill: #555555" transform="translate(110.686649 1200.121900) scale(0.073333 -0.11)">
      <defs>
       <path id="SegoeUI-42" d="M 588 0 
 L 588 4481 
@@ -3714,7 +3051,7 @@ z
    </g>
    <g id="text_44">
     <!-- T=8 -->
-    <g style="fill: #555555" transform="translate(542.256928 102.166719) scale(0.11 -0.11)">
+    <g style="fill: #555555" transform="translate(110.752748 1216.711000) scale(0.073333 -0.11)">
      <defs>
       <path id="SegoeUI-54" d="M 3238 4006 
 L 1944 4006 
@@ -3735,7 +3072,7 @@ z
    </g>
    <g id="text_45">
     <!-- C=2 -->
-    <g style="fill: #555555" transform="translate(541.732709 118.755519) scale(0.11 -0.11)">
+    <g style="fill: #555555" transform="translate(110.530671 1233.300000) scale(0.073333 -0.11)">
      <defs>
       <path id="SegoeUI-43" d="M 3638 188 
 Q 3141 -75 2400 -75 
@@ -3762,7 +3099,7 @@ z
    </g>
    <g id="text_46">
     <!-- d_k=2 -->
-    <g style="fill: #555555" transform="translate(536.883256 135.344319) scale(0.11 -0.11)">
+    <g style="fill: #555555" transform="translate(108.914617 1249.888000) scale(0.073333 -0.11)">
      <defs>
       <path id="SegoeUI-64" d="M 3250 0 
 L 2738 0 
@@ -3824,7 +3161,7 @@ z
    </g>
    <g id="text_47">
     <!-- vocab=12 -->
-    <g style="fill: #555555" transform="translate(527.778178 151.933119) scale(0.11 -0.11)">
+    <g style="fill: #555555" transform="translate(105.879233 1266.477000) scale(0.073333 -0.11)">
      <defs>
       <path id="SegoeUI-76" d="M 3034 3200 
 L 1759 0 
@@ -3917,7 +3254,7 @@ z
    </g>
    <g id="text_48">
    <!-- Embedding -->
-   <g style="fill: #34495e" transform="translate(86.4576 1295.6057) scale(0.13 -0.13)">
+   <g style="fill: #34495e" transform="translate(86.457600 1295.61) scale(0.086667 -0.13)">
      <defs>
       <path id="SegoeUI-45" d="M 2963 0 
 L 588 0 
@@ -4006,7 +3343,7 @@ z
    </g>
    <g id="text_49">
    <!-- Attention -->
-   <g style="fill: #34495e" transform="translate(210.8736 1295.640231) scale(0.13 -0.13)">
+   <g style="fill: #34495e" transform="translate(210.873600 1295.64) scale(0.086667 -0.13)">
      <defs>
       <path id="SegoeUI-41" d="M 4056 0 
 L 3475 0 
@@ -4061,7 +3398,7 @@ z
    </g>
    <g id="text_50">
    <!-- Feed-Forward -->
-   <g style="fill: #34495e" transform="translate(326.0736 1295.640231) scale(0.13 -0.13)">
+   <g style="fill: #34495e" transform="translate(326.073600 1295.64) scale(0.086667 -0.13)">
      <defs>
       <path id="SegoeUI-46" d="M 2863 4006 
 L 1113 4006 
@@ -4125,7 +3462,7 @@ z
    </g>
    <g id="text_51">
    <!-- Output -->
-   <g style="fill: #34495e" transform="translate(464.3136 1295.640231) scale(0.13 -0.13)">
+   <g style="fill: #34495e" transform="translate(464.313600 1295.64) scale(0.086667 -0.13)">
      <defs>
       <path id="SegoeUI-4f" d="M 2394 -75 
 Q 1441 -75 867 553 
@@ -4205,7 +3542,7 @@ z
  </g>
  <defs>
   <clipPath id="pb73fe0bd0a">
-   <rect x="7.2" y="7.2" width="608.256" height="1382.4"/>
+   <rect x="0" y="7.2" width="662.656" height="1382.4"/>
   </clipPath>
  </defs>
 </svg>
