@@ -23,7 +23,7 @@ We can take advantage of this direct visibility to demonstrate how the informati
 
 ### 1.1 Related work
 
-Much of the work in the mechanistic interpretability literature focuses on large language models and tries to interpret attention in terms of linguistic relationships or specific circuits (Vaswani et al., 2017; Clark et al., 2019; Vig, 2019; Wang, 2022; Liu, 2022). However, such work rarely traces the full forward pass end-to-end in a directly visualizable space; our contribution is a worked geometric walkthrough of one such model. Other work takes a more mathematical approach to deconstructing the operations performed by each part of the transformer (Elhage et al., 2021), or explores how features are compressed into fewer dimensions (Elhage et al., 2022). Other work on small models has analyzed how geometric structure in embedding space emerges during training on modular arithmetic (Nanda et al., 2023; Musat, 2024; Gromov, 2023; Zhong et al., 2023; Welch Labs 2025), and algorithmic descriptions of transformer computations have been formalized via languages such as RASP (Weiss et al., 2021).
+Much of the work in the mechanistic interpretability literature focuses on large language models and tries to interpret attention in terms of linguistic relationships or specific circuits (Vaswani et al., 2017; Clark et al., 2019; Vig, 2019; Wang, 2022; Liu, 2022). However, such work rarely traces the full forward pass end-to-end in a directly visualizable space; our contribution is a worked geometric walkthrough of one such model. Other work takes a more mathematical approach to deconstructing the operations performed by each part of the transformer (Elhage et al., 2021), or explores how features are compressed into fewer dimensions (Elhage et al., 2022). Other work on small models has analyzed how geometric structure in embedding space emerges during training on modular arithmetic (Nanda et al., 2023; Musat, 2024; Gromov, 2023; Zhong et al., 2023; Welch Labs 2025), and algorithmic descriptions of transformer computations have been formalized via languages such as RASP (Weiss et al., 2021; Friedman et al., 2023).
 
 ## 2. Methods
 
@@ -400,6 +400,8 @@ Nearly all code — including the transformer model, training pipeline, and figu
 - Elhage, N., et al. (2021). A mathematical framework for transformer circuits. *Transformer Circuits Thread*. https://transformer-circuits.pub/2021/framework/index.html
 
 - Elhage, N., et al. (2022). Toy models of superposition. *Transformer Circuits Thread*. https://transformer-circuits.pub/2022/toy_model/index.html
+
+- Friedman, D., Wettig, A., & Chen, D. (2023). Learning Transformer Programs. *NeurIPS*. https://arxiv.org/abs/2306.01128
 
 - Geva, M., Schuster, R., Berant, J., & Levy, O. (2021). Transformer feed-forward layers are key-value memories. *EMNLP*, 5484–5495. https://aclanthology.org/2021.emnlp-main.446/
 

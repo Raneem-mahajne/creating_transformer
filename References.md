@@ -45,6 +45,9 @@ Links were checked with HTTP HEAD/GET on 2026-08-06; status notes are at the bot
 
 ### Toy models, grokking, and geometric algorithms
 
+- Friedman, D., Wettig, A., & Chen, D. (2023). Learning Transformer Programs. *NeurIPS*.  
+  [arXiv](https://arxiv.org/abs/2306.01128) · [PDF](https://arxiv.org/pdf/2306.01128)
+
 - Gromov, A. (2023). Grokking modular arithmetic. *arXiv*.  
   [arXiv](https://arxiv.org/abs/2301.02679) · [PDF](https://arxiv.org/pdf/2301.02679)
 
