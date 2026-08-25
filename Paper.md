@@ -23,7 +23,7 @@ We can take advantage of this direct visibility to demonstrate how the informati
 
 ### 1.1 Related work
 
-Much of the work in the mechanistic interpretability literature focuses on large language models and tries to interpret attention in terms of linguistic relationships or specific circuits (Vaswani et al., 2017; Clark et al., 2019; Vig, 2019; Wang, 2022; Liu, 2022). However, such work rarely traces the full forward pass end-to-end in a directly visualizable space; our contribution is a worked geometric walkthrough of one such model. Other work takes a more mathematical approach to deconstructing the operations performed by each part of the transformer (Elhage et al., 2021), or explores how features are compressed into fewer dimensions (Elhage et al., 2022). Other work on small models has analyzed how geometric structure in embedding space emerges during training on modular arithmetic (Nanda et al., 2023; Musat, 2024; Gromov, 2023; Zhong et al., 2023; Welch Labs 2025), and algorithmic descriptions of transformer computations have been formalized via languages such as RASP (Weiss et al., 2021; Friedman et al., 2023).
+Much of the work in the mechanistic interpretability literature focuses on large language models and tries to interpret attention in terms of linguistic relationships or specific circuits (Vaswani et al., 2017; Clark et al., 2019; Vig, 2019; Wang, 2022; Liu, 2022). However, such work rarely traces the full forward pass end-to-end in a directly visualizable space; our contribution is a worked geometric walkthrough of one such model. Other work takes a more mathematical approach to deconstructing the operations performed by each part of the transformer (Elhage et al., 2021), or explores how features are compressed into fewer dimensions (Elhage et al., 2022). Other work on small models has analyzed how geometric structure in embedding space emerges during training on arithmetic tasks (Nanda et al., 2023; Musat, 2024; Gromov, 2023; Zhong et al., 2023; Welch Labs 2025; Power et al., 2022; Quirke & Barez, 2024), and algorithmic descriptions of transformer computations have been formalized via languages such as RASP (Weiss et al., 2021; Friedman et al., 2023; Zhou et al., 2024).
 
 ## 2. Methods
 
@@ -421,6 +421,10 @@ Nearly all code — including the transformer model, training pipeline, and figu
 
 - nostalgebraist. (2020). Interpreting GPT: The logit lens. LessWrong. https://www.lesswrong.com/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens
 
+- Power, A., Burda, Y., Edwards, H., Babuschkin, I., & Misra, V. (2022). Grokking: Generalization beyond overfitting on small algorithmic datasets. *arXiv preprint* arXiv:2201.02177. https://arxiv.org/abs/2201.02177
+
+- Quirke, P., & Barez, F. (2024). Understanding addition in transformers. *ICLR*. https://arxiv.org/abs/2310.13121
+
 - Radford, A., Narasimhan, K., Salimans, T., & Sutskever, I. (2018). Improving language understanding by generative pre-training. OpenAI. https://cdn.openai.com/research-covers/language-unsupervised/language_understanding_paper.pdf
 
 - Sun, W., Winnubst, J., Natrajan, M., et al. (2025). Learning produces an orthogonalized state machine in the hippocampus. *Nature*, *640*, 165–175. https://doi.org/10.1038/s41586-024-08548-w
@@ -434,3 +438,5 @@ Nearly all code — including the transformer model, training pipeline, and figu
 - Weiss, G., Goldberg, Y., & Yahav, E. (2021). Thinking like transformers. *ICML*.
 
 - Zhong, Z., Liu, Z., Tegmark, M., & Andreas, J. (2023). The clock and the pizza: Two stories in mechanistic explanation of neural networks. *NeurIPS*. https://arxiv.org/abs/2306.17844
+
+- Zhou, H., Bradley, A., Littwin, E., Razin, N., Saremi, O., Susskind, J., Bengio, S., & Nakkiran, P. (2024). What algorithms can Transformers learn? A study in length generalization. *ICLR*. https://arxiv.org/abs/2310.16028

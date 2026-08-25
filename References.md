@@ -60,6 +60,12 @@ Links were checked with HTTP HEAD/GET on 2026-08-06; status notes are at the bot
 - Nanda, N., Chan, L., Liberum, T., Smith, J., & Steinhardt, J. (2023). Progress measures for grokking via mechanistic interpretability. *arXiv*.  
   [arXiv](https://arxiv.org/abs/2301.05217) · [PDF](https://arxiv.org/pdf/2301.05217)
 
+- Power, A., Burda, Y., Edwards, H., Babuschkin, I., & Misra, V. (2022). Grokking: Generalization beyond overfitting on small algorithmic datasets. *arXiv*.  
+  [arXiv](https://arxiv.org/abs/2201.02177) · [PDF](https://arxiv.org/pdf/2201.02177)
+
+- Quirke, P., & Barez, F. (2024). Understanding addition in transformers. *ICLR*.  
+  [arXiv](https://arxiv.org/abs/2310.13121) · [PDF](https://arxiv.org/pdf/2310.13121)
+
 - Welch Labs. (2025). *The most complex model we actually understand* [Video]. YouTube.  
   [YouTube](https://www.youtube.com/watch?v=D8GOeCFFby4)
 
@@ -68,6 +74,9 @@ Links were checked with HTTP HEAD/GET on 2026-08-06; status notes are at the bot
 
 - Zhong, Z., Liu, Z., Tegmark, M., & Andreas, J. (2023). The clock and the pizza: Two stories in mechanistic explanation of neural networks. *NeurIPS*.  
   [arXiv](https://arxiv.org/abs/2306.17844) · [PDF](https://arxiv.org/pdf/2306.17844) · [OpenReview](https://openreview.net/forum?id=S5wmbQc1We)
+
+- Zhou, H., Bradley, A., Littwin, E., Razin, N., Saremi, O., Susskind, J., Bengio, S., & Nakkiran, P. (2024). What algorithms can Transformers learn? A study in length generalization. *ICLR*.  
+  [arXiv](https://arxiv.org/abs/2310.16028) · [PDF](https://arxiv.org/pdf/2310.16028)
 
 ### Dimensionality reduction (mentioned as *not* needed here)
 
@@ -99,9 +108,6 @@ These are the strongest non-gobbledygook matches to the paper’s core claim (ge
 
 - Lindner, D., Kramár, J., Farquhar, S., Rahtz, M., McGrath, T., & Mikulik, V. (2023). Tracr: Compiled transformers as a laboratory for interpretability. *NeurIPS*.  
   [arXiv](https://arxiv.org/abs/2301.05062) · [PDF](https://arxiv.org/pdf/2301.05062)
-
-- Power, A., Burda, Y., Edwards, H., Babuschkin, I., & Misra, V. (2022). Grokking: Generalization beyond overfitting on small algorithmic datasets. *arXiv*.  
-  [arXiv](https://arxiv.org/abs/2201.02177) · [PDF](https://arxiv.org/pdf/2201.02177)
 
 ---
 
