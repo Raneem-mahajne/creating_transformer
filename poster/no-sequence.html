@@ -114,12 +114,30 @@ body {
   display: block;
   border-radius: 1mm;
 }
-.card.grow img {
+.card.grow {
+  flex: 0.9 1 0;
+  min-height: 0;
+}
+.col-1 .card.grow-data { flex: 0.82 1 0; }
+.col-1 .card.grow-curve { flex: 0.88 1 0; }
+.col-1 .card.grow-gen { flex: 1.12 1 0; }
+.card.grow .figframe {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
   width: 100%;
-  max-height: 80mm;
-  margin-left: auto;
-  margin-right: auto;
+}
+.card.grow .figframe img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
   object-fit: contain;
+  object-position: center center;
 }
 .col-2 .card,
 .col-3 .card {
@@ -141,7 +159,7 @@ body {
   object-fit: contain;
 }
 .card.arch {
-  flex: 1.8 1 0;
+  flex: 1.35 1 0;
   min-height: 0;
   padding-left: 0;
   padding-right: 0;
@@ -243,19 +261,19 @@ body {
       <div class="figframe"><img src="fig01-tight.png" alt="Figure 1"></div>
       <div class="cap"><b>Figure 1.</b> Architecture of the minimal transformer. Every component operates entirely in $\mathbb{R}^2$.</div>
     </div>
-    <div class="card grow">
+    <div class="card grow grow-data">
       <div class="card-title">Training Data</div>
-      <img src="fig02.png" alt="Figure 2">
+      <div class="figframe"><img src="fig02.png" alt="Figure 2"></div>
       <div class="cap"><b>Figure 2.</b> Sample training sequences as heatmaps. Green: constrained position (immediately after <code>+</code>) with the correct next token (the most recent even number). Gray: unconstrained position (any token is valid).</div>
     </div>
-    <div class="card grow">
+    <div class="card grow grow-curve">
       <div class="card-title">Learning Curve</div>
-      <img src="fig03.png" alt="Figure 3">
+      <div class="figframe"><img src="fig03.png" alt="Figure 3"></div>
       <div class="cap"><b>Figure 3.</b> Training dynamics over 20,000 steps. Left axis: cross-entropy loss. Right axis: rule error — the fraction of constrained positions (tokens immediately following <code>+</code>) where the model's top predicted token is not the target (the most recent even number). Rule error near 90% is chance level; near 0% indicates the rule is learned.</div>
     </div>
-    <div class="card grow">
+    <div class="card grow grow-gen">
       <div class="card-title">Generated Sequences</div>
-      <img src="fig04.png" alt="Figure 4">
+      <div class="figframe"><img src="fig04.png" alt="Figure 4"></div>
       <div class="cap"><b>Figure 4.</b> Model-generated sequences at initialization (top) vs. after training (bottom). Green = correct at constrained positions (after <code>+</code>), red = wrong at constrained positions, gray = unconstrained. Top: at step 0, constrained positions are mostly red (random predictions). Bottom: after training, constrained positions are mostly green (correct "last even" outputs).</div>
     </div>
   </div>
