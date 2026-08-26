@@ -77,9 +77,9 @@ body {
   min-height: 0;
   justify-content: flex-start;
 }
-.col-1 { flex: 1.08; }
-.col-2 { flex: 1; }
-.col-3 { flex: 1; }
+.col-1 { flex: 0.92; }
+.col-2 { flex: 1.12; }
+.col-3 { flex: 1.12; }
 
 /* ===== Card title bars ===== */
 .card .card-title {
@@ -115,22 +115,10 @@ body {
   border-radius: 1mm;
 }
 .card.grow img {
-  width: 92%;
+  width: 100%;
+  max-height: 80mm;
   margin-left: auto;
   margin-right: auto;
-}
-.card.arch {
-  flex: 1 1 0;
-  min-height: 0;
-}
-.card.arch img {
-  width: auto;
-  max-width: 100%;
-  height: 0;
-  flex: 1 1 0;
-  min-height: 0;
-  max-height: none;
-  margin: 0 auto;
   object-fit: contain;
 }
 .col-2 .card,
@@ -138,6 +126,9 @@ body {
   flex: 1 1 0;
   min-height: 0;
 }
+.col-2 .card.emb { flex: 1.42 1 0; }
+.col-2 .card.qkv { flex: 1.18 1 0; }
+.col-2 .card.attn { flex: 1.28 1 0; }
 .col-2 .card img,
 .col-3 .card img {
   width: auto;
@@ -149,13 +140,49 @@ body {
   margin: 0 auto;
   object-fit: contain;
 }
+.card.arch {
+  flex: 1.8 1 0;
+  min-height: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+.card.arch .card-title {
+  margin-left: 0;
+  margin-right: 0;
+}
+.card.arch .cap {
+  padding-left: 1.5mm;
+  padding-right: 1.5mm;
+}
+.card.arch .figframe,
+.col-2 .card .figframe {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+.card.arch .figframe img,
+.col-2 .card .figframe img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  flex: none;
+  min-height: 0;
+  margin: 0;
+  object-fit: contain;
+  object-position: center center;
+  border-radius: 0;
+}
 .card .cap { font-size: 13.5pt; color: var(--text-light); line-height: 1.25; margin-top: 0.8mm; flex-shrink: 0; }
 .card .cap b { color: var(--navy); font-weight: 900; }
 
 /* Abstract */
 .abstract { background: var(--card-bg); border-radius: 2mm; box-shadow: 0 1px 5px rgba(0,0,0,.12); padding: 2mm 3mm; flex: 0 0 auto; }
 .abstract h2 { font-size: 16.5pt; font-weight: 900; color: var(--navy); margin-bottom: 1mm; border-bottom: 0.8mm solid var(--gold); display: inline-block; padding: 0 0 0.4mm; }
-.abstract p { font-size: 14pt; line-height: 1.22; color: var(--text-light); }
+.abstract p { font-size: 13pt; line-height: 1.18; color: var(--text-light); }
 
 /* ===== Footer ===== */
 .footer {
@@ -213,7 +240,7 @@ body {
     </div>
     <div class="card arch">
       <div class="card-title">Model Architecture</div>
-      <img src="fig01.png" alt="Figure 1">
+      <div class="figframe"><img src="fig01-tight.png" alt="Figure 1"></div>
       <div class="cap"><b>Figure 1.</b> Architecture of the minimal transformer. Every component operates entirely in $\mathbb{R}^2$.</div>
     </div>
     <div class="card grow">
@@ -234,19 +261,19 @@ body {
   </div>
 
   <div class="col col-2">
-    <div class="card">
+    <div class="card emb">
       <div class="card-title">Learned Embeddings</div>
-      <img src="fig05.png" alt="Figure 5">
+      <div class="figframe"><img src="fig05.png" alt="Figure 5"></div>
       <div class="cap"><b>Figure 5.</b> Learned embeddings. (a) Token embeddings $\mathbf{x}_i$ shown as heatmap. (b) Position embeddings $\mathbf{p}_i$ shown as heatmap. (c) Combined token+position embeddings shown as scatterplot. (d) Positions $\mathbf{p}_i$ shown as scatterplot. (e) Token+position embeddings $\mathbf{e}_i$ shown as scatterplot. Positions are indicated as subscripts next to each token e.g. $+_5$ is the <code>+</code> token at position 5.</div>
     </div>
-    <div class="card">
+    <div class="card qkv">
       <div class="card-title">Q, K, V Projections</div>
-      <img src="fig06.png" alt="Figure 6">
+      <div class="figframe"><img src="fig06.png" alt="Figure 6"></div>
       <div class="cap"><b>Figure 6.</b> QKV projections. (a) Original combined token+position embeddings (as in Figure 5e). (b) Query-space (blue), with $W_Q$ inset. (c) Key-space (red), with $W_K$ inset. (d) Value-space (green), with $W_V$ inset. All 96 token+position points in each panel.</div>
     </div>
-    <div class="card">
+    <div class="card attn">
       <div class="card-title">Who Attends to Whom: Query–Key Geometry</div>
-      <img src="fig07.png" alt="Figure 7">
+      <div class="figframe"><img src="fig07.png" alt="Figure 7"></div>
       <div class="cap"><b>Figure 7.</b> Query–key geometry in Q/K space. <b>Top:</b> joint query–key space (blue: queries; red: keys; labels show token and position). <b>Bottom:</b> Focus on the query $+_5$ (blue); background color indicates the dot product of the $+_5$ query with every point in space. Keys with position $\geq 5$ are grayed due to the causal mask.</div>
     </div>
   </div>
