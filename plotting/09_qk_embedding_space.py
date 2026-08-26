@@ -345,19 +345,18 @@ def plot_qk_embedding_space_combined(
     x_min, x_max = all_x.min() - margin_x, all_x.max() + margin_x
     y_min, y_max = all_y.min() - margin_y, all_y.max() + margin_y
 
-    # Prefer constrained layout for multi-panel text-heavy figures.
+    # Avoid constrained_layout here: equal-aspect axes plus constrained
+    # layout leaves a large empty band between the two stacked panels.
     if _u._JOURNAL_MODE:
-        fig = plt.figure(figsize=(7.0, 8.8), constrained_layout=True)
+        fig = plt.figure(figsize=(7.0, 7.4))
     else:
-        fig = plt.figure(figsize=(18, 18.5), constrained_layout=True)
-    # Reduce vertical whitespace between stacked panels in the combined figure.
-    fig.set_constrained_layout_pads(hspace=0.0, h_pad=0.0, wspace=0.02, w_pad=0.02)
+        fig = plt.figure(figsize=(18, 15.2))
 
     if step_label is not None:
         _suptitle_fs = 10 if _u._JOURNAL_MODE else 18
         fig.suptitle(f"Step: {step_label}", fontsize=_suptitle_fs, fontweight="bold", y=0.99)
 
-    gs = GridSpec(2, 1, figure=fig, height_ratios=[1.0, 1.03], hspace=0.0)
+    gs = GridSpec(2, 1, figure=fig, height_ratios=[1.0, 1.0], hspace=0.10)
     ax_top = fig.add_subplot(gs[0, 0])
     ax_bottom = fig.add_subplot(gs[1, 0])
 
