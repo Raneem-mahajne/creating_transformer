@@ -34,6 +34,9 @@ Links were checked with HTTP HEAD/GET on 2026-08-06; status notes are at the bot
 - Elhage, N., et al. (2022). Toy models of superposition. *Transformer Circuits Thread*.  
   [Article](https://transformer-circuits.pub/2022/toy_model/index.html)
 
+- Bricken, T., et al. (2023). Towards monosemanticity: Decomposing language models with dictionary learning. *Transformer Circuits Thread*.  
+  [Article](https://transformer-circuits.pub/2023/monosemantic-features)
+
 - Geva, M., Schuster, R., Berant, J., & Levy, O. (2021). Transformer feed-forward layers are key-value memories. *EMNLP*, 5484–5495.  
   [ACL Anthology](https://aclanthology.org/2021.emnlp-main.446/) · [PDF](https://aclanthology.org/2021.emnlp-main.446.pdf) · [arXiv](https://arxiv.org/abs/2012.14913)
 
