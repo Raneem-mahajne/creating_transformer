@@ -1,11 +1,15 @@
 % Options for packages loaded elsewhere
 \PassOptionsToPackage{unicode}{hyperref}
 \PassOptionsToPackage{hyphens}{url}
+\PassOptionsToPackage{dvipsnames,svgnames,x11names}{xcolor}
 \documentclass[
+  11pt,
+  a4paper,
 ]{article}
 \usepackage{xcolor}
+\usepackage[a4paper,margin=1.15in]{geometry}
 \usepackage{amsmath,amssymb}
-\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\setcounter{secnumdepth}{5}
 \usepackage{iftex}
 \ifPDFTeX
   \usepackage[T1]{fontenc}
@@ -103,56 +107,160 @@
 \setlength{\emergencystretch}{3em} % prevent overfull lines
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
-\usepackage{seqsplit}
+% Academic layout for Paper.md → PDF (no prose changes).
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{float}
+
+\setstretch{1.14}
+\setlength{\parskip}{0.42em}
+\setlength{\emergencystretch}{3em}
+\raggedbottom
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\raggedright}
+  {\thesection.}{0.65em}{}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\raggedright}
+  {\thesubsection}{0.6em}{}
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\bfseries\raggedright}
+  {\thesubsubsection}{0.55em}{}
+\titlespacing*{\section}{0pt}{1.7ex plus .35ex}{0.85ex plus .1ex}
+\titlespacing*{\subsection}{0pt}{1.35ex plus .25ex}{0.55ex plus .08ex}
+\titlespacing*{\subsubsection}{0pt}{1.1ex plus .2ex}{0.4ex plus .05ex}
+
+\captionsetup[figure]{
+  labelformat=empty,
+  font=small,
+  skip=7pt,
+  justification=justified,
+  singlelinecheck=false
+}
+\captionsetup[table]{
+  font=small,
+  labelfont=bf,
+  skip=5pt,
+  justification=centering
+}
+
+\setlist[itemize]{leftmargin=1.35em,itemsep=0.22em,topsep=0.35em,parsep=0.08em}
+\setlist[enumerate]{leftmargin=1.55em,itemsep=0.32em,topsep=0.4em,parsep=0.1em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\itshape Fully Interpretable Minimal Transformers}
+\fancyhead[R]{\small\thepage}
+\renewcommand{\headrulewidth}{0.35pt}
+\fancypagestyle{plain}{%
+  \fancyhf{}%
+  \fancyhead[L]{\small\itshape Fully Interpretable Minimal Transformers}%
+  \fancyhead[R]{\small\thepage}%
+  \renewcommand{\headrulewidth}{0.35pt}%
+}
+
 \usepackage{tabularx}
+\usepackage{seqsplit}
+
+\date{}
+
+% Don't collapse list spacing from pandoc's \tightlist
+\renewcommand{\tightlist}{}
+
+% Keep tables a bit tighter
+\renewcommand{\arraystretch}{1.12}
+
+% Code / example sequences
+\IfFileExists{fvextra.sty}{%
+  \usepackage{fvextra}
+  \DefineVerbatimEnvironment{Highlighting}{Verbatim}{%
+    commandchars=\\\{\},
+    breaklines=true,
+    fontsize=\small,
+    frame=single,
+    framesep=5pt,
+    rulecolor=\color{black!18}%
+  }
+}{}
+\makeatletter
+\def\verbatim@font{\normalfont\ttfamily\small}
+\makeatother
+
+% Leave room for captions under tall figures
+\makeatletter
+\@ifundefined{pandoc@box}{}{%
+  \renewcommand*\pandocbounded[1]{%
+    \sbox\pandoc@box{#1}%
+    \Gscale@div\@tempa{0.70\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+    \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+    \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi
+    \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+    \else\usebox{\pandoc@box}%
+    \fi
+  }%
+}
+\makeatother
+% Keep figures in source order, immediately after they are cited.
+\floatplacement{figure}{H}
+\def\fps@figure{H}
 \usepackage{bookmark}
 \IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
 \urlstyle{same}
 \hypersetup{
-  hidelinks,
+  pdftitle={Fully Interpretable Minimal Transformers: From Geometry to Algorithm},
+  pdfauthor={Toviah Moldwin, Raneem Mahajne, and Idan SegevEdmond and Lily Safra Center for Brain Sciences, The Hebrew University of Jerusalem},
+  colorlinks=true,
+  linkcolor={black},
+  filecolor={Maroon},
+  citecolor={Blue},
+  urlcolor={blue},
   pdfcreator={LaTeX via pandoc}}
 
-\author{}
+\title{Fully Interpretable Minimal Transformers: From Geometry to
+Algorithm}
+\author{Toviah Moldwin, Raneem Mahajne, and Idan
+Segev\\[0.45em]{\normalsize\itshape Edmond and Lily Safra Center for
+Brain Sciences, The Hebrew University of Jerusalem}}
 \date{}
 
 \begin{document}
+\maketitle
+\begin{abstract}
+We present a framework for building and interpreting minimal transformer
+models trained on procedurally-generated integer sequences. As a
+pedagogical case study, we apply it to one minimal model on a single
+synthetic retrieval task. By constraining the embedding dimension and
+head size to \(2\), we enable full two-dimensional visualization of
+every internal representation. Embeddings, query/key/value transforms,
+attention outputs, residual streams, and the language-model head's
+decision boundaries can all be seen directly. We argue that, in this
+setting, the learned geometry can be read as an algorithm. The
+arrangement of points and boundaries in \(\mathbb{R}^2\) can be read as
+a step-by-step procedure. Using a simple task where the model must
+produce the most recent even number whenever it sees the `+' operator,
+we visually walk through every step of the transformer's computation. We
+show how the model embeds the tokens and their respective positions in
+the sequence, transforms them via the Q, K, and V matrices, uses the dot
+product between the Q and K representations to form the attention
+matrix, and uses the attention matrix to select values that move the
+representation of each input token to the region of the domain of the LM
+head that will correctly predict the next token. We introduce a suite of
+interpretability visualizations that make the algorithmic interpretation
+of this procedure explicit, and provide training evolution animations
+showing how the algorithmic geometry emerges during learning. The
+framework offers a pedagogical and experimental testbed to explore how
+transformers use informational geometry to solve tasks.
+\end{abstract}
 
-\section{Fully Interpretable Minimal Transformers: From Geometry to
-Algorithm}\label{fully-interpretable-minimal-transformers-from-geometry-to-algorithm}
-
-Toviah Moldwin, Raneem Mahajne, and Idan Segev\\
-Edmond and Lily Safra Center for Brain Sciences, The Hebrew University
-of Jerusalem
-
-\begin{quote}
-\textbf{Abstract.} We present a framework for building and interpreting
-minimal transformer models trained on procedurally-generated integer
-sequences. By constraining the embedding dimension and head size to
-\(2\), we enable full two-dimensional visualization of every internal
-representation. Embeddings, query/key/value transforms, attention
-outputs, residual streams, and the language-model head's decision
-boundaries can all be seen directly. Our central claim is that the
-learned geometry implies an algorithm. The arrangement of points and
-boundaries in \(\mathbb{R}^2\) can be read as a step-by-step procedure.
-Using a simple task where the model must produce the most recent even
-number whenever it sees the `+' operator, We visually walk through every
-step of the transformer's computation. We show how the model embeds the
-tokens and their respective positions in the sequence, transforms them
-via the Q, K, and V matrices, uses the dot product between the Q and K
-representations to form the attention matrix, and uses the attention
-matrix to select values that move the representation of each input token
-to the region of the domain of the LM head that will correctly predict
-the next token. We introduce a suite of interpretability visualizations
-that make the algorithmic interpretation of this procedure explicit, and
-provide training evolution animations showing how the algorithmic
-geometry emerges during learning. The framework offers a pedagogical and
-experimental testbed to explore how transformers use informational
-geometry to solve tasks.
-\end{quote}
-
-\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
-
-\subsection{1. Introduction}\label{introduction}
+{
+\hypersetup{linkcolor=black}
+\setcounter{tocdepth}{2}
+\tableofcontents
+}
+\section{Introduction}\label{introduction}
 
 Understanding how transformers (Vaswani et al., 2017) process sequences
 remains a central challenge in mechanistic interpretability. Large-scale
@@ -172,30 +280,42 @@ thus not required, as the information geometry learned by the model is
 directly visible in the 2D plane. We can take advantage of this direct
 visibility to demonstrate how the information geometry of the
 transformer can be straightforwardly interpreted as an algorithmic
-procedure.
+procedure. The paper presents a worked, tutorial-style walkthrough of
+one such model rather than a general mechanistic theory.
 
-\subsubsection{1.1 Related work}\label{related-work}
+\subsection{Related work}\label{related-work}
 
 Much of the work in the mechanistic interpretability literature focuses
-on large language models and tries to interpret the attention matrices
-in terms of the linguistic relationships they express (Vaswani et al.,
-2017; Clark et al., 2019; Vig, 2019; Wang, 2022; Liu, 2022). However,
-this work generally does not elucidate the full internal computational
-processing of the transformer, as we do here. Other work on small models
-with 2-dimensional embeddings has analyzed how geometric structure in
-embedding space emerges during training on modular arithmetic (Musat,
-2024; Nanda et al., 2023; Welch Labs 2025).
+on large language models and tries to interpret attention in terms of
+linguistic relationships (Clark et al., 2019; Vig, 2019; Wang, 2022).
+However, such work rarely traces the full forward pass end-to-end in a
+directly visualizable space; our contribution is a worked geometric
+walkthrough of one such model. Other work takes a more mathematical
+approach to deconstructing the operations performed by each part of the
+transformer (Elhage et al., 2021), or indirectly explores how
+information is represented internally in the transformer model via
+perturbation experiments or mathematical and model engineering
+techniques (Elhage et al., 2022; Bricken et al., 2023; Park et al.,
+2024; Li et al., 2023; Nanda, Lee, \& Wattenberg, 2023; Dar et al.,
+2023). Many interpretability studies have focused on analyzing how
+geometric structure in embedding space emerges during training on
+arithmetic tasks (Nanda et al., 2023; Musat, 2024; Gromov, 2023; Zhong
+et al., 2023; Welch Labs 2025; Power et al., 2022; Quirke \& Barez,
+2024; Liu, 2022; Hanna et al., 2023; Stolfo et al., 2023). A different
+approach to interpretability attempts to formalize transformer
+computations into human-readable languages such as RASP (Weiss et al.,
+2021; Friedman et al., 2023; Zhou et al., 2024; Lindner et al., 2023).
 
-\subsection{2. Methods}\label{methods}
+\section{Methods}\label{methods}
 
-\subsubsection{2.1 Task Definition}\label{task-definition}
+\subsection{Task Definition}\label{task-definition}
 
 We adopt the ``plus-last-even'' rule, described below, as our primary
 task. We chose this task because it is simple enough to be learned by a
 small transformer model while still illustrating the core attention
 mechanism of history-based information retrieval.
 
-\paragraph{2.1.1 The Plus-Last-Even Task}\label{the-plus-last-even-task}
+\subsubsection{The Plus-Last-Even Task}\label{the-plus-last-even-task}
 
 The task is defined over a vocabulary \(\mathcal{V}\) of 12 tokens: the
 integers \(\{0, \ldots, 10\}\) and a special operator \texttt{+}.
@@ -217,7 +337,7 @@ Sequence generation obeys:
 
 \begin{verbatim}
 5  3  8  7  +  8  10  2  4  +  4  ...
-            ↑                 ↑
+            ^                 ^
        last even = 8     last even = 4
 \end{verbatim}
 
@@ -230,7 +350,7 @@ output that number with high probability. This is a non-trivial
 attention task: it requires routing information from a variable,
 content-dependent past position to the present.
 
-\subsubsection{2.2 Model Architecture}\label{model-architecture}
+\subsection{Model Architecture}\label{model-architecture}
 
 The model is a single-layer, single-head, decoder-only causal
 transformer --- the minimal instance of the GPT-style architecture of
@@ -246,6 +366,13 @@ the self-attention output to the output of the feedforward sub-layer,
 followed by a linear language-model head that maps the final hidden
 state to vocabulary logits (Figure 1). Table 1 lists all
 hyperparameters.
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 1. Architecture of the minimal transformer. Every component operates entirely in \textbackslash mathbb\{R\}\^{}2.}]{plus_last_even/plots/a4/01_architecture_overview.png}}
+\caption{Figure 1. Architecture of the minimal transformer. Every
+component operates entirely in \(\mathbb{R}^2\).}
+\end{figure}
 
 \begin{longtable}[]{@{}ll@{}}
 \caption{Model hyperparameters.}\label{tbl:hyperparams}\tabularnewline
@@ -321,7 +448,9 @@ block is the sum of the combined embedding and the attention output. We
 denote this \textbf{first-residual state} by \(\mathbf{z}_i\): \[
 \mathbf{z}_i = \mathbf{e}_i + \mathrm{Attn}(\mathbf{e})_i.
 \] So \(\mathbf{z}_i\) is the quantity that is passed into the
-feedforward network.
+feedforward network. (Note that the feedforward network itself can be
+interpreted as a key-value operation over its inputs; see Geva et al.,
+2021, 2022).
 
 \textbf{Second residual.} The feedforward network (FFN) is applied to
 \(\mathbf{z}_i\), and its output is added back to \(\mathbf{z}_i\) (the
@@ -331,7 +460,7 @@ to the LM head is \[
 \]
 
 \textbf{LM head.} The LM head produces the next-token distribution from
-the hidden state \(\mathbf{h}_i\) : \[
+the hidden state \(\mathbf{h}_i\): \[
 P(t_{i+1} \mid \mathbf{h}_i) = \mathrm{softmax}\!\left(\mathbf{h}_i \, W_{\mathrm{lm}}^\top + \mathbf{b}\right),
 \] where \(W_{\mathrm{lm}} \in \mathbb{R}^{V \times 2}\) and
 \(\mathbf{b} \in \mathbb{R}^V\).
@@ -347,16 +476,7 @@ P(t_{i+1} \mid \mathbf{h}_i) &= \mathrm{softmax}\!\left(\mathbf{h}_i \, W_{\math
 \end{aligned}
 \]
 
-\begin{figure}
-\centering
-\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 1. Architecture of the minimal transformer. Every component operates entirely in \textbackslash mathbb\{R\}\^{}2.}]{plus_last_even/plots/a4/01_architecture_overview.png}}
-\caption{Figure 1. Architecture of the minimal transformer. Every
-component operates entirely in \(\mathbb{R}^2\).}
-\end{figure}
-
-\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
-
-\subsubsection{2.3 Training}\label{training}
+\subsection{Training}\label{training}
 
 Training data consists of 2,000 sequences of length 20--50, generated by
 the plus-last-even rule. At each position, the next token is drawn as
@@ -398,12 +518,9 @@ Evaluation iterations & 50 batches \\
 Checkpoint interval & every 100 steps \\
 \end{longtable}
 
-\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+\section{Results}\label{results}
 
-\subsection{3. Results}\label{results}
-
-\subsubsection{3.1 The Model Learns the
-Rule}\label{the-model-learns-the-rule}
+\subsection{The Model Learns the Rule}\label{the-model-learns-the-rule}
 
 We first verify that training succeeds by examining the training data,
 the model's own generations, and the learning curve. Figure 2 displays
@@ -415,11 +532,17 @@ recent even number); \emph{unconstrained} positions may have any next
 token. All constrained positions in the training data are green,
 verifying the data generator.
 
-\pandocbounded{\includegraphics[keepaspectratio,alt={Training Data}]{plus_last_even/plots/a4/02_training_data.png}}
-\emph{\textbf{Figure 2.} Sample training sequences as heatmaps. Green:
-constrained position (immediately after \texttt{+}) with the correct
-next token (the most recent even number). Gray: unconstrained position
-(any token is valid).}
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 2. Sample training sequences as heatmaps. Green: constrained position (immediately after +) with the correct next token (the most recent even number). Gray: unconstrained position (any token is valid).}]{plus_last_even/plots/a4/02_training_data.png}}
+\caption[\textbf{Figure 2.} Sample training sequences as heatmaps.
+Green: constrained position (immediately after \protect\texttt{+}) with
+the correct next token (the most recent even number). Gray:
+unconstrained position (any token is valid).]{\textbf{Figure 2.} Sample
+training sequences as heatmaps. Green: constrained position (immediately
+after \protect\texttt{+}) with the correct next token (the most recent
+even number). Gray: unconstrained position (any token is valid).}
+\end{figure}
 
 Figure 3 shows the training dynamics over 20,000 steps. Cross-entropy
 loss drops steeply in the first \textasciitilde2,000 steps, then
@@ -427,15 +550,24 @@ continues to decrease more gradually. \emph{Rule error} is the fraction
 of constrained positions (those immediately following \texttt{+}) where
 the model's top prediction is wrong; it drops from \textasciitilde90\%
 (chance for a 12-token vocabulary) to near 0\%, indicating that the
-model has learned the rule.
+model has learned the rule. Rule error on held-out batches is our
+primary quantitative performance metric (Figure 3).
 
-\pandocbounded{\includegraphics[keepaspectratio,alt={Learning Curve}]{plus_last_even/plots/a4/03_learning_curve.png}}
-\emph{\textbf{Figure 3.} Training dynamics over 20,000 steps. Left axis:
-cross-entropy loss. Right axis: rule error --- the fraction of
-constrained positions (tokens immediately following \texttt{+}) where
-the model's top predicted token is not the target (the most recent even
-number). Rule error near 90\% is chance level; near 0\% indicates the
-rule is learned.}
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 3. Training dynamics over 20,000 steps. Left axis: cross-entropy loss. Right axis: rule error --- the fraction of constrained positions (tokens immediately following +) where the model's top predicted token is not the target (the most recent even number). Rule error near 90\% is chance level; near 0\% indicates the rule is learned.}]{plus_last_even/plots/a4/03_learning_curve.png}}
+\caption[\textbf{Figure 3.} Training dynamics over 20,000 steps. Left
+axis: cross-entropy loss. Right axis: rule error --- the fraction of
+constrained positions (tokens immediately following \protect\texttt{+})
+where the model's top predicted token is not the target (the most recent
+even number). Rule error near 90\% is chance level; near 0\% indicates
+the rule is learned.]{\textbf{Figure 3.} Training dynamics over 20,000
+steps. Left axis: cross-entropy loss. Right axis: rule error --- the
+fraction of constrained positions (tokens immediately following
+\protect\texttt{+}) where the model's top predicted token is not the
+target (the most recent even number). Rule error near 90\% is chance
+level; near 0\% indicates the rule is learned.}
+\end{figure}
 
 Figure 4 compares sequences generated by the model before and after
 training. The same color convention applies: at initialization (step 0),
@@ -445,16 +577,24 @@ green: the model reliably outputs the most recent even number after
 every \texttt{+}. We now proceed to show how the model implements the
 ``plus-last-even'' rule.
 
-\pandocbounded{\includegraphics[keepaspectratio,alt={Generated Sequences}]{plus_last_even/plots/a4/04_generated_sequences.png}}
-\emph{\textbf{Figure 4.} Model-generated sequences at initialization
-(top) vs.~after training (bottom). green = correct at constrained
-positions (after \texttt{+}), red = wrong at constrained positions, gray
-= unconstrained. Top: at step 0, constrained positions are mostly red
-(random predictions). Bottom: after training, constrained positions are
-mostly green (correct ``last even'' outputs).}
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 4. Model-generated sequences at initialization (top) vs.~after training (bottom). Green = correct at constrained positions (after +), red = wrong at constrained positions, gray = unconstrained. Top: at step 0, constrained positions are mostly red (random predictions). Bottom: after training, constrained positions are mostly green (correct ``last even'' outputs).}]{plus_last_even/plots/a4/04_generated_sequences.png}}
+\caption[\textbf{Figure 4.} Model-generated sequences at initialization
+(top) vs.~after training (bottom). Green = correct at constrained
+positions (after \protect\texttt{+}), red = wrong at constrained
+positions, gray = unconstrained. Top: at step 0, constrained positions
+are mostly red (random predictions). Bottom: after training, constrained
+positions are mostly green (correct ``last even''
+outputs).]{\textbf{Figure 4.} Model-generated sequences at
+initialization (top) vs.~after training (bottom). Green = correct at
+constrained positions (after \protect\texttt{+}), red = wrong at
+constrained positions, gray = unconstrained. Top: at step 0, constrained
+positions are mostly red (random predictions). Bottom: after training,
+constrained positions are mostly green (correct ``last even'' outputs).}
+\end{figure}
 
-\subsubsection{3.2 The Embedding Space: How the Model Encodes Its
-Vocabulary}\label{the-embedding-space-how-the-model-encodes-its-vocabulary}
+\subsection{The Embedding Space: How the Model Encodes Its Vocabulary}\label{the-embedding-space-how-the-model-encodes-its-vocabulary}
 
 The first stage of the transformer maps each input token and position to
 a 2D vector. Figure 5 reveals that the learned embedding layer has
@@ -471,26 +611,37 @@ formation of the odd tokens, indicates that the distinct identity of the
 even tokens is more important for solving this task.
 
 The position embeddings (Figure 5b) form a ladder structure, with
-\(p_0\) at the bottom, \(p_7\) at the top, and the other positions
-arranged in ascending order in between. This orderly arrangement allows
-the model to encode how far back a token is, which is essential for
-identifying the most recent even number. When token and position
-embeddings are summed (Figure 5g), each token fans out into eight copies
---- one per position --- shifted vertically by the position embedding.
-Because the range of values of the position embeddings is smaller than
-the range of the token embeddings, the `macro'-level geometry of the
-summed token+position embeddings retains the odd/even/\texttt{+}
-organization of the token embeddings, while the `micro'-level geometry
-preserves the ladder structure of the position embeddings.
+\(\mathbf{p}_0\) at the bottom, \(\mathbf{p}_7\) at the top, and the
+other positions arranged in ascending order in between. This orderly
+arrangement allows the model to encode how far back a token is, which is
+essential for identifying the most recent even number. When token and
+position embeddings are summed (Figure 5e), each token fans out into
+eight copies --- one per position --- shifted vertically by the position
+embedding. Because the range of values of the position embeddings is
+smaller than the range of the token embeddings, the `macro'-level
+geometry of the summed token+position embeddings retains the
+odd/even/\texttt{+} organization of the token embeddings, while the
+`micro'-level geometry preserves the ladder structure of the position
+embeddings.
 
-\pandocbounded{\includegraphics[keepaspectratio,alt={Token Embeddings}]{plus_last_even/plots/a4/05_token_embeddings.png}}
-\emph{\textbf{Figure 5.} Learned embeddings. (a) Token embeddings
-\(\mathbf{x_i}\) shown as heatmap. (b) Position embeddings
-\(\mathbf{p_i}\) shown as heatmap. (c) Combined token+position
-embeddings shown as scatterplot. (d) Positions \(\mathbf{p_i}\) shown as
-scatterplot. (e) Token+position embeddings \(\mathbf{e_i}\) shown as
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 5. Learned embeddings. (a) Token embeddings \textbackslash mathbf\{x\}\_i shown as heatmap. (b) Position embeddings \textbackslash mathbf\{p\}\_i shown as heatmap. (c) Combined token+position embeddings shown as scatterplot. (d) Positions \textbackslash mathbf\{p\}\_i shown as scatterplot. (e) Token+position embeddings \textbackslash mathbf\{e\}\_i shown as scatterplot. Positions are indicated as subscripts next to each token e.g.~+\_5 is the + token at position 5.}]{plus_last_even/plots/a4/05_token_embeddings.png}}
+\caption[\textbf{Figure 5.} Learned embeddings. (a) Token embeddings
+\(\mathbf{x}_i\) shown as heatmap. (b) Position embeddings
+\(\mathbf{p}_i\) shown as heatmap. (c) Combined token+position
+embeddings shown as scatterplot. (d) Positions \(\mathbf{p}_i\) shown as
+scatterplot. (e) Token+position embeddings \(\mathbf{e}_i\) shown as
 scatterplot. Positions are indicated as subscripts next to each token
-e.g.~\(+_5\) is the \texttt{+} token at position 5.}
+e.g.~\(+_5\) is the \protect\texttt{+} token at position
+5.]{\textbf{Figure 5.} Learned embeddings. (a) Token embeddings
+\(\mathbf{x}_i\) shown as heatmap. (b) Position embeddings
+\(\mathbf{p}_i\) shown as heatmap. (c) Combined token+position
+embeddings shown as scatterplot. (d) Positions \(\mathbf{p}_i\) shown as
+scatterplot. (e) Token+position embeddings \(\mathbf{e}_i\) shown as
+scatterplot. Positions are indicated as subscripts next to each token
+e.g.~\(+_5\) is the \protect\texttt{+} token at position 5.}
+\end{figure}
 
 We emphasize that this geometric structure does not exist at
 initialization; it is learned. Movie 1 shows the embedding space at
@@ -500,8 +651,7 @@ rapidly migrates away from the number tokens. The even/odd split
 solidifies between steps 5,000 and 10,000, and the position embedding
 ladder organizes gradually throughout training.
 
-\subsubsection{3.3 The Attention Mechanism: Query, Key, and Value
-Projections}\label{the-attention-mechanism-query-key-and-value-projections}
+\subsection{The Attention Mechanism: Query, Key, and Value Projections}\label{the-attention-mechanism-query-key-and-value-projections}
 
 The combined embeddings \(\mathbf{e}_i\) alone are not sufficient for
 the model to obey the plus-last-even rule, due to the rule's conditional
@@ -535,9 +685,10 @@ which even number should be output.
 
 The model applies three learned linear maps
 \(W_Q, W_K, W_V \in \mathbb{R}^{d_k \times n_{\mathrm{embed}}}\) (here
-\(n_{embed}, d_k = 2\)) to every combined embedding \(\mathbf{e}_i\),
-producing query, key, and value column vectors in \(\mathbb{R}^{d_k}\);
-for a sequence of tokens of length \(T\) of positions these form
+\(n_{\mathrm{embed}}, d_k = 2\)) to every combined embedding
+\(\mathbf{e}_i\), producing query, key, and value column vectors in
+\(\mathbb{R}^{d_k}\); for a sequence of tokens of length \(T\) these
+form
 \(\mathbf{Q}, \mathbf{K}, \mathbf{V} \in \mathbb{R}^{T \times d_k}\).
 Figure 6 shows these transformations and their effect. Panel (a)
 displays the original combined token+position embeddings (all 96 points
@@ -545,15 +696,21 @@ in embedding space). Panels (b), (c), and (d) show the same points after
 projection into query space (blue), key space (red), and value space
 (green).
 
-\pandocbounded{\includegraphics[keepaspectratio,alt={QKV Transformations}]{plus_last_even/plots/a4/08_qkv_transforms.png}}
-\emph{\textbf{Figure 6.} QKV projections. (a) Original combined
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 6. QKV projections. (a) Original combined token+position embeddings (as in Figure 5e). (b) Query-space (blue), with W\_Q inset. (c) Key-space (red), with W\_K inset. (d) Value-space (green), with W\_V inset. All 96 token+position points in each panel.}]{plus_last_even/plots/a4/08_qkv_transforms.png}}
+\caption[\textbf{Figure 6.} QKV projections. (a) Original combined
+token+position embeddings (as in Figure 5e). (b) Query-space (blue),
+with \(W_Q\) inset. (c) Key-space (red), with \(W_K\) inset. (d)
+Value-space (green), with \(W_V\) inset. All 96 token+position points in
+each panel.]{\textbf{Figure 6.} QKV projections. (a) Original combined
 token+position embeddings (as in Figure 5e). (b) Query-space (blue),
 with \(W_Q\) inset. (c) Key-space (red), with \(W_K\) inset. (d)
 Value-space (green), with \(W_V\) inset. All 96 token+position points in
 each panel.}
+\end{figure}
 
-\subsubsection{3.4 Who Attends to Whom: The Query--Key
-Geometry}\label{who-attends-to-whom-the-querykey-geometry}
+\subsection{Who Attends to Whom: The Query--Key Geometry}\label{who-attends-to-whom-the-querykey-geometry}
 
 When the model encounters a \texttt{+}, how does it know to look back
 and find the most recent even number? The answer lies in the geometry of
@@ -580,26 +737,34 @@ If we focus on a single query \(\mathbf{+}_5\) (\texttt{+} at position
 a key at any point in space (Figure 7 Bottom). In principle, the dot
 product is highest with even numbers at position 7, however, because of
 the causal masking, queries are only allowed to look at keys that come
-before it in the sequence, so we have grayed out all keys that come
-before position 5 (keys in positions 5 are also grayed out because if
-there's a plus in position 5, no other token could be in position 5).
-The \texttt{+} query thus acts as a selective filter that picks out
+before it in the sequence, so we have grayed out all keys at position
+\(\geq 5\) (keys at position 5 are also grayed out because if there's a
+plus in position 5, no other token could be in position 5). The
+\texttt{+} query thus acts as a selective filter that picks out
 even-number keys from the past context, with recency biasing the
 selection toward the most recent one. Movie 4 reveals how this structure
 develops over the course of training.
 
-\pandocbounded{\includegraphics[keepaspectratio,alt={Q/K embedding space and focused query}]{plus_last_even/plots/a4/09_10_qk_space_combined.png}}
-\emph{\textbf{Figure 7.} Query--key geometry in Q/K space. \textbf{Top:}
-joint query--key space (blue: queries; red: keys; labels show token and
-position). \textbf{Bottom:} Focus on the query \(+_5\) (blue);
-background color indicates the dot product of the \(+_5\) query with
-every point in space. Keys with position \(\geq 5\) are grayed due to
-the causal mask.}
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 7. Query--key geometry in Q/K space. Top: joint query--key space (blue: queries; red: keys; labels show token and position). Bottom: Focus on the query +\_5 (blue); background color indicates the dot product of the +\_5 query with every point in space. Keys with position \textbackslash geq 5 are grayed due to the causal mask.}]{plus_last_even/plots/a4/09_10_qk_space_combined.png}}
+\caption[\textbf{Figure 7.} Query--key geometry in Q/K space.
+\textbf{Top:} joint query--key space (blue: queries; red: keys; labels
+show token and position). \textbf{Bottom:} Focus on the query \(+_5\)
+(blue); background color indicates the dot product of the \(+_5\) query
+with every point in space. Keys with position \(\geq 5\) are grayed due
+to the causal mask.]{\textbf{Figure 7.} Query--key geometry in Q/K
+space. \textbf{Top:} joint query--key space (blue: queries; red: keys;
+labels show token and position). \textbf{Bottom:} Focus on the query
+\(+_5\) (blue); background color indicates the dot product of the
+\(+_5\) query with every point in space. Keys with position \(\geq 5\)
+are grayed due to the causal mask.}
+\end{figure}
 
 Because Figure 8 is not tied to a specific input sequence, it is not
 possible to produce a true attention matrix, which would require having
 only a single token in each position. However, we can calculate the raw
-query--key scores \(QK^T\) i.e.~the dot product between every possible
+query--key scores \(QK^T\), i.e.~the dot product between every possible
 query vector and every possible key vector. To focus on the
 rule-relevant structure, Figure 8 shows only the blocks where the query
 token is \texttt{+}. Each subplot is an 8×8 grid: rows index the
@@ -613,14 +778,20 @@ than tokens at earlier positions. This confirms the observation from
 Figure 7 that the geometry of the key/query space allows the \texttt{+}
 tokens to attend to most recent even tokens.
 
-\pandocbounded{\includegraphics[keepaspectratio,alt={QK scores for + queries}]{plus_last_even/plots/a4/11_1_qk_full_heatmap_last_row.png}}
-\emph{\textbf{Figure 8.} Pre-softmax query--key scores \(QK^\top\),
-restricted to \texttt{+} queries. Each subplot shows an 8×8 matrix of
-dot products: \texttt{+} query positions (rows) vs.~key positions
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 8. Pre-softmax query--key scores QK\^{}\textbackslash top, restricted to + queries. Each subplot shows an 8×8 matrix of dot products: + query positions (rows) vs.~key positions (columns) for a particular key token.}]{plus_last_even/plots/a4/11_1_qk_full_heatmap_last_row.png}}
+\caption[\textbf{Figure 8.} Pre-softmax query--key scores \(QK^\top\),
+restricted to \protect\texttt{+} queries. Each subplot shows an 8×8
+matrix of dot products: \protect\texttt{+} query positions (rows)
+vs.~key positions (columns) for a particular key token.]{\textbf{Figure
+8.} Pre-softmax query--key scores \(QK^\top\), restricted to
+\protect\texttt{+} queries. Each subplot shows an 8×8 matrix of dot
+products: \protect\texttt{+} query positions (rows) vs.~key positions
 (columns) for a particular key token.}
+\end{figure}
 
-\subsubsection{3.5 The Output Landscape: Where Representations Need to
-Land}\label{the-output-landscape-where-representations-need-to-land}
+\subsection{The Output Landscape: Where Representations Need to Land}\label{the-output-landscape-where-representations-need-to-land}
 
 Before examining the value transformation, we first characterize the
 output network through which all information must ultimately pass. This
@@ -637,11 +808,18 @@ particular point in the 2D plane must sum to 1.) Figure 9 makes this
 partition explicit: each subplot shows the model's probability for a
 specific output token across the plane.
 
-\pandocbounded{\includegraphics[keepaspectratio,alt={Output Probability Heatmaps}]{plus_last_even/plots/a4/06_output_probs.png}}
-\textbf{Figure 9.} Output probability landscape (per-unit view). Each
-subplot shows the softmax probability \(P(\text{next} = \text{token})\)
-over the 2D plane for one output token (digits 0--10 and the \texttt{+}
-operator).
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 9. Output probability landscape (per-unit view). Each subplot shows the softmax probability P(\textbackslash text\{next\} = \textbackslash text\{token\}) over the 2D plane for one output token (digits 0--10 and the + operator).}]{plus_last_even/plots/a4/06_output_probs.png}}
+\caption[\textbf{Figure 9.} Output probability landscape (per-unit
+view). Each subplot shows the softmax probability
+\(P(\text{next} = \text{token})\) over the 2D plane for one output token
+(digits 0--10 and the \protect\texttt{+} operator).]{\textbf{Figure 9.}
+Output probability landscape (per-unit view). Each subplot shows the
+softmax probability \(P(\text{next} = \text{token})\) over the 2D plane
+for one output token (digits 0--10 and the \protect\texttt{+}
+operator).}
+\end{figure}
 
 The output landscape and the embedding positions co-evolve during
 training (Movie 2). At initialization, the probability landscape is
@@ -684,7 +862,7 @@ components of \(\mathbf{z}_i\). Recall that
 \(\mathbf{z}_i = \mathbf{e}_i + \mathrm{Attn}(\mathbf{e})_i\) where
 \(\mathrm{Attn}(\mathbf{e})_i = \sum_{j=1}^{i} \alpha_{ij} \mathbf{v}_j\).
 In other words, \(\mathbf{z}_i\) can be thought of as being the sum of
-two constituent components, the embedding \(\mathbf{e}_i\), which are
+two constituent components, the embedding \(\mathbf{e}_i\), which is
 passed via the residual stream, and an attention-weighted sum of values
 \(\mathbf{v}_j\). It can thus be instructive to see how each of these
 components, i.e.~the embeddings \(\mathbf{e}_i\) and the values
@@ -692,47 +870,60 @@ components, i.e.~the embeddings \(\mathbf{e}_i\) and the values
 output.
 
 Panels (c) and (d) of Figure 10 overlay the embeddings \(\mathbf{e}_i\)
-and the values \(\mathbf{v}_j\), respectively on the argmax map (panel
+and the values \(\mathbf{v}_j\), respectively, on the argmax map (panel
 b) to reveal where they sit relative to the output network's decision
 regions. In panel (c), the 96 combined embeddings \(\mathbf{e}_i\) (12
 tokens \(\times\) 8 positions) are plotted. The digit embeddings
-generaly fall in the high-entropy indifference region in the upper
+generally fall in the high-entropy indifference region in the upper
 half-plane (visible in panel a), where no specific retrieval is
 triggered. In contrast, all \texttt{+} embeddings land in the lower
 half-plane --- inside the strong prediction region --- which provides a
-geometric headstart for the algorithm: the model has already categorized
-\texttt{+} as requiring an even-number output based on token identity
-and position alone. However, because the embeddings lack the context of
-the rest of the string, it can identify the ``type'' of output needed
-(even/odd/\texttt{+}) but cannot resolve the specific value. This
-defines the attention layer's objective: it must look back to find the
-most recent even number and produce a value vector that, when added to
-the residual stream, nudges the representation into the correct
-even-number target zone.
+geometric head start for the algorithm: the model has already
+categorized \texttt{+} as requiring an even-number output based on token
+identity and position alone. However, because the embeddings lack the
+context of the rest of the string, it can identify the ``type'' of
+output needed (even/odd/\texttt{+}) but cannot resolve the specific
+value. This defines the attention layer's objective: it must look back
+to find the most recent even number and produce a value vector that,
+when added to the residual stream, nudges the representation into the
+correct even-number target zone.
 
 Panel (d) shows the value-transformed vectors
 \(\mathbf{v}_j = W_V \mathbf{e}_j\) for all 96 combined token+position
 embeddings, overlaid on the same argmax map. We observe that the
-ordering of the value vectors on the plane in figure 10d is the same
-ordering as the even-digit prediction zones in Figure 10b. This
-illustrates that the purpose of the value vectors is to nudge the
+ordering of the value vectors on the plane in Figure 10d is the same
+ordering as the even-digit prediction zones in Figure 10b. This overlay
+reads \(\mathbf{v}_j\) against a landscape whose native input is
+\(\mathbf{z}_i\), a technique similar in spirit to the ``logit lens''
+used to probe intermediate layers in large language models
+(nostalgebraist, 2020; Geva et al., 2021, 2022; Belrose et al., 2023).
+This illustrates that the purpose of the value vectors is to nudge the
 embeddings towards a particular zone in order to produce the correct
 output. However, \emph{which} value specifically will be chosen depends
 on the attention matrix which requires a specific sequence. (Per-unit
 heatmaps with embedding and value overlays are included in the
 Supplementary Figures.)
 
-\pandocbounded{\includegraphics[keepaspectratio,alt={Output Landscape Summary}]{plus_last_even/plots/a4/07_output_landscape_summary.png}}
-\emph{\textbf{Figure 10.} Output landscape summary (summary of Figure
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 10. Output landscape summary (summary of Figure 9). (a) Entropy of the output distribution (nats); high in the indifference region (top half), near zero in even-number target zones (bottom half). (b) Argmax prediction map: color and annotation indicate which token has the highest predicted probability at each point. (c) Argmax map with combined embeddings \textbackslash mathbf\{e\}\_i overlaid. (d) Argmax map with value-transformed vectors \textbackslash mathbf\{v\}\_j overlaid.}]{plus_last_even/plots/a4/07_output_landscape_summary.png}}
+\caption[\textbf{Figure 10.} Output landscape summary (summary of Figure
 9). (a) Entropy of the output distribution (nats); high in the
 indifference region (top half), near zero in even-number target zones
 (bottom half). (b) Argmax prediction map: color and annotation indicate
 which token has the highest predicted probability at each point. (c)
 Argmax map with combined embeddings \(\mathbf{e}_i\) overlaid. (d)
+Argmax map with value-transformed vectors \(\mathbf{v}_j\)
+overlaid.]{\textbf{Figure 10.} Output landscape summary (summary of
+Figure 9). (a) Entropy of the output distribution (nats); high in the
+indifference region (top half), near zero in even-number target zones
+(bottom half). (b) Argmax prediction map: color and annotation indicate
+which token has the highest predicted probability at each point. (c)
+Argmax map with combined embeddings \(\mathbf{e}_i\) overlaid. (d)
 Argmax map with value-transformed vectors \(\mathbf{v}_j\) overlaid.}
+\end{figure}
 
-\subsubsection{3.7 Tracing a Sequence Through the
-Pipeline}\label{tracing-a-sequence-through-the-pipeline}
+\subsection{Tracing a Sequence Through the Pipeline}\label{tracing-a-sequence-through-the-pipeline}
 
 The preceding analysis characterized the model's learned parameters in
 the abstract --- all 96 possible token+position combinations. We now
@@ -742,7 +933,7 @@ and verifying that each step works as expected. This sequence ends in a
 \texttt{+} to illustrate next token prediction. The model's output for
 the next token in the sequence should be a 6. \textbf{Embedding.} The
 embeddings for this sequence are a subset of the total set of
-token+positions embeddings, as there can only be one token in each
+token+position embeddings, as there can only be one token in each
 position. Thus, this sequence uses only 8 out of the 96 total possible
 token+position combinations. In Figure 11, we show the tokens for this
 sequence against a backdrop of all 96 possible token+position
@@ -751,13 +942,22 @@ and \texttt{+} token embeddings are separated from each other in the
 embedding space, and the position of each token in the sequence
 determines where it appears in the ``ladder'' structure for that token.
 
-\pandocbounded{\includegraphics[keepaspectratio,alt={Sequence Embeddings}]{plus_last_even/plots/a4/13_sequence_embeddings.png}}
-\textbf{Figure 11.} Embeddings for the demo sequence
-\texttt{4\ 1\ +\ 4\ 6\ 9\ 5\ +}. \textbf{a-c:} Embedding heatmaps for
-tokens, positions and token+position. \textbf{d--f:} 2D scatter plot
-views of tokens, positions, and token+position combinations, shown over
-a backdrop of all possible tokens, position, and token+position
-embeddings (light gray).
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 11. Embeddings for the demo sequence 4 1 + 4 6 9 5 +. a-c: Embedding heatmaps for tokens, positions and token+position. d--f: 2D scatter plot views of tokens, positions, and token+position combinations, shown over a backdrop of all possible tokens, positions, and token+position embeddings (light gray).}]{plus_last_even/plots/a4/13_sequence_embeddings.png}}
+\caption[\textbf{Figure 11.} Embeddings for the demo sequence
+\protect\texttt{4\ 1\ +\ 4\ 6\ 9\ 5\ +}. \textbf{a-c:} Embedding
+heatmaps for tokens, positions and token+position. \textbf{d--f:} 2D
+scatter plot views of tokens, positions, and token+position
+combinations, shown over a backdrop of all possible tokens, positions,
+and token+position embeddings (light gray).]{\textbf{Figure 11.}
+Embeddings for the demo sequence
+\protect\texttt{4\ 1\ +\ 4\ 6\ 9\ 5\ +}. \textbf{a-c:} Embedding
+heatmaps for tokens, positions and token+position. \textbf{d--f:} 2D
+scatter plot views of tokens, positions, and token+position
+combinations, shown over a backdrop of all possible tokens, positions,
+and token+position embeddings (light gray).}
+\end{figure}
 
 \textbf{Attention.} The model must compute the attention matrix for this
 sequence by forming
@@ -765,15 +965,21 @@ sequence by forming
 positions and taking dot products between query rows and key rows
 (i.e.~the matrix \(\mathbf{Q}\mathbf{K}^\top\)). Figure 12 shows the Q
 and K heatmaps for the representation of the tokens within this
-sequence, and panel c shows these Q and K embedding on the same
+sequence, and panel (c) shows these Q and K embeddings on the same
 scatterplot against a backdrop of all 96 possible queries and keys, as
 in Figure 7.
 
-\pandocbounded{\includegraphics[keepaspectratio,alt={Q/K Attention}]{plus_last_even/plots/a4/14_qk_attention.png}}
-\emph{\textbf{Figure 12.} Q and K for the demo sequence. (a) Q heatmap,
-(b) K heatmap, (c) scatterplot of queries (blue), and keys (red) for
-tokens within our test sequence against a backdrop of all 96 possible
-queries and keys (gray).}
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 12. Q and K for the demo sequence. (a) Q heatmap, (b) K heatmap, (c) scatterplot of queries (blue), and keys (red) for tokens within our test sequence against a backdrop of all 96 possible queries and keys (gray).}]{plus_last_even/plots/a4/14_qk_attention.png}}
+\caption[\textbf{Figure 12.} Q and K for the demo sequence. (a) Q
+heatmap, (b) K heatmap, (c) scatterplot of queries (blue), and keys
+(red) for tokens within our test sequence against a backdrop of all 96
+possible queries and keys (gray).]{\textbf{Figure 12.} Q and K for the
+demo sequence. (a) Q heatmap, (b) K heatmap, (c) scatterplot of queries
+(blue), and keys (red) for tokens within our test sequence against a
+backdrop of all 96 possible queries and keys (gray).}
+\end{figure}
 
 For each token within the sequence, the model should compute the dot
 product between that token's query and the key of every token in the
@@ -792,19 +998,29 @@ keys. We can verify this by looking at the heatmap of Figure 13b, which
 shows the masked query-key dot products. If we look at the rows for the
 two \texttt{+} tokens that appear in the sequence, each of those rows
 has the largest value in the column belonging to the most recent even
-number relative to that \texttt{+}token. Once we generate the final
+number relative to that \texttt{+} token. Once we generate the final
 attention matrix via normalization by \({\sqrt{d_k}}\) and applying
 softmax, it is clear that the \texttt{+} tokens attend to their
 respective most recent even numbers (Figure 13c).
 
-\pandocbounded{\includegraphics[keepaspectratio,alt={Q dot product gradients}]{plus_last_even/plots/a4/15_q_dot_product_gradients.png}}
-\textbf{Figure 13.} Attention computation for the demo sequence. (a) The
-background of each panel displays the dot product of a specific query
-(blue) in the test sequence with every point in space (green = high,
-white = low). The unmasked (red) and masked (gray) keys are overlayed on
-this space to show their dot products with the selected query. (b) the
-masked \(Q \cdot K^\top\) matrix, (c) the attention matrix after
-normalization by \({\sqrt{d_k}}\) and applying softmax.
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 13. Attention computation for the demo sequence. (a) The background of each panel displays the dot product of a specific query (blue) in the test sequence with every point in space (green = high, white = low). The unmasked (red) and masked (gray) keys are overlaid on this space to show their dot products with the selected query. (b) The masked Q \textbackslash cdot K\^{}\textbackslash top matrix, (c) the attention matrix after normalization by \{\textbackslash sqrt\{d\_k\}\} and applying softmax.}]{plus_last_even/plots/a4/15_q_dot_product_gradients.png}}
+\caption[\textbf{Figure 13.} Attention computation for the demo
+sequence. (a) The background of each panel displays the dot product of a
+specific query (blue) in the test sequence with every point in space
+(green = high, white = low). The unmasked (red) and masked (gray) keys
+are overlaid on this space to show their dot products with the selected
+query. (b) The masked \(Q \cdot K^\top\) matrix, (c) the attention
+matrix after normalization by \({\sqrt{d_k}}\) and applying
+softmax.]{\textbf{Figure 13.} Attention computation for the demo
+sequence. (a) The background of each panel displays the dot product of a
+specific query (blue) in the test sequence with every point in space
+(green = high, white = low). The unmasked (red) and masked (gray) keys
+are overlaid on this space to show their dot products with the selected
+query. (b) The masked \(Q \cdot K^\top\) matrix, (c) the attention
+matrix after normalization by \({\sqrt{d_k}}\) and applying softmax.}
+\end{figure}
 
 \textbf{Value routing.} Now that we have the attention weight matrix
 \(\mathbf{A}\), we need to apply it to the value vectors in order to
@@ -812,29 +1028,36 @@ produce the attention vector for each token
 \(\mathrm{Attn}(\mathbf{e})_i\). Specifically, the attention vectors are
 the attention-weighted sum of the value vectors for each token,
 i.e.~\(\mathrm{Attn}(\mathbf{e})_i = \sum_{j=1}^{i} \alpha_{ij} \mathbf{v}_j\).
-We can generate a matrix whose rows are the embeddings for each vector
-by multiplying the attention weight matrix \(\mathbf{A}\) (Figure 14A)
-by the value matrix \(\mathbf{V}\) (Figure 14B) such that we have
-\(\mathrm{Attn}(\mathbf{e})_i^\top = (A \mathbf{V})_{i,:}\) (Figure
-14C). We also show the value vectors \(\mathbf{v}_j\) (Figure 14D) and
-attention vectors \(\mathrm{Attn}(\mathbf{e})_i\) as scatter plots. The
-attention weights for each token here effectively select value vectors
-to be used for the prediciton; the attention vectors for the \texttt{+}
-tokens for example, are basically copies of the value vectors of the
-most recent even number.
+We can generate a matrix whose rows are the attention outputs for each
+position by multiplying the attention weight matrix \(\mathbf{A}\)
+(Figure 14A) by the value matrix \(\mathbf{V}\) (Figure 14B) such that
+we have \(\mathrm{Attn}(\mathbf{e})_i^\top = (A \mathbf{V})_{i,:}\)
+(Figure 14C). We also show the value vectors \(\mathbf{v}_j\) (Figure
+14D) and attention vectors \(\mathrm{Attn}(\mathbf{e})_i\) as scatter
+plots. The attention weights for each token here effectively select
+value vectors to be used for the prediction; the attention vectors for
+the \texttt{+} tokens for example, are basically copies of the value
+vectors of the most recent even number.
 
-\pandocbounded{\includegraphics[keepaspectratio,alt={Value Output}]{plus_last_even/plots/a4/16_value_output.png}}
-\emph{\textbf{Figure 14.} Values and attention output for the demo
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 14. Values and attention output for the demo sequence. (a) Attention weight matrix as in Figure 13c, (b) Values for each digit shown as heatmaps. (c) Attention outputs shown as heatmaps. (d) Values shown as scatter plot. (e) Attention output shown as scatter plot.}]{plus_last_even/plots/a4/16_value_output.png}}
+\caption[\textbf{Figure 14.} Values and attention output for the demo
+sequence. (a) Attention weight matrix as in Figure 13c, (b) Values for
+each digit shown as heatmaps. (c) Attention outputs shown as heatmaps.
+(d) Values shown as scatter plot. (e) Attention output shown as scatter
+plot.]{\textbf{Figure 14.} Values and attention output for the demo
 sequence. (a) Attention weight matrix as in Figure 13c, (b) Values for
 each digit shown as heatmaps. (c) Attention outputs shown as heatmaps.
 (d) Values shown as scatter plot. (e) Attention output shown as scatter
 plot.}
+\end{figure}
 
 \textbf{Predicting the next token.} Now that we have the attention
 vectors \(\mathrm{Attn}(\mathbf{e})_i\) for each embedding, we are ready
 to predict the next token for each token in our test sequence.
 (Actually, a next-token prediction is constructed for each token in the
-sequence). For the token at postion \(i\) in the sequence, we first
+sequence). For the token at position \(i\) in the sequence, we first
 compute \(\mathbf{z}_i = \mathbf{e}_i + \mathrm{Attn}(\mathbf{e})_i\).
 In other words, we add the token's attention vector to its embedding and
 see where it lands in the output space. We can think of this addition as
@@ -853,23 +1076,33 @@ predicts that the next number in the sequence should be a 6, thus
 demonstrating that the transformer can correctly produce new tokens that
 are beyond the end of the input sequence.
 
-\pandocbounded{\includegraphics[keepaspectratio,alt={Residuals}]{plus_last_even/plots/a4/17_residuals.png}}
-\textbf{Figure 15. Predicting the next token by summing the input
-embeddings and attention vectors.} (a) Top: Heatmaps illustrating the 2D
-values for the input embeddings (\(\mathbf{e}\)) for each token in the
-test sequence. Bottom: Input embeddings in the 2D output space, where
-the background colors represent the most likely next-token prediction.
-(b) Top: The attention vectors (\(\mathrm{Attn}(\mathbf{e})\)) Bottom:
-The attention weights shown as arrows from the origin. (c) Top: The sum
-of the input embeddings and the attention vectors (\(\mathbf{z}\)) as
-heatmap. Bottom: Input embeddings (white annotations) are moved by the
-attention vectors (arrows) to the correct region for predicting the next
-token.
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 15. Predicting the next token by summing the input embeddings and attention vectors. (a) Top: Heatmaps illustrating the 2D values for the input embeddings (\textbackslash mathbf\{e\}) for each token in the test sequence. Bottom: Input embeddings in the 2D output space, where the background colors represent the most likely next-token prediction. (b) Top: The attention vectors (\textbackslash mathrm\{Attn\}(\textbackslash mathbf\{e\})) Bottom: The attention weights shown as arrows from the origin. (c) Top: The sum of the input embeddings and the attention vectors (\textbackslash mathbf\{z\}) as heatmap. Bottom: Input embeddings (white annotations) are moved by the attention vectors (arrows) to the correct region for predicting the next token.}]{plus_last_even/plots/a4/17_residuals.png}}
+\caption[\textbf{Figure 15. Predicting the next token by summing the
+input embeddings and attention vectors.} (a) Top: Heatmaps illustrating
+the 2D values for the input embeddings (\(\mathbf{e}\)) for each token
+in the test sequence. Bottom: Input embeddings in the 2D output space,
+where the background colors represent the most likely next-token
+prediction. (b) Top: The attention vectors
+(\(\mathrm{Attn}(\mathbf{e})\)) Bottom: The attention weights shown as
+arrows from the origin. (c) Top: The sum of the input embeddings and the
+attention vectors (\(\mathbf{z}\)) as heatmap. Bottom: Input embeddings
+(white annotations) are moved by the attention vectors (arrows) to the
+correct region for predicting the next token.]{\textbf{Figure 15.
+Predicting the next token by summing the input embeddings and attention
+vectors.} (a) Top: Heatmaps illustrating the 2D values for the input
+embeddings (\(\mathbf{e}\)) for each token in the test sequence. Bottom:
+Input embeddings in the 2D output space, where the background colors
+represent the most likely next-token prediction. (b) Top: The attention
+vectors (\(\mathrm{Attn}(\mathbf{e})\)) Bottom: The attention weights
+shown as arrows from the origin. (c) Top: The sum of the input
+embeddings and the attention vectors (\(\mathbf{z}\)) as heatmap.
+Bottom: Input embeddings (white annotations) are moved by the attention
+vectors (arrows) to the correct region for predicting the next token.}
+\end{figure}
 
-\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
-
-\subsection{4. Geometry as Algorithm:
-Summary}\label{geometry-as-algorithm-summary}
+\section{Geometry as Algorithm: Summary}\label{geometry-as-algorithm-summary}
 
 For the plus-last-even rule, the model's behavior decomposes into a
 five-step algorithm. Each step corresponds to a specific geometric
@@ -916,17 +1149,16 @@ We have thus demonstrated how the representational geometry of the
 transformer (Vaswani et al., 2017) can be directly interpreted to solve
 the plus-last-even rule.
 
-\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
-
-\subsection{5. Discussion}\label{discussion}
+\section{Discussion}\label{discussion}
 
 \textbf{Conclusions and implications.} By selecting a sufficiently
 simple task, the plus-last-even task, we have shown that it is possible
 to train a minimal transformer with an embedding size and head size of 2
 to near-perfect accuracy. This low dimensionality enables us to inspect
 the learned internal information geometry of the transformer at every
-step in the architecture. This approach enables complete mechanistic
-interpretability. Rather than only observing what the model predicts, we
+step in the architecture. This approach enables near-complete
+interpretability of the attention and embedding pathway for this minimal
+model and task. Rather than only observing what the model predicts, we
 can trace exactly how the computation is organized inside the network
 and understand how the algorithm is implemented without the need for
 dimensionality reduction.
@@ -938,25 +1170,28 @@ effective for more complex conditional rules, and certainly not for
 full-fledged AI tasks such as language modeling. Furthermore, this study
 is restricted to a single-layer, single-head architecture. In deeper
 models with more attention heads, the interaction between successive
-residual updates and FFN transformations introduce topological
+residual updates and FFN transformations introduces topological
 complexities that are harder to interpret as a single-step geometric
-nudge toward a decision boundary.
+nudge toward a decision boundary. In addition, our analysis is based on
+a single trained model and default random seed, a more robust analysis
+would look at variation in geometric representations across seeds.
 
-\textbf{Future directions.} The plus-last-even task is an artificial
-task that was chosen for pedagogicial purposes to illustrate various
-facets of the transformer computation. Additional tasks including
-certain simple mathematical or logical operations can potentially also
-be solved using our minimal transformer architecture. The internal
-representations learned when solving different tasks can provide further
-insight into how transformers use information geometry to approach
-different kinds of problems. Moreover, transformers trained on the same
-tasks but with different random seeds can provide insight into what
-aspects of the information geometry are necessary to solve a task versus
-what aspects are left up to the model's ``creative discretion''.
+\textbf{Future directions.} As noted under Limitations, the
+plus-last-even task is an artificial task that was chosen for
+pedagogical purposes to illustrate various facets of the transformer
+computation. Additional tasks including certain simple mathematical or
+logical operations can potentially also be solved using our minimal
+transformer architecture. The internal representations learned when
+solving different tasks can provide further insight into how
+transformers use information geometry to approach different kinds of
+problems. Moreover, transformers trained on the same tasks but with
+different random seeds can provide insight into what aspects of the
+information geometry are necessary to solve a task versus what aspects
+are left up to the model's ``creative discretion''.
 
 Although our work emphasized using 2-dimensional latent spaces for the
-purpose of complete interpretability, the visualization approaches that
-we used here can potentially be applied to more complex models if
+purpose of direct, lossless visualization, the visualization approaches
+that we used here can potentially be applied to more complex models if
 dimensionality reduction techniques are used and steps are taken to
 isolate the representations at each layer.
 
@@ -966,17 +1201,15 @@ brain to those found in large language models (e.g., Caucheteux et al.,
 2021; Hosseini et al., 2022; Sun et al., 2025; Doerig et al., 2025). Our
 framework allows for the possibility of exploring representational
 geometry in sufficiently simple tasks that can also be used in
-experimental neuroscience, potentially enabling for a direct comparison
-of neural activity to a transformer's internal representations.
+experimental neuroscience, potentially enabling a direct comparison of
+neural activity to a transformer's internal representations.
 
-\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
-
-\subsection{6. Movies}\label{movies}
+\section{Movies}\label{movies}
 
 The following animations show the evolution of the model's learned
 geometry over the course of training (one frame per checkpoint, 200
 frames total). These are available as GIF/MP4 files in
-\texttt{plus\_last\_even/plots/learning\_dynamics/}.
+\texttt{\seqsplit{plus\_last\_even/plots/learning\_dynamics/}}.
 
 \noindent
 
@@ -992,11 +1225,11 @@ Movie 5 & \parbox[t]{3.5cm}{\raggedright\ttfamily\seqsplit{04\_qk\_space\_plus\_
 \bottomrule
 \end{tabularx}
 
-\subsubsection{Supplementary Figures}\label{supplementary-figures}
+\subsection{Supplementary Figures}\label{supplementary-figures}
 
 Additional static figures in
-\texttt{plus\_last\_even/plots/supplementary/} and
-\texttt{plus\_last\_even/plots/extended/}:
+\texttt{\seqsplit{plus\_last\_even/plots/supplementary/}} and
+\texttt{\seqsplit{plus\_last\_even/plots/extended/}}:
 
 \noindent
 
@@ -1014,9 +1247,7 @@ Additional static figures in
 \bottomrule
 \end{tabularx}
 
-\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
-
-\subsection{7. Reproducing the Results}\label{reproducing-the-results}
+\section{Reproducing the Results}\label{reproducing-the-results}
 
 \textbf{Train and visualize:}
 
@@ -1053,21 +1284,21 @@ Additional static figures in
 
 \textbf{Dependencies:} PyTorch, NumPy, Matplotlib, Pillow, imageio.
 
-\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+\section*{Declaration on the use of artificial intelligence}\label{declaration-on-the-use-of-artificial-intelligence}
+\addcontentsline{toc}{section}{Declaration on the use of artificial intelligence}
 
-\subsection{Declaration on the use of artificial
-intelligence}\label{declaration-on-the-use-of-artificial-intelligence}
+Nearly all code --- including the transformer model, training pipeline,
+and figure/video generation --- was produced with Cursor Agent. All
+training outcomes, figures, and interpretive claims were independently
+verified by the primary authors. The first draft of this paper was
+written by Claude Opus 4.6; the entirety of the draft was thoroughly
+rewritten, edited, and revised by the authors for factual accuracy,
+clarity, and language.
 
-Nearly all code including creating the transformer model, training it,
-and generating all figures and videos was generated by Cursor Agent, all
-results were validated and checked extensively by the primary authors.
-The first draft of this paper was written by Claude Opus 4.6; the
-entirety of the draft was thouroughly rewriten, edited, and revised by
-the authors for factual accuracy, clarity, and language.
+\section*{References}\label{references}
+\addcontentsline{toc}{section}{References}
 
-\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
-
-\subsection{References}\label{references}
+\begingroup\raggedright\setlist[itemize]{label={},leftmargin=1.65em,itemsep=0.42em,topsep=0.5em,parsep=0.12em}
 
 \begin{itemize}
 \item
@@ -1075,23 +1306,69 @@ the authors for factual accuracy, clarity, and language.
   does BERT look at? An analysis of BERT's attention. \emph{ACL Workshop
   on BlackboxNLP}.
 \item
+  Belrose, N., Furman, Z., Smith, L., Halawi, D., Ostrovsky, I.,
+  McKinney, L., Biderman, S., \& Steinhardt, J. (2023). Eliciting latent
+  predictions from transformers with the tuned lens. \emph{arXiv
+  preprint} arXiv:2303.08112. https://arxiv.org/abs/2303.08112
+\item
+  Bricken, T., et al.~(2023). Towards monosemanticity: Decomposing
+  language models with dictionary learning. \emph{Transformer Circuits
+  Thread}. https://transformer-circuits.pub/2023/monosemantic-features
+\item
   Caucheteux, C., Gramfort, A., \& King, J.-R. (2021). GPT-2's
   activations predict the degree of semantic comprehension in the human
   brain. \emph{bioRxiv}. https://doi.org/10.1101/2021.04.20.440622
+\item
+  Dar, G., Geva, M., Gupta, A., \& Berant, J. (2023). Analyzing
+  transformers in embedding space. \emph{ACL}, 16124--16170.
+  https://aclanthology.org/2023.acl-long.893/
 \item
   Doerig, A., Kietzmann, T. C., Allen, E., et al.~(2025). High-level
   visual representations in the human brain are aligned with large
   language models. \emph{Nature Machine Intelligence}, \emph{7},
   1220--1234. https://doi.org/10.1038/s42256-025-01072-0
 \item
+  Elhage, N., et al.~(2021). A mathematical framework for transformer
+  circuits. \emph{Transformer Circuits Thread}.
+  https://transformer-circuits.pub/2021/framework/index.html
+\item
+  Elhage, N., et al.~(2022). Toy models of superposition.
+  \emph{Transformer Circuits Thread}.
+  https://transformer-circuits.pub/2022/toy\_model/index.html
+\item
+  Friedman, D., Wettig, A., \& Chen, D. (2023). Learning Transformer
+  Programs. \emph{NeurIPS}. https://arxiv.org/abs/2306.01128
+\item
+  Geva, M., Schuster, R., Berant, J., \& Levy, O. (2021). Transformer
+  feed-forward layers are key-value memories. \emph{EMNLP}, 5484--5495.
+  https://aclanthology.org/2021.emnlp-main.446/
+\item
+  Geva, M., Caciularu, A., Wang, K., \& Goldberg, Y. (2022). Transformer
+  feed-forward layers build predictions by promoting concepts in the
+  vocabulary space. \emph{EMNLP}, 30--45.
+  https://aclanthology.org/2022.emnlp-main.3/
+\item
   Gromov, A. (2023). Grokking modular arithmetic. \emph{arXiv preprint}
   arXiv:2301.02679v1. https://arxiv.org/pdf/2301.02679
+\item
+  Hanna, M., Liu, O., \& Variengien, A. (2023). How does GPT-2 compute
+  greater-than?: Interpreting mathematical abilities in a pre-trained
+  language model. \emph{NeurIPS}. https://arxiv.org/abs/2305.00586
 \item
   Hosseini, E. A., Schrimpf, M., Zhang, Y., Bowman, S., Zaslavsky, N.,
   \& Fedorenko, E. (2022). Artificial neural network language models
   predict human brain responses to language even after a developmentally
   realistic amount of training. \emph{bioRxiv}.
   https://doi.org/10.1101/2022.10.04.510681
+\item
+  Li, K., Hopkins, A. K., Bau, D., Viégas, F., Pfister, H., \&
+  Wattenberg, M. (2023). Emergent world representations: Exploring a
+  sequence model trained on a synthetic task. \emph{ICLR}.
+  https://arxiv.org/abs/2210.13382
+\item
+  Lindner, D., Kramár, J., Farquhar, S., Rahtz, M., McGrath, T., \&
+  Mikulik, V. (2023). Tracr: Compiled transformers as a laboratory for
+  interpretability. \emph{NeurIPS}. https://arxiv.org/abs/2301.05062
 \item
   Liu, Z., Kitouni, O., Nolte, N., Michaud, E. J., Tegmark, M., \&
   Williams, M. (2022). Towards understanding grokking: An effective
@@ -1111,9 +1388,33 @@ the authors for factual accuracy, clarity, and language.
   \emph{arXiv preprint} arXiv:2301.05217v1.
   https://arxiv.org/pdf/2301.05217v1
 \item
+  Nanda, N., Lee, A., \& Wattenberg, M. (2023). Emergent linear
+  representations in world models of self-supervised sequence models.
+  \emph{BlackboxNLP}. https://aclanthology.org/2023.blackboxnlp-1.2/
+\item
+  nostalgebraist. (2020). Interpreting GPT: The logit lens. LessWrong.
+  https://www.lesswrong.com/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens
+\item
+  Park, K., Choe, Y. J., \& Veitch, V. (2024). The linear representation
+  hypothesis and the geometry of large language models. \emph{ICML}.
+  https://arxiv.org/abs/2311.03658
+\item
+  Power, A., Burda, Y., Edwards, H., Babuschkin, I., \& Misra, V.
+  (2022). Grokking: Generalization beyond overfitting on small
+  algorithmic datasets. \emph{arXiv preprint} arXiv:2201.02177.
+  https://arxiv.org/abs/2201.02177
+\item
+  Quirke, P., \& Barez, F. (2024). Understanding addition in
+  transformers. \emph{ICLR}. https://arxiv.org/abs/2310.13121
+\item
   Radford, A., Narasimhan, K., Salimans, T., \& Sutskever, I. (2018).
   Improving language understanding by generative pre-training. OpenAI.
   https://cdn.openai.com/research-covers/language-unsupervised/language\_understanding\_paper.pdf
+\item
+  Stolfo, A., Belinkov, Y., \& Sachan, M. (2023). A mechanistic
+  interpretation of arithmetic reasoning in language models using causal
+  mediation analysis. \emph{EMNLP}, 7035--7052.
+  https://aclanthology.org/2023.emnlp-main.435/
 \item
   Sun, W., Winnubst, J., Natrajan, M., et al.~(2025). Learning produces
   an orthogonalized state machine in the hippocampus. \emph{Nature},
@@ -1136,6 +1437,20 @@ the authors for factual accuracy, clarity, and language.
   Welch Labs. (2025). \emph{The most complex model we actually
   understand} {[}Video{]}. YouTube.
   https://www.youtube.com/watch?v=D8GOeCFFby4
+\item
+  Weiss, G., Goldberg, Y., \& Yahav, E. (2021). Thinking like
+  transformers. \emph{ICML}.
+\item
+  Zhong, Z., Liu, Z., Tegmark, M., \& Andreas, J. (2023). The clock and
+  the pizza: Two stories in mechanistic explanation of neural networks.
+  \emph{NeurIPS}. https://arxiv.org/abs/2306.17844
+\item
+  Zhou, H., Bradley, A., Littwin, E., Razin, N., Saremi, O., Susskind,
+  J., Bengio, S., \& Nakkiran, P. (2024). What algorithms can
+  Transformers learn? A study in length generalization. \emph{ICLR}.
+  https://arxiv.org/abs/2310.16028
 \end{itemize}
+
+\endgroup
 
 \end{document}

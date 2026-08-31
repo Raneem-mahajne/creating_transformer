@@ -1,0 +1,99 @@
+% Academic layout for Paper.md → PDF (no prose changes).
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{float}
+
+\setstretch{1.14}
+\setlength{\parskip}{0.42em}
+\setlength{\emergencystretch}{3em}
+\raggedbottom
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\raggedright}
+  {\thesection.}{0.65em}{}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\raggedright}
+  {\thesubsection}{0.6em}{}
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\bfseries\raggedright}
+  {\thesubsubsection}{0.55em}{}
+\titlespacing*{\section}{0pt}{1.7ex plus .35ex}{0.85ex plus .1ex}
+\titlespacing*{\subsection}{0pt}{1.35ex plus .25ex}{0.55ex plus .08ex}
+\titlespacing*{\subsubsection}{0pt}{1.1ex plus .2ex}{0.4ex plus .05ex}
+
+\captionsetup[figure]{
+  labelformat=empty,
+  font=small,
+  skip=7pt,
+  justification=justified,
+  singlelinecheck=false
+}
+\captionsetup[table]{
+  font=small,
+  labelfont=bf,
+  skip=5pt,
+  justification=centering
+}
+
+\setlist[itemize]{leftmargin=1.35em,itemsep=0.22em,topsep=0.35em,parsep=0.08em}
+\setlist[enumerate]{leftmargin=1.55em,itemsep=0.32em,topsep=0.4em,parsep=0.1em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\itshape Fully Interpretable Minimal Transformers}
+\fancyhead[R]{\small\thepage}
+\renewcommand{\headrulewidth}{0.35pt}
+\fancypagestyle{plain}{%
+  \fancyhf{}%
+  \fancyhead[L]{\small\itshape Fully Interpretable Minimal Transformers}%
+  \fancyhead[R]{\small\thepage}%
+  \renewcommand{\headrulewidth}{0.35pt}%
+}
+
+\usepackage{tabularx}
+\usepackage{seqsplit}
+
+\date{}
+
+% Don't collapse list spacing from pandoc's \tightlist
+\renewcommand{\tightlist}{}
+
+% Keep tables a bit tighter
+\renewcommand{\arraystretch}{1.12}
+
+% Code / example sequences
+\IfFileExists{fvextra.sty}{%
+  \usepackage{fvextra}
+  \DefineVerbatimEnvironment{Highlighting}{Verbatim}{%
+    commandchars=\\\{\},
+    breaklines=true,
+    fontsize=\small,
+    frame=single,
+    framesep=5pt,
+    rulecolor=\color{black!18}%
+  }
+}{}
+\makeatletter
+\def\verbatim@font{\normalfont\ttfamily\small}
+\makeatother
+
+% Leave room for captions under tall figures
+\makeatletter
+\@ifundefined{pandoc@box}{}{%
+  \renewcommand*\pandocbounded[1]{%
+    \sbox\pandoc@box{#1}%
+    \Gscale@div\@tempa{0.70\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+    \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+    \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi
+    \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+    \else\usebox{\pandoc@box}%
+    \fi
+  }%
+}
+\makeatother
+% Keep figures in source order, immediately after they are cited.
+\floatplacement{figure}{H}
+\def\fps@figure{H}

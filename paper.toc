@@ -1,0 +1,21 @@
+\contentsline {section}{\numberline {1}Introduction}{2}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Related work}{2}{subsection.1.1}%
+\contentsline {section}{\numberline {2}Methods}{3}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Task Definition}{3}{subsection.2.1}%
+\contentsline {subsubsection}{\numberline {2.1.1}The Plus-Last-Even Task}{3}{subsubsection.2.1.1}%
+\contentsline {subsection}{\numberline {2.2}Model Architecture}{3}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Training}{5}{subsection.2.3}%
+\contentsline {section}{\numberline {3}Results}{6}{section.3}%
+\contentsline {subsection}{\numberline {3.1}The Model Learns the Rule}{6}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}The Embedding Space: How the Model Encodes Its Vocabulary}{6}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}The Attention Mechanism: Query, Key, and Value Projections}{9}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}Who Attends to Whom: The Query--Key Geometry}{11}{subsection.3.4}%
+\contentsline {subsection}{\numberline {3.5}The Output Landscape: Where Representations Need to Land}{12}{subsection.3.5}%
+\contentsline {subsection}{\numberline {3.6}Tracing a Sequence Through the Pipeline}{16}{subsection.3.6}%
+\contentsline {section}{\numberline {4}Geometry as Algorithm: Summary}{19}{section.4}%
+\contentsline {section}{\numberline {5}Discussion}{21}{section.5}%
+\contentsline {section}{\numberline {6}Movies}{23}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Supplementary Figures}{23}{subsection.6.1}%
+\contentsline {section}{\numberline {7}Reproducing the Results}{24}{section.7}%
+\contentsline {section}{Declaration on the use of artificial intelligence}{25}{section.7}%
+\contentsline {section}{References}{25}{section.7}%

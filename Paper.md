@@ -57,6 +57,7 @@ Positions not immediately following `+` are unconstrained — any token may appe
 
 The model is a single-layer, single-head, decoder-only causal transformer — the minimal instance of the GPT-style architecture of Radford et al. (2018), using scaled dot-product self-attention as in Vaswani et al. (2017). The model processes tokens autoregressively: at each position it conditions on the preceding tokens within a fixed context window of $T = 8$ and produces a distribution over the next token. The single transformer block contains one causal self-attention head and a feedforward network (a two-layer MLP applied independently to each position), with a residual connection from the block input to the output of the self-attention sub-layer and a residual connection from the self-attention output to the output of the feedforward sub-layer, followed by a linear language-model head that maps the final hidden state to vocabulary logits (Figure 1). Table 1 lists all hyperparameters.
 
+![Figure 1. Architecture of the minimal transformer. Every component operates entirely in $\mathbb{R}^2$.](plus_last_even/plots/a4/01_architecture_overview.png)
 
 | Parameter | Value |
 |-----------|-------|
@@ -125,8 +126,6 @@ $$
 P(t_{i+1} \mid \mathbf{h}_i) &= \mathrm{softmax}\!\left(\mathbf{h}_i \, W_{\mathrm{lm}}^\top + \mathbf{b}\right).
 \end{aligned}
 $$
-
-![Figure 1. Architecture of the minimal transformer. Every component operates entirely in $\mathbb{R}^2$.](plus_last_even/plots/a4/01_architecture_overview.png)
 
 ---
 
