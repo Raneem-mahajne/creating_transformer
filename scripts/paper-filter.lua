@@ -298,13 +298,13 @@ function Pandoc(doc)
     end
   end
 
-  -- Hanging-indent references: style the list after the References heading.
+  -- References: keep bullet points with a bit of extra spacing.
   for idx, block in ipairs(out) do
     if block.t == "Header" and stringify(block.content) == "References" then
       if out[idx + 1] and out[idx + 1].t == "BulletList" then
         table.insert(out, idx + 1, pandoc.RawBlock(
           "latex",
-          "\\begingroup\\raggedright\\setlist[itemize]{label={},leftmargin=1.65em,itemsep=0.42em,topsep=0.5em,parsep=0.12em}"
+          "\\begingroup\\raggedright\\setlist[itemize]{label=\\textbullet,leftmargin=1.6em,itemsep=0.4em,topsep=0.5em,parsep=0.12em}"
         ))
         table.insert(out, idx + 3, pandoc.RawBlock("latex", "\\endgroup"))
       end

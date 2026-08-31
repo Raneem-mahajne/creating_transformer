@@ -29,4 +29,6 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 & $pdflatex -interaction=nonstopmode -halt-on-error paper.tex
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-Write-Host "Wrote paper.pdf"
+$out = "FullyInterpretableMinimalTransformer.pdf"
+Move-Item -Force "paper.pdf" $out
+Write-Host "Wrote $out"
