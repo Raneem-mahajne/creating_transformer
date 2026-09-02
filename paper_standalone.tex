@@ -230,28 +230,26 @@ Brain Sciences, The Hebrew University of Jerusalem}}
 \maketitle
 \begin{abstract}
 We present a framework for building and interpreting minimal transformer
-models trained on procedurally-generated integer sequences. By
-constraining the embedding dimension and head size to \(2\), we enable
-full two-dimensional visualization of every internal representation.
-Embeddings, query/key/value transforms, attention outputs, residual
-streams, and the language-model head's decision boundaries can all be
+models. By constraining a transformer's embedding dimension and head
+size to \(2\), we enable full two-dimensional visualization of its
+internal representations. Embeddings, query/key/value transforms,
+attention outputs, residual streams, and decision boundaries can all be
 seen directly. Our central claim is that the learned geometry implies an
-algorithm. The arrangement of points and boundaries in \(\mathbb{R}^2\)
-can be read as a step-by-step procedure. Using a simple task where the
-model must produce the most recent even number whenever it sees the `+'
-operator, we visually walk through every step of the transformer's
-computation. We show how the model embeds the tokens and their
-respective positions in the sequence, transforms them via the Q, K, and
-V matrices, uses the dot product between the Q and K representations to
-form the attention matrix, and uses the attention matrix to select
-values that move the representation of each input token to the region of
-the domain of the LM head that will correctly predict the next token. We
-introduce a suite of interpretability visualizations that make the
-algorithmic interpretation of this procedure explicit, and provide
-training evolution animations showing how the algorithmic geometry
-emerges during learning. The framework offers a pedagogical and
-experimental testbed to explore how transformers use informational
-geometry to solve tasks.
+algorithm; the arrangement of points and boundaries in \(\mathbb{R}^2\)
+can be read as a step-by-step procedure. We train a transformer on a
+simple task where it must produce the most recently observed even number
+whenever the `+' operator appears in a sequence of digits. Once trained,
+we visually walk through every step of the transformer's computation. We
+show how the model embeds the tokens and their respective positions in
+the sequence, transforms them via the Q, K, and V matrices, uses the dot
+product between the Q and K representations to form the attention
+matrix, and uses the attention matrix to select values that move the
+representation of each input token to the region of the domain of the
+output layer that will correctly predict the next token. We introduce a
+suite of interpretability visualizations that make the algorithmic
+interpretation of this procedure explicit. Our framework offers a
+pedagogical and experimental testbed to explore how transformers use
+informational geometry to implement next-token prediction.
 \end{abstract}
 
 \section{Introduction}\label{introduction}
