@@ -235,21 +235,21 @@ constraining the embedding dimension and head size to \(2\), we enable
 full two-dimensional visualization of every internal representation.
 Embeddings, query/key/value transforms, attention outputs, residual
 streams, and the language-model head's decision boundaries can all be
-seen directly. We argue that, in this setting, the learned geometry can
-be read as an algorithm. The arrangement of points and boundaries in
-\(\mathbb{R}^2\) can be read as a step-by-step procedure. Using a simple
-task where the model must produce the most recent even number whenever
-it sees the `+' operator, we visually walk through every step of the
-transformer's computation. We show how the model embeds the tokens and
-their respective positions in the sequence, transforms them via the Q,
-K, and V matrices, uses the dot product between the Q and K
-representations to form the attention matrix, and uses the attention
-matrix to select values that move the representation of each input token
-to the region of the domain of the LM head that will correctly predict
-the next token. We introduce a suite of interpretability visualizations
-that make the algorithmic interpretation of this procedure explicit, and
-provide training evolution animations showing how the algorithmic
-geometry emerges during learning. The framework offers a pedagogical and
+seen directly. Our central claim is that the learned geometry implies an
+algorithm. The arrangement of points and boundaries in \(\mathbb{R}^2\)
+can be read as a step-by-step procedure. Using a simple task where the
+model must produce the most recent even number whenever it sees the `+'
+operator, we visually walk through every step of the transformer's
+computation. We show how the model embeds the tokens and their
+respective positions in the sequence, transforms them via the Q, K, and
+V matrices, uses the dot product between the Q and K representations to
+form the attention matrix, and uses the attention matrix to select
+values that move the representation of each input token to the region of
+the domain of the LM head that will correctly predict the next token. We
+introduce a suite of interpretability visualizations that make the
+algorithmic interpretation of this procedure explicit, and provide
+training evolution animations showing how the algorithmic geometry
+emerges during learning. The framework offers a pedagogical and
 experimental testbed to explore how transformers use informational
 geometry to solve tasks.
 \end{abstract}
@@ -274,17 +274,16 @@ thus not required, as the information geometry learned by the model is
 directly visible in the 2D plane. We can take advantage of this direct
 visibility to demonstrate how the information geometry of the
 transformer can be straightforwardly interpreted as an algorithmic
-procedure. The paper presents a worked, tutorial-style walkthrough of
-one such model rather than a general mechanistic theory.
+procedure in an illustrative task.
 
 \subsection{Related work}\label{related-work}
 
 Much of the work in the mechanistic interpretability literature focuses
 on large language models and tries to interpret attention in terms of
-linguistic relationships (Clark et al., 2019; Vig, 2019; Wang, 2022).
+linguistic properties (Clark et al., 2019; Vig, 2019; Wang, 2022).
 However, such work rarely traces the full forward pass end-to-end in a
-directly visualizable space; our contribution is a worked geometric
-walkthrough of one such model. Other work takes a more mathematical
+directly visualizable space; our contribution is a complete geometric
+walkthrough of a transformer model. Other work takes a more mathematical
 approach to deconstructing the operations performed by each part of the
 transformer (Elhage et al., 2021), or indirectly explores how
 information is represented internally in the transformer model via
