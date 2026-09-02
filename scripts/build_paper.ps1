@@ -10,7 +10,6 @@ pandoc "Paper.md" `
   --include-in-header="scripts/paper-header.tex" `
   --number-sections `
   --top-level-division=section `
-  --toc --toc-depth=2 `
   --syntax-highlighting=pygments `
   -V fontsize=11pt `
   -V papersize=a4 `
@@ -18,7 +17,6 @@ pandoc "Paper.md" `
   -V colorlinks=true `
   -V linkcolor=black `
   -V urlcolor=blue `
-  -V toccolor=black `
   -o "paper.tex"
 
 Copy-Item -Force "paper.tex" "paper_standalone.tex"

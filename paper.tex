@@ -230,36 +230,30 @@ Brain Sciences, The Hebrew University of Jerusalem}}
 \maketitle
 \begin{abstract}
 We present a framework for building and interpreting minimal transformer
-models trained on procedurally-generated integer sequences. As a
-pedagogical case study, we apply it to one minimal model on a single
-synthetic retrieval task. By constraining the embedding dimension and
-head size to \(2\), we enable full two-dimensional visualization of
-every internal representation. Embeddings, query/key/value transforms,
-attention outputs, residual streams, and the language-model head's
-decision boundaries can all be seen directly. We argue that, in this
-setting, the learned geometry can be read as an algorithm. The
-arrangement of points and boundaries in \(\mathbb{R}^2\) can be read as
-a step-by-step procedure. Using a simple task where the model must
-produce the most recent even number whenever it sees the `+' operator,
-we visually walk through every step of the transformer's computation. We
-show how the model embeds the tokens and their respective positions in
-the sequence, transforms them via the Q, K, and V matrices, uses the dot
-product between the Q and K representations to form the attention
-matrix, and uses the attention matrix to select values that move the
-representation of each input token to the region of the domain of the LM
-head that will correctly predict the next token. We introduce a suite of
-interpretability visualizations that make the algorithmic interpretation
-of this procedure explicit, and provide training evolution animations
-showing how the algorithmic geometry emerges during learning. The
-framework offers a pedagogical and experimental testbed to explore how
-transformers use informational geometry to solve tasks.
+models trained on procedurally-generated integer sequences. By
+constraining the embedding dimension and head size to \(2\), we enable
+full two-dimensional visualization of every internal representation.
+Embeddings, query/key/value transforms, attention outputs, residual
+streams, and the language-model head's decision boundaries can all be
+seen directly. We argue that, in this setting, the learned geometry can
+be read as an algorithm. The arrangement of points and boundaries in
+\(\mathbb{R}^2\) can be read as a step-by-step procedure. Using a simple
+task where the model must produce the most recent even number whenever
+it sees the `+' operator, we visually walk through every step of the
+transformer's computation. We show how the model embeds the tokens and
+their respective positions in the sequence, transforms them via the Q,
+K, and V matrices, uses the dot product between the Q and K
+representations to form the attention matrix, and uses the attention
+matrix to select values that move the representation of each input token
+to the region of the domain of the LM head that will correctly predict
+the next token. We introduce a suite of interpretability visualizations
+that make the algorithmic interpretation of this procedure explicit, and
+provide training evolution animations showing how the algorithmic
+geometry emerges during learning. The framework offers a pedagogical and
+experimental testbed to explore how transformers use informational
+geometry to solve tasks.
 \end{abstract}
 
-{
-\hypersetup{linkcolor=black}
-\setcounter{tocdepth}{2}
-\tableofcontents
-}
 \section{Introduction}\label{introduction}
 
 Understanding how transformers (Vaswani et al., 2017) process sequences
