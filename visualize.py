@@ -520,7 +520,7 @@ def visualize_from_checkpoint(
             list(SPRUSTON_FAR_TRIAL),
             save_path=corr_path,
         )
-        print(f"Spruston near/far representation correlation saved to {corr_path}")
+        print(f"Spruston near/far representation similarity saved to {corr_path}")
 
         evo_path = os.path.join(plots_dir, "spruston_near_far_representation_evolution.png")
         plot_spruston_near_far_evolution_grid(
