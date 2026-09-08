@@ -5,7 +5,7 @@ import random
 import torch
 
 from config_loader import get_generator_from_config
-from IntegerStringGenerator import SPRUSTON_NEAR_TRIAL, SPRUSTON_DEFAULT_TOKEN_LABELS
+from IntegerStringGenerator import SPRUSTON_NEAR_TRIAL, SPRUSTON_FAR_TRIAL, SPRUSTON_DEFAULT_TOKEN_LABELS
 from checkpoint import (
     load_checkpoint,
     get_plots_dir,
@@ -506,6 +506,32 @@ def visualize_from_checkpoint(
     # plot_attention_matrix moved to supplementary
     if _plot("qk_embedding_space.png"):
         plot_qk_embedding_space(model, itos, save_path=_plot_path("qk_embedding_space.png"))
+    if data_config.get("generator_type") == "Spruston2ACDC":
+        from plotting.spruston_representation_correlation import (
+            plot_spruston_near_far_evolution_grid,
+            plot_spruston_near_far_representation_correlation,
+        )
+
+        corr_path = os.path.join(plots_dir, "spruston_near_far_representation_corr.png")
+        plot_spruston_near_far_representation_correlation(
+            model,
+            itos,
+            list(SPRUSTON_NEAR_TRIAL),
+            list(SPRUSTON_FAR_TRIAL),
+            save_path=corr_path,
+        )
+        print(f"Spruston near/far representation correlation saved to {corr_path}")
+
+        evo_path = os.path.join(plots_dir, "spruston_near_far_representation_evolution.png")
+        plot_spruston_near_far_evolution_grid(
+            config_name_actual,
+            itos,
+            list(SPRUSTON_NEAR_TRIAL),
+            list(SPRUSTON_FAR_TRIAL),
+            save_path=evo_path,
+            n_times=5,
+        )
+        print(f"Spruston near/far evolution grid saved to {evo_path}")
     if _plot("qk_embedding_space_plus5_focus.png") and stoi is not None and "+" in stoi:
         plot_qk_embedding_space_focused_query(
             model, itos, token_str="+", position=5,

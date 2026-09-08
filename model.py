@@ -120,7 +120,7 @@ class BigramLanguageModel(nn.Module):
 
         self.lm_head = nn.Linear(n_embd, vocab_size)
 
-    def forward(self, idx: torch.Tensor, targets: torch.Tensor | None = None, return_wei: bool = False):
+    def forward(self, idx: torch.Tensor, targets: torch.Tensor | None = None, return_wei: bool = False, return_hidden: bool = False):
         B, T = idx.shape
 
         token_emb = self.token_embedding(idx)  # (B,T,C)
@@ -150,8 +150,12 @@ class BigramLanguageModel(nn.Module):
             Bt, Tt, Cc = logits.shape
             loss = F.cross_entropy(logits.view(Bt * Tt, Cc), targets.view(Bt * Tt))
 
+        if return_wei and return_hidden:
+            return logits, loss, wei, x
         if return_wei:
             return logits, loss, wei
+        if return_hidden:
+            return logits, loss, x
         return logits, loss
 
     @torch.no_grad()

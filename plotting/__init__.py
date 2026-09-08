@@ -79,6 +79,18 @@ plot_weights_qkv_single = _mod_14_qkv_query_key_attention.plot_weights_qkv_singl
 _mod_15_q_dot_product_gradients = __import__("plotting.15_q_dot_product_gradients", fromlist=['plot_q_dot_product_gradients'])
 plot_q_dot_product_gradients = _mod_15_q_dot_product_gradients.plot_q_dot_product_gradients
 
+_mod_spruston_corr = __import__(
+    "plotting.spruston_representation_correlation",
+    fromlist=[
+        "plot_spruston_near_far_representation_correlation",
+        "plot_spruston_near_far_evolution_grid",
+    ],
+)
+plot_spruston_near_far_representation_correlation = (
+    _mod_spruston_corr.plot_spruston_near_far_representation_correlation
+)
+plot_spruston_near_far_evolution_grid = _mod_spruston_corr.plot_spruston_near_far_evolution_grid
+
 _mod_17_residuals = __import__("plotting.17_residuals", fromlist=['plot_residuals', 'plot_ffn_second_residual_arrows'])
 plot_residuals = _mod_17_residuals.plot_residuals
 plot_ffn_second_residual_arrows = _mod_17_residuals.plot_ffn_second_residual_arrows
@@ -159,6 +171,8 @@ __all__ = [
     "plot_weights_qkv_single_rows",
     "plot_weights_qkv_single",
     "plot_q_dot_product_gradients",
+    "plot_spruston_near_far_representation_correlation",
+    "plot_spruston_near_far_evolution_grid",
     "plot_residuals",
     "plot_ffn_second_residual_arrows",
     "plot_final_on_output_heatmap_grid",
