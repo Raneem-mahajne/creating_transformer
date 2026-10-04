@@ -6,11 +6,11 @@ header-includes:
 
 # Fully Interpretable Minimal Transformers: From Geometry to Algorithm
 
-Toviah Moldwin, Raneem Mahajne, and Idan Segev  
+Raneem Mahajne and Toviah Moldwin  
 Edmond and Lily Safra Center for Brain Sciences, The Hebrew University of Jerusalem
 
 > **Abstract.**
-> We present a framework for building and interpreting minimal transformer models trained on procedurally-generated integer sequences. As a pedagogical case study, we apply it to one minimal model on a single synthetic retrieval task. By constraining the embedding dimension and head size to $2$, we enable full two-dimensional visualization of every internal representation. Embeddings, query/key/value transforms, attention outputs, residual streams, and the language-model head's decision boundaries can all be seen directly. We argue that, in this setting, the learned geometry can be read as an algorithm. The arrangement of points and boundaries in $\mathbb{R}^2$ can be read as a step-by-step procedure. Using a simple task where the model must produce the most recent even number whenever it sees the '+' operator, we visually walk through every step of the transformer's computation. We show how the model embeds the tokens and their respective positions in the sequence, transforms them via the Q, K, and V matrices, uses the dot product between the Q and K representations to form the attention matrix, and uses the attention matrix to select values that move the representation of each input token to the region of the domain of the LM head that will correctly predict the next token. We introduce a suite of interpretability visualizations that make the algorithmic interpretation of this procedure explicit, and provide training evolution animations showing how the algorithmic geometry emerges during learning. The framework offers a pedagogical and experimental testbed to explore how transformers use informational geometry to solve tasks.
+> We present a framework for building and interpreting minimal transformer models. By constraining a transformer's embedding dimension and head size to $2$, we enable full two-dimensional visualization of its internal representations. Embeddings, query/key/value transforms, attention outputs, residual streams, and decision boundaries can all be seen directly. Our central claim is that the learned geometry implies an algorithm; the arrangement of points and boundaries in $\mathbb{R}^2$ can be read as a step-by-step procedure. We train a transformer on a simple task where it must produce the most recently observed even number whenever the '+' operator appears in a sequence of digits. Once trained, we visually walk through every step of the transformer's computation. We show how the model embeds the tokens and their respective positions in the sequence, transforms them via the Q, K, and V matrices, uses the dot product between the Q and K representations to form the attention matrix, and uses the attention matrix to select values that move the representation of each input token to the region of the domain of the output layer that will correctly predict the next token. We introduce a suite of interpretability visualizations that make the algorithmic interpretation of this procedure explicit. Our framework offers a pedagogical and experimental testbed to explore how transformers use informational geometry to implement next-token prediction.
 
 ---
 
@@ -19,11 +19,11 @@ Edmond and Lily Safra Center for Brain Sciences, The Hebrew University of Jerusa
 Understanding how transformers (Vaswani et al., 2017) process sequences remains a central challenge in mechanistic interpretability. Large-scale models achieve strong performance but their internal representations are high-dimensional and opaque: one can probe attention or activations, but a complete picture of information flow from input to output is often difficult to obtain. 
 
 We address this problem with minimal transformers, i.e. models that retain the full structure of a decoder-only transformer, but are constrained to two-dimensional embeddings and head dimension. Every internal state — embeddings, queries, keys, values, attention outputs, residual sums, and pre-softmax logit vectors — exists in $\mathbb{R}^2$. Dimensionality reduction techniques such as PCA, t-SNE (van der Maaten & Hinton, 2008), or UMAP (McInnes et al., 2018) are thus not required, as the information geometry learned by the model is directly visible in the 2D plane.
-We can take advantage of this direct visibility to demonstrate how the information geometry of the transformer can be straightforwardly interpreted as an algorithmic procedure. The paper presents a worked, tutorial-style walkthrough of one such model rather than a general mechanistic theory.
+We can take advantage of this direct visibility to demonstrate how the information geometry of the transformer can be straightforwardly interpreted as an algorithmic procedure in an illustrative task. 
 
 ### 1.1 Related work
 
-Much of the work in the mechanistic interpretability literature focuses on large language models and tries to interpret attention in terms of linguistic relationships (Clark et al., 2019; Vig, 2019; Wang, 2022). However, such work rarely traces the full forward pass end-to-end in a directly visualizable space; our contribution is a worked geometric walkthrough of one such model. Other work takes a more mathematical approach to deconstructing the operations performed by each part of the transformer (Elhage et al., 2021), or explores how features are compressed into fewer dimensions (Elhage et al., 2022). Other work has analyzed how geometric structure in embedding space emerges during training on arithmetic tasks (Nanda et al., 2023; Musat, 2024; Gromov, 2023; Zhong et al., 2023; Welch Labs 2025; Power et al., 2022; Quirke & Barez, 2024; Liu, 2022; Hanna et al., 2023). A different approach to interpretability attempts to formalize transformer computations into human-readable languages such as RASP (Weiss et al., 2021; Friedman et al., 2023; Zhou et al., 2024; Lindner et al., 2023).
+Much of the work in the mechanistic interpretability literature focuses on large language models and tries to interpret attention in terms of linguistic properties (Clark et al., 2019; Vig, 2019; Wang et al., 2023). However, such work rarely traces the full forward pass end-to-end in a directly visualizable space; our contribution is a complete geometric walkthrough of a transformer model. Other work takes a more mathematical approach to deconstructing the operations performed by each part of the transformer (Elhage et al., 2021), or indirectly explores how information is represented internally in the transformer model via perturbation experiments or mathematical and model engineering techniques (Elhage et al., 2022; Bricken et al., 2023; Park et al., 2024; Li et al., 2023; Nanda, Lee, & Wattenberg, 2023; Dar et al., 2023). Many interpretability studies have focused on analyzing how geometric structure in embedding space emerges during training on arithmetic tasks (Nanda et al., 2023; Musat, 2024; Gromov, 2023; Zhong et al., 2023; Welch Labs, 2025; Power et al., 2022; Quirke & Barez, 2024; Liu et al., 2022; Hanna et al., 2023; Stolfo et al., 2023). A different approach to interpretability attempts to formalize transformer computations into human-readable languages such as RASP (Weiss et al., 2021; Friedman et al., 2023; Zhou et al., 2024; Lindner et al., 2023).
 
 ## 2. Methods
 
@@ -57,6 +57,7 @@ Positions not immediately following `+` are unconstrained — any token may appe
 
 The model is a single-layer, single-head, decoder-only causal transformer — the minimal instance of the GPT-style architecture of Radford et al. (2018), using scaled dot-product self-attention as in Vaswani et al. (2017). The model processes tokens autoregressively: at each position it conditions on the preceding tokens within a fixed context window of $T = 8$ and produces a distribution over the next token. The single transformer block contains one causal self-attention head and a feedforward network (a two-layer MLP applied independently to each position), with a residual connection from the block input to the output of the self-attention sub-layer and a residual connection from the self-attention output to the output of the feedforward sub-layer, followed by a linear language-model head that maps the final hidden state to vocabulary logits (Figure 1). Table 1 lists all hyperparameters.
 
+![Figure 1. Architecture of the minimal transformer. Every component operates entirely in $\mathbb{R}^2$.](plus_last_even/plots/a4/01_architecture_overview.png)
 
 | Parameter | Value |
 |-----------|-------|
@@ -125,8 +126,6 @@ $$
 P(t_{i+1} \mid \mathbf{h}_i) &= \mathrm{softmax}\!\left(\mathbf{h}_i \, W_{\mathrm{lm}}^\top + \mathbf{b}\right).
 \end{aligned}
 $$
-
-![Figure 1. Architecture of the minimal transformer. Every component operates entirely in $\mathbb{R}^2$.](plus_last_even/plots/a4/01_architecture_overview.png)
 
 ---
 
@@ -384,16 +383,24 @@ python main.py plus_last_even --video-qkv
 
 Nearly all code — including the transformer model, training pipeline, and figure/video generation — was produced with Cursor Agent. All training outcomes, figures, and interpretive claims were independently verified by the primary authors. The first draft of this paper was written by Claude Opus 4.6; the entirety of the draft was thoroughly rewritten, edited, and revised by the authors for factual accuracy, clarity, and language.
 
+## Acknowledgments
+
+We thank Idan Segev for his guidance and support throughout this project. This work received generous support from the Drahi Family Foundation and the Gatsby Charitable Foundation.
+
 ---
 
 ## References
 
 
-- Clark, K., Khandelwal, U., Levy, O., & Manning, C. D. (2019). What does BERT look at? An analysis of BERT's attention. *ACL Workshop on BlackboxNLP*.
-
 - Belrose, N., Furman, Z., Smith, L., Halawi, D., Ostrovsky, I., McKinney, L., Biderman, S., & Steinhardt, J. (2023). Eliciting latent predictions from transformers with the tuned lens. *arXiv preprint* arXiv:2303.08112. https://arxiv.org/abs/2303.08112
 
+- Bricken, T., et al. (2023). Towards monosemanticity: Decomposing language models with dictionary learning. *Transformer Circuits Thread*. https://transformer-circuits.pub/2023/monosemantic-features
+
 - Caucheteux, C., Gramfort, A., & King, J.-R. (2021). GPT-2's activations predict the degree of semantic comprehension in the human brain. *bioRxiv*. https://doi.org/10.1101/2021.04.20.440622
+
+- Clark, K., Khandelwal, U., Levy, O., & Manning, C. D. (2019). What does BERT look at? An analysis of BERT's attention. *ACL Workshop on BlackboxNLP*.
+
+- Dar, G., Geva, M., Gupta, A., & Berant, J. (2023). Analyzing transformers in embedding space. *ACL*, 16124–16170. https://aclanthology.org/2023.acl-long.893/
 
 - Doerig, A., Kietzmann, T. C., Allen, E., et al. (2025). High-level visual representations in the human brain are aligned with large language models. *Nature Machine Intelligence*, *7*, 1220–1234. https://doi.org/10.1038/s42256-025-01072-0
 
@@ -411,7 +418,9 @@ Nearly all code — including the transformer model, training pipeline, and figu
 
 - Hanna, M., Liu, O., & Variengien, A. (2023). How does GPT-2 compute greater-than?: Interpreting mathematical abilities in a pre-trained language model. *NeurIPS*. https://arxiv.org/abs/2305.00586
 
-- Hosseini, E. A., Schrimpf, M., Zhang, Y., Bowman, S., Zaslavsky, N., & Fedorenko, E. (2022). Artificial neural network language models predict human brain responses to language even after a developmentally realistic amount of training. *bioRxiv*. https://doi.org/10.1101/2022.10.04.510681
+- Hosseini, E. A., Schrimpf, M., Zhang, Y., Bowman, S., Zaslavsky, N., & Fedorenko, E. (2022). Artificial neural network language models align neurally and behaviorally with humans even after a developmentally realistic amount of training. *bioRxiv*. https://doi.org/10.1101/2022.10.04.510681
+
+- Li, K., Hopkins, A. K., Bau, D., Viégas, F., Pfister, H., & Wattenberg, M. (2023). Emergent world representations: Exploring a sequence model trained on a synthetic task. *ICLR*. https://arxiv.org/abs/2210.13382
 
 - Lindner, D., Kramár, J., Farquhar, S., Rahtz, M., McGrath, T., & Mikulik, V. (2023). Tracr: Compiled transformers as a laboratory for interpretability. *NeurIPS*. https://arxiv.org/abs/2301.05062
 
@@ -419,11 +428,15 @@ Nearly all code — including the transformer model, training pipeline, and figu
 
 - McInnes, L., Healy, J., & Melville, J. (2018). UMAP: Uniform Manifold Approximation and Projection for Dimension Reduction. *arXiv preprint* arXiv:1802.03426. https://arxiv.org/abs/1802.03426
 
-- Musat, T. (2024). Clustering and alignment: Understanding the training dynamics in modular addition. *arXiv preprint* arXiv:2408.09414v2.
+- Musat, T. (2024). Clustering and alignment: Understanding the training dynamics in modular addition. *arXiv preprint* arXiv:2408.09414v2. https://arxiv.org/abs/2408.09414
 
-- Nanda, N., Chan, L., Liberum, T., Smith, J., & Steinhardt, J. (2023). Progress measures for grokking via mechanistic interpretability. *arXiv preprint* arXiv:2301.05217v1. https://arxiv.org/pdf/2301.05217v1
+- Nanda, N., Chan, L., Lieberum, T., Smith, J., & Steinhardt, J. (2023). Progress measures for grokking via mechanistic interpretability. *arXiv preprint* arXiv:2301.05217v1. https://arxiv.org/pdf/2301.05217v1
+
+- Nanda, N., Lee, A., & Wattenberg, M. (2023). Emergent linear representations in world models of self-supervised sequence models. *BlackboxNLP*. https://aclanthology.org/2023.blackboxnlp-1.2/
 
 - nostalgebraist. (2020). Interpreting GPT: The logit lens. LessWrong. https://www.lesswrong.com/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens
+
+- Park, K., Choe, Y. J., & Veitch, V. (2024). The linear representation hypothesis and the geometry of large language models. *ICML*. https://arxiv.org/abs/2311.03658
 
 - Power, A., Burda, Y., Edwards, H., Babuschkin, I., & Misra, V. (2022). Grokking: Generalization beyond overfitting on small algorithmic datasets. *arXiv preprint* arXiv:2201.02177. https://arxiv.org/abs/2201.02177
 
@@ -431,15 +444,21 @@ Nearly all code — including the transformer model, training pipeline, and figu
 
 - Radford, A., Narasimhan, K., Salimans, T., & Sutskever, I. (2018). Improving language understanding by generative pre-training. OpenAI. https://cdn.openai.com/research-covers/language-unsupervised/language_understanding_paper.pdf
 
+- Stolfo, A., Belinkov, Y., & Sachan, M. (2023). A mechanistic interpretation of arithmetic reasoning in language models using causal mediation analysis. *EMNLP*, 7035–7052. https://aclanthology.org/2023.emnlp-main.435/
+
 - Sun, W., Winnubst, J., Natrajan, M., et al. (2025). Learning produces an orthogonalized state machine in the hippocampus. *Nature*, *640*, 165–175. https://doi.org/10.1038/s41586-024-08548-w
 
 - van der Maaten, L. & Hinton, G. (2008). Visualizing data using t-SNE. *JMLR*, 9, 2579–2605.
+
 - Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, Ł., & Polosukhin, I. (2017). Attention is all you need. *Advances in Neural Information Processing Systems*, 30.
+
 - Vig, J. (2019). A multiscale visualization of attention in the transformer model. *ACL System Demonstrations*.
-- Wang, K., Variengien, A., Conmy, A., Shlegeris, B., & Steinhardt, J. (2022). Interpretability in the wild: A circuit for indirect object identification in GPT-2 small. *NeurIPS*.
-- Welch Labs. (2025). *The most complex model we actually understand* [Video]. YouTube. https://www.youtube.com/watch?v=D8GOeCFFby4
+
+- Wang, K., Variengien, A., Conmy, A., Shlegeris, B., & Steinhardt, J. (2023). Interpretability in the wild: A circuit for indirect object identification in GPT-2 small. *ICLR*. https://arxiv.org/abs/2211.00593
 
 - Weiss, G., Goldberg, Y., & Yahav, E. (2021). Thinking like transformers. *ICML*.
+
+- Welch Labs. (2025). *The most complex model we actually understand* [Video]. YouTube. https://www.youtube.com/watch?v=D8GOeCFFby4
 
 - Zhong, Z., Liu, Z., Tegmark, M., & Andreas, J. (2023). The clock and the pizza: Two stories in mechanistic explanation of neural networks. *NeurIPS*. https://arxiv.org/abs/2306.17844
 

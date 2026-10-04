@@ -34,6 +34,9 @@ Links were checked with HTTP HEAD/GET on 2026-08-06; status notes are at the bot
 - Elhage, N., et al. (2022). Toy models of superposition. *Transformer Circuits Thread*.  
   [Article](https://transformer-circuits.pub/2022/toy_model/index.html)
 
+- Bricken, T., et al. (2023). Towards monosemanticity: Decomposing language models with dictionary learning. *Transformer Circuits Thread*.  
+  [Article](https://transformer-circuits.pub/2023/monosemantic-features)
+
 - Geva, M., Schuster, R., Berant, J., & Levy, O. (2021). Transformer feed-forward layers are key-value memories. *EMNLP*, 5484–5495.  
   [ACL Anthology](https://aclanthology.org/2021.emnlp-main.446/) · [PDF](https://aclanthology.org/2021.emnlp-main.446.pdf) · [arXiv](https://arxiv.org/abs/2012.14913)
 
@@ -46,6 +49,9 @@ Links were checked with HTTP HEAD/GET on 2026-08-06; status notes are at the bot
 - nostalgebraist. (2020). Interpreting GPT: The logit lens. LessWrong.  
   [LessWrong](https://www.lesswrong.com/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens)
 
+- Dar, G., Geva, M., Gupta, A., & Berant, J. (2023). Analyzing transformers in embedding space. *ACL*, 16124–16170.  
+  [ACL Anthology](https://aclanthology.org/2023.acl-long.893/) · [PDF](https://aclanthology.org/2023.acl-long.893.pdf)
+
 ### Toy models, grokking, and geometric algorithms
 
 - Friedman, D., Wettig, A., & Chen, D. (2023). Learning Transformer Programs. *NeurIPS*.  
@@ -53,6 +59,9 @@ Links were checked with HTTP HEAD/GET on 2026-08-06; status notes are at the bot
 
 - Gromov, A. (2023). Grokking modular arithmetic. *arXiv*.  
   [arXiv](https://arxiv.org/abs/2301.02679) · [PDF](https://arxiv.org/pdf/2301.02679)
+
+- Li, K., Hopkins, A. K., Bau, D., Viégas, F., Pfister, H., & Wattenberg, M. (2023). Emergent world representations: Exploring a sequence model trained on a synthetic task. *ICLR*.  
+  [arXiv](https://arxiv.org/abs/2210.13382) · [PDF](https://arxiv.org/pdf/2210.13382)
 
 - Lindner, D., Kramár, J., Farquhar, S., Rahtz, M., McGrath, T., & Mikulik, V. (2023). Tracr: Compiled transformers as a laboratory for interpretability. *NeurIPS*.  
   [arXiv](https://arxiv.org/abs/2301.05062) · [PDF](https://arxiv.org/pdf/2301.05062)
@@ -66,11 +75,20 @@ Links were checked with HTTP HEAD/GET on 2026-08-06; status notes are at the bot
 - Nanda, N., Chan, L., Liberum, T., Smith, J., & Steinhardt, J. (2023). Progress measures for grokking via mechanistic interpretability. *arXiv*.  
   [arXiv](https://arxiv.org/abs/2301.05217) · [PDF](https://arxiv.org/pdf/2301.05217)
 
+- Nanda, N., Lee, A., & Wattenberg, M. (2023). Emergent linear representations in world models of self-supervised sequence models. *BlackboxNLP*.  
+  [ACL Anthology](https://aclanthology.org/2023.blackboxnlp-1.2/) · [PDF](https://aclanthology.org/2023.blackboxnlp-1.2.pdf)
+
+- Park, K., Choe, Y. J., & Veitch, V. (2024). The linear representation hypothesis and the geometry of large language models. *ICML*.  
+  [arXiv](https://arxiv.org/abs/2311.03658) · [PDF](https://arxiv.org/pdf/2311.03658)
+
 - Power, A., Burda, Y., Edwards, H., Babuschkin, I., & Misra, V. (2022). Grokking: Generalization beyond overfitting on small algorithmic datasets. *arXiv*.  
   [arXiv](https://arxiv.org/abs/2201.02177) · [PDF](https://arxiv.org/pdf/2201.02177)
 
 - Quirke, P., & Barez, F. (2024). Understanding addition in transformers. *ICLR*.  
   [arXiv](https://arxiv.org/abs/2310.13121) · [PDF](https://arxiv.org/pdf/2310.13121)
+
+- Stolfo, A., Belinkov, Y., & Sachan, M. (2023). A mechanistic interpretation of arithmetic reasoning in language models using causal mediation analysis. *EMNLP*, 7035–7052.  
+  [ACL Anthology](https://aclanthology.org/2023.emnlp-main.435/) · [PDF](https://aclanthology.org/2023.emnlp-main.435.pdf)
 
 - Welch Labs. (2025). *The most complex model we actually understand* [Video]. YouTube.  
   [YouTube](https://www.youtube.com/watch?v=D8GOeCFFby4)
