@@ -23,7 +23,9 @@ We can take advantage of this direct visibility to demonstrate how the informati
 
 ### 1.1 Related work
 
-Much of the work in the mechanistic interpretability literature focuses on large language models and tries to interpret attention in terms of linguistic properties (Clark et al., 2019; Vig, 2019; Wang et al., 2023). However, such work rarely traces the full forward pass end-to-end in a directly visualizable space; our contribution is a complete geometric walkthrough of a transformer model. Other work takes a more mathematical approach to deconstructing the operations performed by each part of the transformer (Elhage et al., 2021), or indirectly explores how information is represented internally in the transformer model via perturbation experiments or mathematical and model engineering techniques (Elhage et al., 2022; Bricken et al., 2023; Park et al., 2024; Li et al., 2023; Nanda, Lee, & Wattenberg, 2023; Dar et al., 2023). Many interpretability studies have focused on analyzing how geometric structure in embedding space emerges during training on arithmetic tasks (Nanda et al., 2023; Musat, 2024; Gromov, 2023; Zhong et al., 2023; Welch Labs, 2025; Power et al., 2022; Quirke & Barez, 2024; Liu et al., 2022; Hanna et al., 2023; Stolfo et al., 2023). A different approach to interpretability attempts to formalize transformer computations into human-readable languages such as RASP (Weiss et al., 2021; Friedman et al., 2023; Zhou et al., 2024; Lindner et al., 2023).
+Much of the work in the mechanistic interpretability literature focuses on large language models and tries to interpret attention in terms of linguistic properties (Clark et al., 2019; Vig, 2019; Wang et al., 2023). However, such work rarely traces the full forward pass end-to-end in a directly visualizable space; our contribution is a complete geometric walkthrough of a transformer model. Other work takes a more mathematical approach to deconstructing the operations performed by each part of the transformer (Elhage et al., 2021), or indirectly explores how information is represented internally in the transformer model via perturbation experiments or mathematical and model engineering techniques (Elhage et al., 2022; Bricken et al., 2023; Park et al., 2024; Li et al., 2023; Nanda, Lee, & Wattenberg, 2023; Dar et al., 2023). Recent work analyzes vision transformers through the SVD of the query-key matrix, revealing how attention behaves differently across layers and image regions (Pan et al., 2024).
+
+Many interpretability studies have focused on analyzing how geometric structure in embedding space emerges during training on arithmetic tasks (Nanda et al., 2023; Musat, 2024; Gromov, 2023; Zhong et al., 2023; Welch Labs, 2025; Power et al., 2022; Quirke & Barez, 2024; Liu et al., 2022; Hanna et al., 2023; Stolfo et al., 2023). A different approach to interpretability attempts to formalize transformer computations into human-readable languages such as RASP (Weiss et al., 2021; Friedman et al., 2023; Zhou et al., 2024; Lindner et al., 2023).
 
 ## 2. Methods
 
@@ -435,6 +437,8 @@ We thank Idan Segev for his guidance and support throughout this project. This w
 - Nanda, N., Lee, A., & Wattenberg, M. (2023). Emergent linear representations in world models of self-supervised sequence models. *BlackboxNLP*. https://aclanthology.org/2023.blackboxnlp-1.2/
 
 - nostalgebraist. (2020). Interpreting GPT: The logit lens. LessWrong. https://www.lesswrong.com/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens
+
+- Pan, X., Philip, A., Xie, Z., & Schwartz, O. (2024). Dissecting query-key interaction in vision transformers. *NeurIPS*, 54595–54631. https://proceedings.neurips.cc/paper_files/paper/2024/hash/6216515a5e0b3257c49dcb1647e497d1-Abstract.html
 
 - Park, K., Choe, Y. J., & Veitch, V. (2024). The linear representation hypothesis and the geometry of large language models. *ICML*. https://arxiv.org/abs/2311.03658
 
