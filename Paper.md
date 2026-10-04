@@ -314,7 +314,7 @@ Neuroscientists have become increasingly interested in relating the representati
 
 ## 6. Movies
 
-The following animations show the evolution of the model's learned geometry over the course of training (one frame per checkpoint, 200 frames total). These are available as GIF/MP4 files in `plus_last_even/plots/learning_dynamics/`.
+The following animations show the evolution of the model's learned geometry over the course of training (one frame per checkpoint, 200 frames total). These are available as GIF/MP4 files in `plus_last_even/plots/learning_dynamics/` of the code repository (https://github.com/Raneem-mahajne/creating_transformer).
 
 \noindent
 \begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}p{3.5cm}>{\raggedright\arraybackslash}X@{}}
@@ -381,7 +381,7 @@ python main.py plus_last_even --video-qkv
 
 ## Declaration on the use of artificial intelligence
 
-Nearly all code — including the transformer model, training pipeline, and figure/video generation — was produced with Cursor Agent. All training outcomes, figures, and interpretive claims were independently verified by the primary authors. The first draft of this paper was written by Claude Opus 4.6; the entirety of the draft was thoroughly rewritten, edited, and revised by the authors for factual accuracy, clarity, and language.
+Nearly all code — including the transformer model, training pipeline, and figure/video generation — was produced with Cursor Agent. All training outcomes, figures, and interpretive claims were independently verified by the authors. The first draft of this paper was written by Claude Opus 4.6; the entirety of the draft was thoroughly rewritten, edited, and revised by the authors for factual accuracy, clarity, and language.
 
 ## Acknowledgments
 
