@@ -43,7 +43,7 @@ Links were checked with HTTP HEAD/GET on 2026-08-06; status notes are at the bot
 - Geva, M., Caciularu, A., Wang, K., & Goldberg, Y. (2022). Transformer feed-forward layers build predictions by promoting concepts in the vocabulary space. *EMNLP*, 30–45.  
   [ACL Anthology](https://aclanthology.org/2022.emnlp-main.3/) · [PDF](https://aclanthology.org/2022.emnlp-main.3.pdf) · [arXiv](https://arxiv.org/abs/2203.14680)
 
-- Belrose, N., Furman, Z., Smith, L., Halawi, D., Ostrovsky, I., McKinney, L., Biderman, S., & Steinhardt, J. (2023). Eliciting latent predictions from transformers with the tuned lens. *arXiv preprint* arXiv:2303.08112.  
+- Belrose, N., Ostrovsky, I., McKinney, L., Furman, Z., Smith, L., Halawi, D., Biderman, S., & Steinhardt, J. (2023). Eliciting latent predictions from transformers with the tuned lens. *arXiv preprint* arXiv:2303.08112.  
   [arXiv](https://arxiv.org/abs/2303.08112) · [PDF](https://arxiv.org/pdf/2303.08112)
 
 - nostalgebraist. (2020). Interpreting GPT: The logit lens. LessWrong.  
