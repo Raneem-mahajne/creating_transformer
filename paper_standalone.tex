@@ -288,22 +288,22 @@ procedure in an illustrative task.
 
 Much of the work in the mechanistic interpretability literature focuses
 on large language models and tries to interpret attention in terms of
-linguistic properties (Clark et al., 2019; Vig, 2019; Wang, 2022).
-However, such work rarely traces the full forward pass end-to-end in a
-directly visualizable space; our contribution is a complete geometric
-walkthrough of a transformer model. Other work takes a more mathematical
-approach to deconstructing the operations performed by each part of the
-transformer (Elhage et al., 2021), or indirectly explores how
-information is represented internally in the transformer model via
+linguistic properties (Clark et al., 2019; Vig, 2019; Wang et al.,
+2023). However, such work rarely traces the full forward pass end-to-end
+in a directly visualizable space; our contribution is a complete
+geometric walkthrough of a transformer model. Other work takes a more
+mathematical approach to deconstructing the operations performed by each
+part of the transformer (Elhage et al., 2021), or indirectly explores
+how information is represented internally in the transformer model via
 perturbation experiments or mathematical and model engineering
 techniques (Elhage et al., 2022; Bricken et al., 2023; Park et al.,
 2024; Li et al., 2023; Nanda, Lee, \& Wattenberg, 2023; Dar et al.,
 2023). Many interpretability studies have focused on analyzing how
 geometric structure in embedding space emerges during training on
 arithmetic tasks (Nanda et al., 2023; Musat, 2024; Gromov, 2023; Zhong
-et al., 2023; Welch Labs 2025; Power et al., 2022; Quirke \& Barez,
-2024; Liu, 2022; Hanna et al., 2023; Stolfo et al., 2023). A different
-approach to interpretability attempts to formalize transformer
+et al., 2023; Welch Labs, 2025; Power et al., 2022; Quirke \& Barez,
+2024; Liu et al., 2022; Hanna et al., 2023; Stolfo et al., 2023). A
+different approach to interpretability attempts to formalize transformer
 computations into human-readable languages such as RASP (Weiss et al.,
 2021; Friedman et al., 2023; Zhou et al., 2024; Lindner et al., 2023).
 
@@ -1310,10 +1310,6 @@ Foundation and the Gatsby Charitable Foundation.
 
 \begin{itemize}
 \item
-  Clark, K., Khandelwal, U., Levy, O., \& Manning, C. D. (2019). What
-  does BERT look at? An analysis of BERT's attention. \emph{ACL Workshop
-  on BlackboxNLP}.
-\item
   Belrose, N., Furman, Z., Smith, L., Halawi, D., Ostrovsky, I.,
   McKinney, L., Biderman, S., \& Steinhardt, J. (2023). Eliciting latent
   predictions from transformers with the tuned lens. \emph{arXiv
@@ -1326,6 +1322,10 @@ Foundation and the Gatsby Charitable Foundation.
   Caucheteux, C., Gramfort, A., \& King, J.-R. (2021). GPT-2's
   activations predict the degree of semantic comprehension in the human
   brain. \emph{bioRxiv}. https://doi.org/10.1101/2021.04.20.440622
+\item
+  Clark, K., Khandelwal, U., Levy, O., \& Manning, C. D. (2019). What
+  does BERT look at? An analysis of BERT's attention. \emph{ACL Workshop
+  on BlackboxNLP}.
 \item
   Dar, G., Geva, M., Gupta, A., \& Berant, J. (2023). Analyzing
   transformers in embedding space. \emph{ACL}, 16124--16170.
@@ -1365,8 +1365,8 @@ Foundation and the Gatsby Charitable Foundation.
 \item
   Hosseini, E. A., Schrimpf, M., Zhang, Y., Bowman, S., Zaslavsky, N.,
   \& Fedorenko, E. (2022). Artificial neural network language models
-  predict human brain responses to language even after a developmentally
-  realistic amount of training. \emph{bioRxiv}.
+  align neurally and behaviorally with humans even after a
+  developmentally realistic amount of training. \emph{bioRxiv}.
   https://doi.org/10.1101/2022.10.04.510681
 \item
   Li, K., Hopkins, A. K., Bau, D., Viégas, F., Pfister, H., \&
@@ -1389,11 +1389,11 @@ Foundation and the Gatsby Charitable Foundation.
 \item
   Musat, T. (2024). Clustering and alignment: Understanding the training
   dynamics in modular addition. \emph{arXiv preprint}
-  arXiv:2408.09414v2.
+  arXiv:2408.09414v2. https://arxiv.org/abs/2408.09414
 \item
-  Nanda, N., Chan, L., Liberum, T., Smith, J., \& Steinhardt, J. (2023).
-  Progress measures for grokking via mechanistic interpretability.
-  \emph{arXiv preprint} arXiv:2301.05217v1.
+  Nanda, N., Chan, L., Lieberum, T., Smith, J., \& Steinhardt, J.
+  (2023). Progress measures for grokking via mechanistic
+  interpretability. \emph{arXiv preprint} arXiv:2301.05217v1.
   https://arxiv.org/pdf/2301.05217v1
 \item
   Nanda, N., Lee, A., \& Wattenberg, M. (2023). Emergent linear
@@ -1439,15 +1439,16 @@ Foundation and the Gatsby Charitable Foundation.
   transformer model. \emph{ACL System Demonstrations}.
 \item
   Wang, K., Variengien, A., Conmy, A., Shlegeris, B., \& Steinhardt, J.
-  (2022). Interpretability in the wild: A circuit for indirect object
-  identification in GPT-2 small. \emph{NeurIPS}.
+  (2023). Interpretability in the wild: A circuit for indirect object
+  identification in GPT-2 small. \emph{ICLR}.
+  https://arxiv.org/abs/2211.00593
+\item
+  Weiss, G., Goldberg, Y., \& Yahav, E. (2021). Thinking like
+  transformers. \emph{ICML}.
 \item
   Welch Labs. (2025). \emph{The most complex model we actually
   understand} {[}Video{]}. YouTube.
   https://www.youtube.com/watch?v=D8GOeCFFby4
-\item
-  Weiss, G., Goldberg, Y., \& Yahav, E. (2021). Thinking like
-  transformers. \emph{ICML}.
 \item
   Zhong, Z., Liu, Z., Tegmark, M., \& Andreas, J. (2023). The clock and
   the pizza: Two stories in mechanistic explanation of neural networks.
