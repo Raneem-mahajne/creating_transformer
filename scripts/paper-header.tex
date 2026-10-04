@@ -54,6 +54,7 @@
 }
 
 \usepackage{tabularx}
+\usepackage{xltabular}
 \usepackage{seqsplit}
 
 \date{}
@@ -94,6 +95,15 @@
   }%
 }
 \makeatother
-% Keep figures in source order, immediately after they are cited.
-\floatplacement{figure}{H}
-\def\fps@figure{H}
+% Let figures float so pages fill with text instead of leaving gaps.
+\floatplacement{figure}{htbp}
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.07}
+\renewcommand{\floatpagefraction}{0.75}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{4}

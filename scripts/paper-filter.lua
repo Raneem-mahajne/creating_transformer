@@ -3,6 +3,7 @@ local stringify = pandoc.utils.stringify
 
 local UNNUMBERED = {
   ["Declaration on the use of artificial intelligence"] = true,
+  ["Acknowledgments"] = true,
   ["References"] = true,
 }
 
@@ -161,7 +162,7 @@ local function set_figure_caption(block, cap_inlines)
   end
   local caption = pandoc.Caption({pandoc.Plain(cleaned)}, cleaned)
   local function with_here(fig)
-    fig.attr.attributes["pos"] = "H"
+    fig.attr.attributes["pos"] = "htbp"
     return fig
   end
   if block.t == "Figure" then
@@ -200,6 +201,15 @@ function Code(el)
   if #el.text > 24 then
     local escaped = el.text:gsub("\\", "\\textbackslash{}"):gsub("_", "\\_"):gsub("%%", "\\%%")
     return pandoc.RawInline("latex", "\\texttt{\\seqsplit{" .. escaped .. "}}")
+  end
+end
+
+function RawBlock(el)
+  if el.format == "latex" or el.format == "tex" then
+    el.text = el.text
+      :gsub("\\begin{tabularx}", "\\begin{xltabular}")
+      :gsub("\\end{tabularx}", "\\end{xltabular}")
+    return el
   end
 end
 
@@ -315,7 +325,7 @@ function Pandoc(doc)
   meta.date = pandoc.MetaString("")
   return pandoc.Pandoc(out, meta):walk({
     Figure = function(fig)
-      fig.attr.attributes["pos"] = "H"
+      fig.attr.attributes["pos"] = "htbp"
       return fig
     end
   })

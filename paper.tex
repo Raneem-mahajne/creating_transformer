@@ -163,6 +163,7 @@
 }
 
 \usepackage{tabularx}
+\usepackage{xltabular}
 \usepackage{seqsplit}
 
 \date{}
@@ -203,15 +204,24 @@
   }%
 }
 \makeatother
-% Keep figures in source order, immediately after they are cited.
-\floatplacement{figure}{H}
-\def\fps@figure{H}
+% Let figures float so pages fill with text instead of leaving gaps.
+\floatplacement{figure}{htbp}
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.07}
+\renewcommand{\floatpagefraction}{0.75}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{4}
 \usepackage{bookmark}
 \IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
 \urlstyle{same}
 \hypersetup{
   pdftitle={Fully Interpretable Minimal Transformers: From Geometry to Algorithm},
-  pdfauthor={Toviah Moldwin, Raneem Mahajne, and Idan SegevEdmond and Lily Safra Center for Brain Sciences, The Hebrew University of Jerusalem},
+  pdfauthor={Raneem Mahajne and Toviah MoldwinEdmond and Lily Safra Center for Brain Sciences, The Hebrew University of Jerusalem},
   colorlinks=true,
   linkcolor={black},
   filecolor={Maroon},
@@ -221,8 +231,8 @@
 
 \title{Fully Interpretable Minimal Transformers: From Geometry to
 Algorithm}
-\author{Toviah Moldwin, Raneem Mahajne, and Idan
-Segev\\[0.45em]{\normalsize\itshape Edmond and Lily Safra Center for
+\author{Raneem Mahajne and Toviah
+Moldwin\\[0.45em]{\normalsize\itshape Edmond and Lily Safra Center for
 Brain Sciences, The Hebrew University of Jerusalem}}
 \date{}
 
@@ -1204,7 +1214,7 @@ frames total). These are available as GIF/MP4 files in
 
 \noindent
 
-\begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}p{3.5cm}>{\raggedright\arraybackslash}X@{}}
+\begin{xltabular}{\linewidth}{@{}l>{\raggedright\arraybackslash}p{3.5cm}>{\raggedright\arraybackslash}X@{}}
 \toprule
 Movie & \texttt{File} & Description \\
 \midrule
@@ -1214,7 +1224,7 @@ Movie 3 & \parbox[t]{3.5cm}{\raggedright\ttfamily\seqsplit{02\_embedding\_qkv\_c
 Movie 4 & \parbox[t]{3.5cm}{\raggedright\ttfamily\seqsplit{03\_qk\_embedding\_space.gif}} & Separation of query and key subspaces. \texttt{+} queries migrate away from number queries; even-number keys align with the \texttt{+} query direction. \\
 Movie 5 & \parbox[t]{3.5cm}{\raggedright\ttfamily\seqsplit{04\_qk\_space\_plus\_attention.gif}} & Evolution of the full attention matrix alongside the Q/K scatter. The \texttt{+}-row entries concentrate on even-number columns over training. \\
 \bottomrule
-\end{tabularx}
+\end{xltabular}
 
 \subsection{Supplementary Figures}\label{supplementary-figures}
 
@@ -1224,7 +1234,7 @@ Additional static figures in
 
 \noindent
 
-\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}X@{}}
+\begin{xltabular}{\linewidth}{@{}>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}X@{}}
 \toprule
 \texttt{File} & Description \\
 \midrule
@@ -1236,7 +1246,7 @@ Additional static figures in
 \parbox[t]{3.2cm}{\raggedright\ttfamily\seqsplit{a4/07\_output\_probs\_embed.png}} & Per-unit output probability heatmaps with all 96 combined embeddings $\mathbf{e}_i$ overlaid (token + position labels). \\
 \parbox[t]{3.2cm}{\raggedright\ttfamily\seqsplit{a4/12\_probability\_heatmap\_with\_values.png}} & Per-unit output probability heatmaps with all 96 value-transformed vectors $W_V \mathbf{e}_i$ overlaid. \\
 \bottomrule
-\end{tabularx}
+\end{xltabular}
 
 \section{Reproducing the Results}\label{reproducing-the-results}
 
@@ -1285,6 +1295,13 @@ verified by the primary authors. The first draft of this paper was
 written by Claude Opus 4.6; the entirety of the draft was thoroughly
 rewritten, edited, and revised by the authors for factual accuracy,
 clarity, and language.
+
+\section*{Acknowledgments}\label{acknowledgments}
+\addcontentsline{toc}{section}{Acknowledgments}
+
+We thank Idan Segev for his guidance and support throughout this
+project. This work received generous support from the Drahi Family
+Foundation and the Gatsby Charitable Foundation.
 
 \section*{References}\label{references}
 \addcontentsline{toc}{section}{References}

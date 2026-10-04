@@ -6,7 +6,7 @@ header-includes:
 
 # Fully Interpretable Minimal Transformers: From Geometry to Algorithm
 
-Toviah Moldwin, Raneem Mahajne, and Idan Segev  
+Raneem Mahajne and Toviah Moldwin  
 Edmond and Lily Safra Center for Brain Sciences, The Hebrew University of Jerusalem
 
 > **Abstract.**
@@ -382,6 +382,10 @@ python main.py plus_last_even --video-qkv
 ## Declaration on the use of artificial intelligence
 
 Nearly all code — including the transformer model, training pipeline, and figure/video generation — was produced with Cursor Agent. All training outcomes, figures, and interpretive claims were independently verified by the primary authors. The first draft of this paper was written by Claude Opus 4.6; the entirety of the draft was thoroughly rewritten, edited, and revised by the authors for factual accuracy, clarity, and language.
+
+## Acknowledgments
+
+We thank Idan Segev for his guidance and support throughout this project. This work received generous support from the Drahi Family Foundation and the Gatsby Charitable Foundation.
 
 ---
 
