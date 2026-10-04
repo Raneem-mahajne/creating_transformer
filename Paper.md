@@ -398,7 +398,7 @@ We thank Idan Segev for his guidance and support throughout this project. This w
 
 - Caucheteux, C., Gramfort, A., & King, J.-R. (2021). GPT-2's activations predict the degree of semantic comprehension in the human brain. *bioRxiv*. https://doi.org/10.1101/2021.04.20.440622
 
-- Clark, K., Khandelwal, U., Levy, O., & Manning, C. D. (2019). What does BERT look at? An analysis of BERT's attention. *ACL Workshop on BlackboxNLP*.
+- Clark, K., Khandelwal, U., Levy, O., & Manning, C. D. (2019). What does BERT look at? An analysis of BERT's attention. *ACL Workshop on BlackboxNLP*. https://arxiv.org/abs/1906.04341
 
 - Dar, G., Geva, M., Gupta, A., & Berant, J. (2023). Analyzing transformers in embedding space. *ACL*, 16124–16170. https://aclanthology.org/2023.acl-long.893/
 
