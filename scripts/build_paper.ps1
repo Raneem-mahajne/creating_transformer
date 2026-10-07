@@ -19,6 +19,10 @@ pandoc "Paper.md" `
   -V urlcolor=blue `
   -o "paper.tex"
 
+# arXiv requires \pdfoutput=1 within the first 5 lines to select pdflatex.
+$tex = [IO.File]::ReadAllText("$Root\paper.tex")
+[IO.File]::WriteAllText("$Root\paper.tex", "\pdfoutput=1`n" + $tex)
+
 Copy-Item -Force "paper.tex" "paper_standalone.tex"
 
 $pdflatex = "C:\texlive\2025\bin\windows\pdflatex.exe"

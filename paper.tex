@@ -1,3 +1,4 @@
+\pdfoutput=1
 % Options for packages loaded elsewhere
 \PassOptionsToPackage{unicode}{hyperref}
 \PassOptionsToPackage{hyphens}{url}
@@ -289,7 +290,7 @@ procedure in an illustrative task.
 Much of the work in the mechanistic interpretability literature focuses
 on large language models and tries to interpret attention in terms of
 linguistic properties (Clark et al., 2019; Vig, 2019; Wang et al.,
-2023). However, such work rarely traces the full forward pass end-to-end
+2022). However, such work rarely traces the full forward pass end-to-end
 in a directly visualizable space; our contribution is a complete
 geometric walkthrough of a transformer model. Other work takes a more
 mathematical approach to deconstructing the operations performed by each
@@ -298,14 +299,18 @@ how information is represented internally in the transformer model via
 perturbation experiments or mathematical and model engineering
 techniques (Elhage et al., 2022; Bricken et al., 2023; Park et al.,
 2024; Li et al., 2023; Nanda, Lee, \& Wattenberg, 2023; Dar et al.,
-2023). Many interpretability studies have focused on analyzing how
-geometric structure in embedding space emerges during training on
-arithmetic tasks (Nanda et al., 2023; Musat, 2024; Gromov, 2023; Zhong
-et al., 2023; Welch Labs, 2025; Power et al., 2022; Quirke \& Barez,
-2024; Liu et al., 2022; Hanna et al., 2023; Stolfo et al., 2023). A
-different approach to interpretability attempts to formalize transformer
-computations into human-readable languages such as RASP (Weiss et al.,
-2021; Friedman et al., 2023; Zhou et al., 2024; Lindner et al., 2023).
+2023). Recent work analyzes vision transformers through the SVD of the
+query-key matrix, revealing how attention behaves differently across
+layers and image regions (Pan et al., 2024).
+
+Many interpretability studies have focused on analyzing how geometric
+structure in embedding space emerges during training on arithmetic tasks
+(Nanda et al., 2023; Musat, 2024; Gromov, 2023; Zhong et al., 2023;
+Welch Labs, 2025; Power et al., 2022; Quirke \& Barez, 2024; Liu et al.,
+2022; Hanna et al., 2023; Stolfo et al., 2023). A different approach to
+interpretability attempts to formalize transformer computations into
+human-readable languages such as RASP (Weiss et al., 2021; Friedman et
+al., 2023; Zhou et al., 2024; Lindner et al., 2023).
 
 \section{Methods}\label{methods}
 
@@ -1199,7 +1204,7 @@ isolate the representations at each layer.
 Neuroscientists have become increasingly interested in relating the
 representational geometry of complex perceptions and behaviors in the
 brain to those found in large language models (e.g., Caucheteux et al.,
-2021; Hosseini et al., 2022; Sun et al., 2025; Doerig et al., 2025). Our
+2021; Hosseini et al., 2024; Sun et al., 2025; Doerig et al., 2025). Our
 framework allows for the possibility of exploring representational
 geometry in sufficiently simple tasks that can also be used in
 experimental neuroscience, potentially enabling a direct comparison of
@@ -1212,7 +1217,7 @@ geometry over the course of training (one frame per checkpoint, 200
 frames total). These are available as GIF/MP4 files in
 \texttt{\seqsplit{plus\_last\_even/plots/learning\_dynamics/}} of the
 code repository
-(https://github.com/Raneem-mahajne/creating\_transformer).
+(\url{https://github.com/Raneem-mahajne/creating_transformer/tree/main/plus_last_even/plots/learning_dynamics}).
 
 \noindent
 
@@ -1220,11 +1225,11 @@ code repository
 \toprule
 Movie & \texttt{File} & Description \\
 \midrule
-Movie 1 & \parbox[t]{3.5cm}{\raggedright\ttfamily\seqsplit{01\_embeddings\_scatterplots.gif}} & Evolution of token, position, and combined embedding scatter plots. The \texttt{+} token separates from numbers first; the even/odd split solidifies by step 5,000--10,000. \\
-Movie 2 & \parbox[t]{3.5cm}{\raggedright\ttfamily\seqsplit{05\_output\_heatmaps\_with\_embeddings.gif}} & Co-evolution of the LM head's output probability landscape and embedding positions. Decision boundaries sharpen progressively from a uniform initialization. \\
-Movie 3 & \parbox[t]{3.5cm}{\raggedright\ttfamily\seqsplit{02\_embedding\_qkv\_comprehensive.gif}} & Specialization of the Q, K, and V subspaces. All three projections are initially identical and develop distinct geometry as training progresses. \\
-Movie 4 & \parbox[t]{3.5cm}{\raggedright\ttfamily\seqsplit{03\_qk\_embedding\_space.gif}} & Separation of query and key subspaces. \texttt{+} queries migrate away from number queries; even-number keys align with the \texttt{+} query direction. \\
-Movie 5 & \parbox[t]{3.5cm}{\raggedright\ttfamily\seqsplit{04\_qk\_space\_plus\_attention.gif}} & Evolution of the full attention matrix alongside the Q/K scatter. The \texttt{+}-row entries concentrate on even-number columns over training. \\
+Movie 1 & \parbox[t]{3.5cm}{\raggedright\ttfamily\href{https://github.com/Raneem-mahajne/creating_transformer/blob/main/plus_last_even/plots/learning_dynamics/01_embeddings_scatterplots.gif}{\seqsplit{01\_embeddings\_scatterplots.gif}}} & Evolution of token, position, and combined embedding scatter plots. The \texttt{+} token separates from numbers first; the even/odd split solidifies by step 5,000--10,000. \\
+Movie 2 & \parbox[t]{3.5cm}{\raggedright\ttfamily\href{https://github.com/Raneem-mahajne/creating_transformer/blob/main/plus_last_even/plots/learning_dynamics/05_output_heatmaps_with_embeddings.gif}{\seqsplit{05\_output\_heatmaps\_with\_embeddings.gif}}} & Co-evolution of the LM head's output probability landscape and embedding positions. Decision boundaries sharpen progressively from a uniform initialization. \\
+Movie 3 & \parbox[t]{3.5cm}{\raggedright\ttfamily\href{https://github.com/Raneem-mahajne/creating_transformer/blob/main/plus_last_even/plots/learning_dynamics/02_embedding_qkv_comprehensive.gif}{\seqsplit{02\_embedding\_qkv\_comprehensive.gif}}} & Specialization of the Q, K, and V subspaces. All three projections are initially identical and develop distinct geometry as training progresses. \\
+Movie 4 & \parbox[t]{3.5cm}{\raggedright\ttfamily\href{https://github.com/Raneem-mahajne/creating_transformer/blob/main/plus_last_even/plots/learning_dynamics/03_qk_embedding_space.gif}{\seqsplit{03\_qk\_embedding\_space.gif}}} & Separation of query and key subspaces. \texttt{+} queries migrate away from number queries; even-number keys align with the \texttt{+} query direction. \\
+Movie 5 & \parbox[t]{3.5cm}{\raggedright\ttfamily\href{https://github.com/Raneem-mahajne/creating_transformer/blob/main/plus_last_even/plots/learning_dynamics/04_qk_space_plus_attention.gif}{\seqsplit{04\_qk\_space\_plus\_attention.gif}}} & Evolution of the full attention matrix alongside the Q/K scatter. The \texttt{+}-row entries concentrate on even-number columns over training. \\
 \bottomrule
 \end{xltabular}
 
@@ -1339,12 +1344,12 @@ Foundation and the Gatsby Charitable Foundation.
   language models. \emph{Nature Machine Intelligence}, \emph{7},
   1220--1234. https://doi.org/10.1038/s42256-025-01072-0
 \item
-  Elhage, N., et al.~(2021). A mathematical framework for transformer
-  circuits. \emph{Transformer Circuits Thread}.
-  https://transformer-circuits.pub/2021/framework/index.html
+  Elhage, N., Nanda, N., Olsson, C., et al.~(2021). A mathematical
+  framework for transformer circuits. \emph{Transformer Circuits
+  Thread}. https://transformer-circuits.pub/2021/framework/index.html
 \item
-  Elhage, N., et al.~(2022). Toy models of superposition.
-  \emph{Transformer Circuits Thread}.
+  Elhage, N., Hume, T., Olsson, C., Schiefer, N., et al.~(2022). Toy
+  models of superposition. \emph{Transformer Circuits Thread}.
   https://transformer-circuits.pub/2022/toy\_model/index.html
 \item
   Friedman, D., Wettig, A., \& Chen, D. (2023). Learning Transformer
@@ -1367,10 +1372,10 @@ Foundation and the Gatsby Charitable Foundation.
   language model. \emph{NeurIPS}. https://arxiv.org/abs/2305.00586
 \item
   Hosseini, E. A., Schrimpf, M., Zhang, Y., Bowman, S., Zaslavsky, N.,
-  \& Fedorenko, E. (2022). Artificial neural network language models
-  align neurally and behaviorally with humans even after a
-  developmentally realistic amount of training. \emph{bioRxiv}.
-  https://doi.org/10.1101/2022.10.04.510681
+  \& Fedorenko, E. (2024). Artificial neural network language models
+  predict human brain responses to language even after a developmentally
+  realistic amount of training. \emph{Neurobiology of Language},
+  \emph{5}(1), 43--63. https://doi.org/10.1162/nol\_a\_00137
 \item
   Li, K., Hopkins, A. K., Bau, D., Viégas, F., Pfister, H., \&
   Wattenberg, M. (2023). Emergent world representations: Exploring a
@@ -1406,6 +1411,11 @@ Foundation and the Gatsby Charitable Foundation.
   nostalgebraist. (2020). Interpreting GPT: The logit lens. LessWrong.
   https://www.lesswrong.com/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens
 \item
+  Pan, X., Philip, A., Xie, Z., \& Schwartz, O. (2024). Dissecting
+  query-key interaction in vision transformers. \emph{NeurIPS},
+  54595--54631.
+  https://proceedings.neurips.cc/paper\_files/paper/2024/hash/6216515a5e0b3257c49dcb1647e497d1-Abstract.html
+\item
   Park, K., Choe, Y. J., \& Veitch, V. (2024). The linear representation
   hypothesis and the geometry of large language models. \emph{ICML}.
   https://arxiv.org/abs/2311.03658
@@ -1433,21 +1443,25 @@ Foundation and the Gatsby Charitable Foundation.
 \item
   van der Maaten, L. \& Hinton, G. (2008). Visualizing data using t-SNE.
   \emph{JMLR}, 9, 2579--2605.
+  https://www.jmlr.org/papers/v9/vandermaaten08a.html
 \item
   Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez,
   A. N., Kaiser, Ł., \& Polosukhin, I. (2017). Attention is all you
   need. \emph{Advances in Neural Information Processing Systems}, 30.
+  https://arxiv.org/abs/1706.03762
 \item
   Vig, J. (2019). A multiscale visualization of attention in the
   transformer model. \emph{ACL System Demonstrations}.
+  https://aclanthology.org/P19-3007/
 \item
   Wang, K., Variengien, A., Conmy, A., Shlegeris, B., \& Steinhardt, J.
-  (2023). Interpretability in the wild: A circuit for indirect object
+  (2022). Interpretability in the wild: A circuit for indirect object
   identification in GPT-2 small. \emph{ICLR}.
   https://arxiv.org/abs/2211.00593
 \item
   Weiss, G., Goldberg, Y., \& Yahav, E. (2021). Thinking like
   transformers. \emph{ICML}.
+  https://proceedings.mlr.press/v139/weiss21a.html
 \item
   Welch Labs. (2025). \emph{The most complex model we actually
   understand} {[}Video{]}. YouTube.

@@ -316,18 +316,18 @@ Neuroscientists have become increasingly interested in relating the representati
 
 ## 6. Movies
 
-The following animations show the evolution of the model's learned geometry over the course of training (one frame per checkpoint, 200 frames total). These are available as GIF/MP4 files in `plus_last_even/plots/learning_dynamics/` of the code repository (https://github.com/Raneem-mahajne/creating_transformer).
+The following animations show the evolution of the model's learned geometry over the course of training (one frame per checkpoint, 200 frames total). These are available as GIF/MP4 files in `plus_last_even/plots/learning_dynamics/` of the code repository (<https://github.com/Raneem-mahajne/creating_transformer/tree/main/plus_last_even/plots/learning_dynamics>).
 
 \noindent
 \begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}p{3.5cm}>{\raggedright\arraybackslash}X@{}}
 \toprule
 Movie & \texttt{File} & Description \\
 \midrule
-Movie 1 & \parbox[t]{3.5cm}{\raggedright\ttfamily\seqsplit{01\_embeddings\_scatterplots.gif}} & Evolution of token, position, and combined embedding scatter plots. The \texttt{+} token separates from numbers first; the even/odd split solidifies by step 5,000--10,000. \\
-Movie 2 & \parbox[t]{3.5cm}{\raggedright\ttfamily\seqsplit{05\_output\_heatmaps\_with\_embeddings.gif}} & Co-evolution of the LM head's output probability landscape and embedding positions. Decision boundaries sharpen progressively from a uniform initialization. \\
-Movie 3 & \parbox[t]{3.5cm}{\raggedright\ttfamily\seqsplit{02\_embedding\_qkv\_comprehensive.gif}} & Specialization of the Q, K, and V subspaces. All three projections are initially identical and develop distinct geometry as training progresses. \\
-Movie 4 & \parbox[t]{3.5cm}{\raggedright\ttfamily\seqsplit{03\_qk\_embedding\_space.gif}} & Separation of query and key subspaces. \texttt{+} queries migrate away from number queries; even-number keys align with the \texttt{+} query direction. \\
-Movie 5 & \parbox[t]{3.5cm}{\raggedright\ttfamily\seqsplit{04\_qk\_space\_plus\_attention.gif}} & Evolution of the full attention matrix alongside the Q/K scatter. The \texttt{+}-row entries concentrate on even-number columns over training. \\
+Movie 1 & \parbox[t]{3.5cm}{\raggedright\ttfamily\href{https://github.com/Raneem-mahajne/creating_transformer/blob/main/plus_last_even/plots/learning_dynamics/01_embeddings_scatterplots.gif}{\seqsplit{01\_embeddings\_scatterplots.gif}}} & Evolution of token, position, and combined embedding scatter plots. The \texttt{+} token separates from numbers first; the even/odd split solidifies by step 5,000--10,000. \\
+Movie 2 & \parbox[t]{3.5cm}{\raggedright\ttfamily\href{https://github.com/Raneem-mahajne/creating_transformer/blob/main/plus_last_even/plots/learning_dynamics/05_output_heatmaps_with_embeddings.gif}{\seqsplit{05\_output\_heatmaps\_with\_embeddings.gif}}} & Co-evolution of the LM head's output probability landscape and embedding positions. Decision boundaries sharpen progressively from a uniform initialization. \\
+Movie 3 & \parbox[t]{3.5cm}{\raggedright\ttfamily\href{https://github.com/Raneem-mahajne/creating_transformer/blob/main/plus_last_even/plots/learning_dynamics/02_embedding_qkv_comprehensive.gif}{\seqsplit{02\_embedding\_qkv\_comprehensive.gif}}} & Specialization of the Q, K, and V subspaces. All three projections are initially identical and develop distinct geometry as training progresses. \\
+Movie 4 & \parbox[t]{3.5cm}{\raggedright\ttfamily\href{https://github.com/Raneem-mahajne/creating_transformer/blob/main/plus_last_even/plots/learning_dynamics/03_qk_embedding_space.gif}{\seqsplit{03\_qk\_embedding\_space.gif}}} & Separation of query and key subspaces. \texttt{+} queries migrate away from number queries; even-number keys align with the \texttt{+} query direction. \\
+Movie 5 & \parbox[t]{3.5cm}{\raggedright\ttfamily\href{https://github.com/Raneem-mahajne/creating_transformer/blob/main/plus_last_even/plots/learning_dynamics/04_qk_space_plus_attention.gif}{\seqsplit{04\_qk\_space\_plus\_attention.gif}}} & Evolution of the full attention matrix alongside the Q/K scatter. The \texttt{+}-row entries concentrate on even-number columns over training. \\
 \bottomrule
 \end{tabularx}
 
