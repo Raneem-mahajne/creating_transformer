@@ -28,10 +28,10 @@ Links were checked with HTTP HEAD/GET on 2026-08-06; status notes are at the bot
 - Hanna, M., Liu, O., & Variengien, A. (2023). How does GPT-2 compute greater-than?: Interpreting mathematical abilities in a pre-trained language model. *NeurIPS*.  
   [arXiv](https://arxiv.org/abs/2305.00586) · [PDF](https://arxiv.org/pdf/2305.00586)
 
-- Elhage, N., et al. (2021). A mathematical framework for transformer circuits. *Transformer Circuits Thread*.  
+- Elhage, N., Nanda, N., Olsson, C., et al. (2021). A mathematical framework for transformer circuits. *Transformer Circuits Thread*.  
   [Article](https://transformer-circuits.pub/2021/framework/index.html)
 
-- Elhage, N., et al. (2022). Toy models of superposition. *Transformer Circuits Thread*.  
+- Elhage, N., Hume, T., Olsson, C., Schiefer, N., et al. (2022). Toy models of superposition. *Transformer Circuits Thread*.  
   [Article](https://transformer-circuits.pub/2022/toy_model/index.html)
 
 - Bricken, T., Templeton, A., Batson, J., Chen, B., Jermyn, A., et al. (2023). Towards monosemanticity: Decomposing language models with dictionary learning. *Transformer Circuits Thread*.  

@@ -406,9 +406,9 @@ We thank Idan Segev for his guidance and support throughout this project. This w
 
 - Doerig, A., Kietzmann, T. C., Allen, E., et al. (2025). High-level visual representations in the human brain are aligned with large language models. *Nature Machine Intelligence*, *7*, 1220–1234. https://doi.org/10.1038/s42256-025-01072-0
 
-- Elhage, N., et al. (2021). A mathematical framework for transformer circuits. *Transformer Circuits Thread*. https://transformer-circuits.pub/2021/framework/index.html
+- Elhage, N., Nanda, N., Olsson, C., et al. (2021). A mathematical framework for transformer circuits. *Transformer Circuits Thread*. https://transformer-circuits.pub/2021/framework/index.html
 
-- Elhage, N., et al. (2022). Toy models of superposition. *Transformer Circuits Thread*. https://transformer-circuits.pub/2022/toy_model/index.html
+- Elhage, N., Hume, T., Olsson, C., Schiefer, N., et al. (2022). Toy models of superposition. *Transformer Circuits Thread*. https://transformer-circuits.pub/2022/toy_model/index.html
 
 - Friedman, D., Wettig, A., & Chen, D. (2023). Learning Transformer Programs. *NeurIPS*. https://arxiv.org/abs/2306.01128
 
