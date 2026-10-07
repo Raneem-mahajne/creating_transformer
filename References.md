@@ -118,8 +118,8 @@ Links were checked with HTTP HEAD/GET on 2026-08-06; status notes are at the bot
 - Doerig, A., Kietzmann, T. C., Allen, E., et al. (2025). High-level visual representations in the human brain are aligned with large language models. *Nature Machine Intelligence*, *7*, 1220–1234.  
   [DOI](https://doi.org/10.1038/s42256-025-01072-0)
 
-- Hosseini, E. A., Schrimpf, M., Zhang, Y., Bowman, S., Zaslavsky, N., & Fedorenko, E. (2022). Artificial neural network language models predict human brain responses to language even after a developmentally realistic amount of training. *bioRxiv*.  
-  [bioRxiv](https://www.biorxiv.org/content/10.1101/2022.10.04.510681v1) · [DOI](https://doi.org/10.1101/2022.10.04.510681)
+- Hosseini, E. A., Schrimpf, M., Zhang, Y., Bowman, S., Zaslavsky, N., & Fedorenko, E. (2024). Artificial neural network language models predict human brain responses to language even after a developmentally realistic amount of training. *Neurobiology of Language*, *5*(1), 43–63.  
+  [DOI](https://doi.org/10.1162/nol_a_00137) · [bioRxiv preprint](https://www.biorxiv.org/content/10.1101/2022.10.04.510681v1)
 
 - Sun, W., Winnubst, J., Natrajan, M., et al. (2025). Learning produces an orthogonalized state machine in the hippocampus. *Nature*, *640*, 165–175.  
   [DOI](https://doi.org/10.1038/s41586-024-08548-w)

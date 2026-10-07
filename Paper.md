@@ -23,7 +23,7 @@ We can take advantage of this direct visibility to demonstrate how the informati
 
 ### 1.1 Related work
 
-Much of the work in the mechanistic interpretability literature focuses on large language models and tries to interpret attention in terms of linguistic properties (Clark et al., 2019; Vig, 2019; Wang et al., 2023). However, such work rarely traces the full forward pass end-to-end in a directly visualizable space; our contribution is a complete geometric walkthrough of a transformer model. Other work takes a more mathematical approach to deconstructing the operations performed by each part of the transformer (Elhage et al., 2021), or indirectly explores how information is represented internally in the transformer model via perturbation experiments or mathematical and model engineering techniques (Elhage et al., 2022; Bricken et al., 2023; Park et al., 2024; Li et al., 2023; Nanda, Lee, & Wattenberg, 2023; Dar et al., 2023). Recent work analyzes vision transformers through the SVD of the query-key matrix, revealing how attention behaves differently across layers and image regions (Pan et al., 2024).
+Much of the work in the mechanistic interpretability literature focuses on large language models and tries to interpret attention in terms of linguistic properties (Clark et al., 2019; Vig, 2019; Wang et al., 2022). However, such work rarely traces the full forward pass end-to-end in a directly visualizable space; our contribution is a complete geometric walkthrough of a transformer model. Other work takes a more mathematical approach to deconstructing the operations performed by each part of the transformer (Elhage et al., 2021), or indirectly explores how information is represented internally in the transformer model via perturbation experiments or mathematical and model engineering techniques (Elhage et al., 2022; Bricken et al., 2023; Park et al., 2024; Li et al., 2023; Nanda, Lee, & Wattenberg, 2023; Dar et al., 2023). Recent work analyzes vision transformers through the SVD of the query-key matrix, revealing how attention behaves differently across layers and image regions (Pan et al., 2024).
 
 Many interpretability studies have focused on analyzing how geometric structure in embedding space emerges during training on arithmetic tasks (Nanda et al., 2023; Musat, 2024; Gromov, 2023; Zhong et al., 2023; Welch Labs, 2025; Power et al., 2022; Quirke & Barez, 2024; Liu et al., 2022; Hanna et al., 2023; Stolfo et al., 2023). A different approach to interpretability attempts to formalize transformer computations into human-readable languages such as RASP (Weiss et al., 2021; Friedman et al., 2023; Zhou et al., 2024; Lindner et al., 2023).
 
@@ -310,7 +310,7 @@ We have thus demonstrated how the representational geometry of the transformer (
 
 Although our work emphasized using 2-dimensional latent spaces for the purpose of direct, lossless visualization, the visualization approaches that we used here can potentially be applied to more complex models if dimensionality reduction techniques are used and steps are taken to isolate the representations at each layer.  
 
-Neuroscientists have become increasingly interested in relating the representational geometry of complex perceptions and behaviors in the brain to those found in large language models (e.g., Caucheteux et al., 2021; Hosseini et al., 2022; Sun et al., 2025; Doerig et al., 2025). Our framework allows for the possibility of exploring representational geometry in sufficiently simple tasks that can also be used in experimental neuroscience, potentially enabling a direct comparison of neural activity to a transformer's internal representations.
+Neuroscientists have become increasingly interested in relating the representational geometry of complex perceptions and behaviors in the brain to those found in large language models (e.g., Caucheteux et al., 2021; Hosseini et al., 2024; Sun et al., 2025; Doerig et al., 2025). Our framework allows for the possibility of exploring representational geometry in sufficiently simple tasks that can also be used in experimental neuroscience, potentially enabling a direct comparison of neural activity to a transformer's internal representations.
 
 ---
 
@@ -420,7 +420,7 @@ We thank Idan Segev for his guidance and support throughout this project. This w
 
 - Hanna, M., Liu, O., & Variengien, A. (2023). How does GPT-2 compute greater-than?: Interpreting mathematical abilities in a pre-trained language model. *NeurIPS*. https://arxiv.org/abs/2305.00586
 
-- Hosseini, E. A., Schrimpf, M., Zhang, Y., Bowman, S., Zaslavsky, N., & Fedorenko, E. (2022). Artificial neural network language models align neurally and behaviorally with humans even after a developmentally realistic amount of training. *bioRxiv*. https://doi.org/10.1101/2022.10.04.510681
+- Hosseini, E. A., Schrimpf, M., Zhang, Y., Bowman, S., Zaslavsky, N., & Fedorenko, E. (2024). Artificial neural network language models predict human brain responses to language even after a developmentally realistic amount of training. *Neurobiology of Language*, *5*(1), 43–63. https://doi.org/10.1162/nol_a_00137
 
 - Li, K., Hopkins, A. K., Bau, D., Viégas, F., Pfister, H., & Wattenberg, M. (2023). Emergent world representations: Exploring a sequence model trained on a synthetic task. *ICLR*. https://arxiv.org/abs/2210.13382
 
@@ -452,15 +452,15 @@ We thank Idan Segev for his guidance and support throughout this project. This w
 
 - Sun, W., Winnubst, J., Natrajan, M., et al. (2025). Learning produces an orthogonalized state machine in the hippocampus. *Nature*, *640*, 165–175. https://doi.org/10.1038/s41586-024-08548-w
 
-- van der Maaten, L. & Hinton, G. (2008). Visualizing data using t-SNE. *JMLR*, 9, 2579–2605.
+- van der Maaten, L. & Hinton, G. (2008). Visualizing data using t-SNE. *JMLR*, 9, 2579–2605. https://www.jmlr.org/papers/v9/vandermaaten08a.html
 
-- Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, Ł., & Polosukhin, I. (2017). Attention is all you need. *Advances in Neural Information Processing Systems*, 30.
+- Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, Ł., & Polosukhin, I. (2017). Attention is all you need. *Advances in Neural Information Processing Systems*, 30. https://arxiv.org/abs/1706.03762
 
-- Vig, J. (2019). A multiscale visualization of attention in the transformer model. *ACL System Demonstrations*.
+- Vig, J. (2019). A multiscale visualization of attention in the transformer model. *ACL System Demonstrations*. https://aclanthology.org/P19-3007/
 
-- Wang, K., Variengien, A., Conmy, A., Shlegeris, B., & Steinhardt, J. (2023). Interpretability in the wild: A circuit for indirect object identification in GPT-2 small. *ICLR*. https://arxiv.org/abs/2211.00593
+- Wang, K., Variengien, A., Conmy, A., Shlegeris, B., & Steinhardt, J. (2022). Interpretability in the wild: A circuit for indirect object identification in GPT-2 small. *ICLR*. https://arxiv.org/abs/2211.00593
 
-- Weiss, G., Goldberg, Y., & Yahav, E. (2021). Thinking like transformers. *ICML*.
+- Weiss, G., Goldberg, Y., & Yahav, E. (2021). Thinking like transformers. *ICML*. https://proceedings.mlr.press/v139/weiss21a.html
 
 - Welch Labs. (2025). *The most complex model we actually understand* [Video]. YouTube. https://www.youtube.com/watch?v=D8GOeCFFby4
 
