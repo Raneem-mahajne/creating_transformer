@@ -267,6 +267,7 @@ function Pandoc(doc)
           table.insert(author, pandoc.RawInline("latex", "}"))
         end
         meta.author = pandoc.MetaInlines(author)
+        meta["author-meta"] = pandoc.MetaString(stringify(names))
         got_authors = true
         i = i + 1
       else
