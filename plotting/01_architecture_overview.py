@@ -203,7 +203,7 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
 
         # ── Input Tokens ────────────────────────────────────────────
         bw, bh_v = 130, vh
-        draw_box(cx - bw/2, y, bw, bh_v, C_INPUT, 'Input\nTokens', f'({batch_size},{block_size})', fs=10, sub_fs=8, gap=16)
+        draw_box(cx - bw/2, y, bw, bh_v, C_INPUT, 'Input\nTokens', f'(Context Window T={block_size})', fs=10, sub_fs=8, gap=16)
         y_inp_b = y + bh_v
         y += bh_v + vgap * 1.4
 
@@ -211,7 +211,7 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
         eb_w, eb_h = 95, 72
         te_x = cx - eb_w - 15
         pe_x = cx + 15
-        draw_box(te_x, y, eb_w, eb_h, C_EMBED, 'Token Emb', f'({vocab_size},{n_embd})', fs=10, sub_fs=8, gap=16)
+        draw_box(te_x, y, eb_w, eb_h, C_EMBED, 'Token Emb', f'({block_size},{n_embd})', fs=10, sub_fs=8, gap=16)
         draw_box(pe_x, y, eb_w, eb_h, C_EMBED, 'Position Emb', f'({block_size},{n_embd})', fs=10, sub_fs=8, gap=16)
         draw_arrow_vertical_path(cx, y_inp_b, te_x + eb_w/2, y)
         draw_arrow_vertical_path(cx, y_inp_b, pe_x + eb_w/2, y)
@@ -236,7 +236,8 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
         qkv_cx = []
         for i, lbl in enumerate(['Q', 'K', 'V']):
             bx = qkv_x0 + i * (qkv_w + qkv_gap)
-            draw_box(bx, y, qkv_w, qkv_h, C_ATTN, lbl, f'{n_embd}\u2192{head_size}', fs=11, sub_fs=9, gap=18)
+            # Q = E W_Q^T: E is (T, n_embd), W_Q is (d_k, n_embd), so Q is (T, d_k).
+            draw_box(bx, y, qkv_w, qkv_h, C_ATTN, rf'${lbl} = E\,W_{lbl}^{{\top}}$', f'({block_size},{head_size})', fs=11, sub_fs=9, gap=18)
             qkv_cx.append(bx + qkv_w / 2)
         # Vertical trunk from + down, then branch; vertical arrows into each Q/K/V box
         fan_y = y - 55
@@ -245,7 +246,7 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
             ax.plot([cx, qc], [fan_y, fan_y], color=C_STROKE, lw=_arrow_lw, zorder=5, solid_capstyle='round')
             draw_arrow(qc, fan_y, qc, y, shrinkA=0, shrinkB=0)
         for i, qc in enumerate(qkv_cx):
-            ax.text(qc, fan_y + 4, f'$W_{["Q","K","V"][i]}$', ha='center', va='top',
+            ax.text(qc, fan_y + 4, f'$W_{["Q","K","V"][i]}$ ({head_size},{n_embd})', ha='center', va='top',
                     fontsize=9, color=C_STROKE, fontweight='bold', fontfamily='sans-serif', zorder=6,
                     bbox=dict(boxstyle='round,pad=0.2', facecolor='white', edgecolor='none', alpha=0.9))
         y_qkv_b = y + qkv_h
@@ -255,8 +256,9 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
         # Box A: QK^T / √d_k → Mask → Softmax
         score_w, score_h = 220, 62
         score_x = cx - score_w / 2
+        # Attention matrix A is (T, T): Q (T, d_k) times K^T (d_k, T).
         draw_box(score_x, y, score_w, score_h, C_ATTN,
-                 'QK\u1d40 / \u221Ad\u2096  \u2192  Mask  \u2192  Softmax', fs=10, gap=18)
+                 'QK\u1d40 / \u221Ad\u2096  \u2192  Mask  \u2192  Softmax', f'({block_size},{block_size})', fs=10, sub_fs=8, gap=14)
         score_cx = cx
         # Q → left of score box, K → right of score box (vertical paths, no diagonals)
         draw_arrow_vertical_path(qkv_cx[0], y_qkv_b, score_cx - 30, y)
@@ -268,8 +270,8 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
         att_label_y = y_score_b + 30
         ax.plot([score_cx, score_cx], [y_score_b, y], color=C_STROKE, lw=_arrow_lw, zorder=5, solid_capstyle='round')
         draw_arrow(score_cx, y - 1, score_cx, y, shrinkA=0, shrinkB=0)
-        ax.text(score_cx + 10, att_label_y, 'Attention Weights', ha='left', va='center',
-                fontsize=8, fontweight='bold', fontstyle='italic', color='#555',
+        ax.text(score_cx, att_label_y, 'Attention Weights', ha='center', va='center',
+                fontsize=8, fontstyle='italic', color='#555',
                 fontfamily='sans-serif', zorder=6,
                 bbox=dict(boxstyle='round,pad=0.25', facecolor='white', edgecolor='none', alpha=0.95))
 
@@ -277,7 +279,8 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
         mulv_w, mulv_h = 140, 65
         mulv_x = cx - mulv_w / 2
         mulv_cx = cx
-        draw_box(mulv_x, y, mulv_w, mulv_h, C_ATTN, 'Weights \u00d7 V', fs=11, gap=18)
+        # Attention output A V is (T, d_k): A (T, T) times V (T, d_k).
+        draw_box(mulv_x, y, mulv_w, mulv_h, C_ATTN, 'Weights \u00d7 V', f'({block_size},{head_size})', fs=11, sub_fs=8, gap=14)
 
         # V → Box B: vertical down from V, horizontal to center, vertical arrow down (tip at top of box)
         ax.plot([qkv_cx[2], qkv_cx[2]], [y_qkv_b, y],
@@ -297,8 +300,8 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
         ax.plot([attnv_cx, attnv_cx], [y_mulv_b, plus1_y - r_plus - 2], color=C_STROKE, lw=_arrow_lw, zorder=5, solid_capstyle='round')
         draw_arrow(attnv_cx, plus1_y - r_plus - 2, attnv_cx, plus1_y - r_plus, shrinkA=0, shrinkB=0)
         out_label_y = y_mulv_b + (plus1_y - r_plus - y_mulv_b) * 0.4
-        ax.text(attnv_cx + 12, out_label_y, 'Attention Output', ha='left', va='center',
-                fontsize=8, fontweight='bold', fontstyle='italic', color='#555',
+        ax.text(attnv_cx, out_label_y, 'Attn(e)', ha='center', va='center',
+                fontsize=8, fontstyle='italic', color='#555',
                 fontfamily='sans-serif', zorder=6,
                 bbox=dict(boxstyle='round,pad=0.25', facecolor='white', edgecolor='none', alpha=0.95))
         # Skip connection: route down the LEFT side (around attention), then vertical into +
@@ -349,14 +352,9 @@ def plot_architecture_diagram(config: dict, save_path: str = None, model=None, v
         # ── Softmax → P(next) ─────────────────────────────────────
         sm_w, sm_h = 85, vh + 8
         draw_box(cx - sm_w - 8, y, sm_w, sm_h, C_OUTPUT, 'Softmax', fs=10)
-        draw_box(cx + 8, y, sm_w, sm_h, C_OUTPUT, 'P(next)', f'({batch_size},{block_size},{vocab_size})', fs=10, sub_fs=8, gap=16)
+        draw_box(cx + 8, y, sm_w, sm_h, C_OUTPUT, 'P(next)', f'({block_size},{vocab_size})', fs=10, sub_fs=8, gap=16)
         draw_arrow_vertical_path(cx, y_lm_b, cx - sm_w/2 - 6, y)
         draw_arrow(cx - 6, y + sm_h/2, cx + 6, y + sm_h/2, shrinkA=0, shrinkB=0)
-
-        # ── Notation (top-right) ──────────────────────────────────
-        ax.text(W_px - 10, 20, 'Notation', ha='right', va='top', fontsize=8, fontweight='bold', color=C_STROKE, fontfamily='sans-serif')
-        for i, ln in enumerate([f'B={batch_size}', f'T={block_size}', f'C={n_embd}', f'd_k={head_size}', f'vocab={vocab_size}']):
-            ax.text(W_px - 10, 34 + i * 14, ln, ha='right', va='top', fontsize=7, color='#555', fontfamily='sans-serif')
 
         # ── Legend (bottom, horizontal) ───────────────────────────
         ly = H_px - 35

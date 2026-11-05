@@ -871,134 +871,9 @@ z
      <use xlink:href="#SegoeUI-Bold-73" transform="translate(279.859375 0)"/>
     </g>
    </g>
-   <g id="text_9">
-    <!-- (4,8) -->
-    <g style="fill: #555555" transform="translate(279.981157 120.962720) scale(0.136640 -0.204960)">
-     <defs>
-      <path id="SegoeUI-28" d="M 1863 -1019 
-L 1406 -1019 
-Q 438 88 438 1709 
-Q 438 3338 1406 4481 
-L 1869 4481 
-Q 888 3294 888 1716 
-Q 888 150 1863 -1019 
-z
-" transform="scale(0.015625)"/>
-      <path id="SegoeUI-34" d="M 2656 4481 
-L 2656 1522 
-L 3231 1522 
-L 3231 1053 
-L 2656 1053 
-L 2656 0 
-L 2150 0 
-L 2150 1053 
-L 44 1053 
-L 44 1497 
-Q 338 1828 638 2204 
-Q 938 2581 1211 2968 
-Q 1484 3356 1717 3742 
-Q 1950 4128 2109 4481 
-L 2656 4481 
-z
-M 622 1522 
-L 2150 1522 
-L 2150 3716 
-Q 1916 3306 1706 2984 
-Q 1497 2663 1308 2400 
-Q 1119 2138 947 1925 
-Q 775 1713 622 1522 
-z
-" transform="scale(0.015625)"/>
-      <path id="SegoeUI-2c" d="M 988 713 
-L 488 -825 
-L 122 -825 
-L 488 713 
-L 988 713 
-z
-" transform="scale(0.015625)"/>
-      <path id="SegoeUI-38" d="M 281 1250 
-Q 281 1428 337 1608 
-Q 394 1788 498 1944 
-Q 603 2100 758 2228 
-Q 913 2356 1109 2431 
-Q 819 2594 647 2848 
-Q 475 3103 475 3413 
-Q 475 3659 570 3868 
-Q 666 4078 834 4231 
-Q 1003 4384 1234 4470 
-Q 1466 4556 1734 4556 
-Q 2006 4556 2237 4468 
-Q 2469 4381 2637 4228 
-Q 2806 4075 2900 3865 
-Q 2994 3656 2994 3413 
-Q 2994 3103 2822 2848 
-Q 2650 2594 2366 2431 
-Q 2559 2356 2712 2228 
-Q 2866 2100 2970 1944 
-Q 3075 1788 3131 1608 
-Q 3188 1428 3188 1250 
-Q 3188 956 3081 712 
-Q 2975 469 2783 295 
-Q 2591 122 2323 25 
-Q 2056 -72 1734 -72 
-Q 1416 -72 1150 25 
-Q 884 122 690 295 
-Q 497 469 389 712 
-Q 281 956 281 1250 
-z
-M 838 1294 
-Q 838 1084 902 915 
-Q 966 747 1083 628 
-Q 1200 509 1367 445 
-Q 1534 381 1738 381 
-Q 1934 381 2100 447 
-Q 2266 513 2386 631 
-Q 2506 750 2573 919 
-Q 2641 1088 2641 1294 
-Q 2641 1481 2577 1645 
-Q 2513 1809 2394 1934 
-Q 2275 2059 2109 2131 
-Q 1944 2203 1738 2203 
-Q 1544 2203 1380 2136 
-Q 1216 2069 1095 1948 
-Q 975 1828 906 1661 
-Q 838 1494 838 1294 
-z
-M 997 3372 
-Q 997 3213 1055 3077 
-Q 1113 2941 1214 2839 
-Q 1316 2738 1450 2680 
-Q 1584 2622 1738 2622 
-Q 1891 2622 2027 2681 
-Q 2163 2741 2263 2842 
-Q 2363 2944 2422 3080 
-Q 2481 3216 2481 3372 
-Q 2481 3534 2423 3671 
-Q 2366 3809 2266 3909 
-Q 2166 4009 2030 4067 
-Q 1894 4125 1738 4125 
-Q 1572 4125 1436 4065 
-Q 1300 4006 1201 3904 
-Q 1103 3803 1050 3665 
-Q 997 3528 997 3372 
-z
-" transform="scale(0.015625)"/>
-      <path id="SegoeUI-29" d="M 531 -1019 
-L 75 -1019 
-Q 1050 150 1050 1716 
-Q 1050 3294 69 4481 
-L 531 4481 
-Q 1506 3338 1506 1709 
-Q 1506 88 531 -1019 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#SegoeUI-28"/>
-     <use xlink:href="#SegoeUI-34" transform="translate(30.175781 0)"/>
-     <use xlink:href="#SegoeUI-2c" transform="translate(84.082031 0)"/>
-     <use xlink:href="#SegoeUI-38" transform="translate(105.761719 0)"/>
-     <use xlink:href="#SegoeUI-29" transform="translate(159.667969 0)"/>
-    </g>
+   <g id="text_9" transform="translate(292.64 110.88) scale(0.666667 1)">
+    <!-- (Context Window T=8) -->
+    <text x="0" y="0" text-anchor="middle" dominant-baseline="middle" font-family="Segoe UI" font-size="12.48" fill="#555555">(Context Window T=8)</text>
    </g>
    <g id="text_10">
     <!-- Token Emb -->
@@ -1122,72 +997,9 @@ z
      <use xlink:href="#SegoeUI-Italic-78"/>
     </g>
    </g>
-   <g id="text_12">
-    <!-- (12,2) -->
-    <g style="fill: #555555" transform="translate(186.904536 266.000000) scale(0.113867 -0.170800)">
-     <defs>
-      <path id="SegoeUI-31" d="M 2263 0 
-L 1750 0 
-L 1750 3872 
-Q 1691 3813 1577 3736 
-Q 1463 3659 1320 3584 
-Q 1178 3509 1020 3443 
-Q 863 3378 713 3341 
-L 713 3859 
-Q 881 3906 1070 3986 
-Q 1259 4066 1442 4164 
-Q 1625 4263 1787 4370 
-Q 1950 4478 2069 4581 
-L 2263 4581 
-L 2263 0 
-z
-" transform="scale(0.015625)"/>
-      <path id="SegoeUI-32" d="M 2413 3306 
-Q 2413 3513 2348 3666 
-Q 2284 3819 2173 3920 
-Q 2063 4022 1913 4072 
-Q 1763 4122 1588 4122 
-Q 1438 4122 1294 4081 
-Q 1150 4041 1014 3969 
-Q 878 3897 751 3797 
-Q 625 3697 516 3575 
-L 516 4125 
-Q 731 4334 998 4445 
-Q 1266 4556 1650 4556 
-Q 1925 4556 2159 4476 
-Q 2394 4397 2566 4244 
-Q 2738 4091 2836 3866 
-Q 2934 3641 2934 3350 
-Q 2934 3084 2873 2868 
-Q 2813 2653 2689 2462 
-Q 2566 2272 2378 2097 
-Q 2191 1922 1938 1741 
-Q 1622 1516 1417 1356 
-Q 1213 1197 1092 1058 
-Q 972 919 923 780 
-Q 875 641 875 459 
-L 3106 459 
-L 3106 0 
-L 341 0 
-L 341 222 
-Q 341 509 403 728 
-Q 466 947 609 1144 
-Q 753 1341 986 1537 
-Q 1219 1734 1556 1981 
-Q 1800 2156 1964 2315 
-Q 2128 2475 2228 2634 
-Q 2328 2794 2370 2958 
-Q 2413 3122 2413 3306 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#SegoeUI-28"/>
-     <use xlink:href="#SegoeUI-31" transform="translate(30.175781 0)"/>
-     <use xlink:href="#SegoeUI-32" transform="translate(84.082031 0)"/>
-     <use xlink:href="#SegoeUI-2c" transform="translate(137.988281 0)"/>
-     <use xlink:href="#SegoeUI-32" transform="translate(159.667969 0)"/>
-     <use xlink:href="#SegoeUI-29" transform="translate(213.574219 0)"/>
-    </g>
+   <g id="text_12" transform="translate(200.64 254) scale(0.666667 1)">
+    <!-- (8,2) -->
+    <text x="0" y="0" text-anchor="middle" dominant-baseline="middle" font-family="Segoe UI" font-size="13" fill="#555555">(8,2)</text>
    </g>
    <g id="text_13">
     <!-- Position Emb -->
@@ -1640,125 +1452,32 @@ z
      <use xlink:href="#SU-W-Italic-56" transform="translate(98.876953 -16.3125) scale(0.7)"/>
     </g>
    </g>
-   <g id="text_22">
-    <!-- Q -->
-    <g style="fill: #34495e" transform="translate(184.576846 447.836768) scale(0.182187 -0.273280)">
-     <defs>
-      <path id="SegoeUI-Bold-51" d="M 2406 -78 
-Q 1444 -78 838 547 
-Q 231 1178 231 2181 
-Q 231 3241 847 3900 
-Q 1459 4556 2478 4556 
-Q 3438 4556 4028 3928 
-Q 4622 3303 4622 2272 
-Q 4622 1219 4006 569 
-Q 3984 547 3965 526 
-Q 3947 506 3925 488 
-L 5059 -603 
-L 3647 -603 
-L 3053 0 
-Q 2759 -78 2406 -78 
-z
-M 2450 3688 
-Q 1922 3688 1606 3288 
-Q 1294 2891 1294 2234 
-Q 1294 1569 1606 1181 
-Q 1919 794 2425 794 
-Q 2947 794 3253 1169 
-Q 3559 1550 3559 2216 
-Q 3559 2909 3263 3300 
-Q 2969 3688 2450 3688 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#SegoeUI-Bold-51"/>
-    </g>
+   <g id="text_eq_Q" transform="translate(191.36 445.44) scale(0.666667 1)">
+    <text x="0" y="0" text-anchor="middle" dominant-baseline="middle" font-family="Segoe UI" font-size="13" font-style="italic" fill="#34495E">Q = E W<tspan baseline-shift="sub" font-size="9">Q</tspan><tspan baseline-shift="super" font-size="9">T</tspan></text>
    </g>
-   <g id="text_23">
-    <!-- 2→2 -->
-    <g style="fill: #555555" transform="translate(179.405590 472.212448) scale(0.125253 -0.187880)">
-     <defs>
-      <path id="SegoeUI-2192" d="M 722 2075 
-L 4441 2075 
-L 4056 2450 
-L 4056 2913 
-L 5056 1875 
-L 5056 1863 
-L 4056 825 
-L 4056 1288 
-L 4434 1656 
-L 722 1656 
-L 722 2075 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#SegoeUI-32"/>
-     <use xlink:href="#SegoeUI-2192" transform="translate(53.90625 0)"/>
-     <use xlink:href="#SegoeUI-32" transform="translate(140.185547 0)"/>
-    </g>
+   <g transform="translate(191.36 464.64) scale(0.666667 1)">
+    <text x="0" y="0" text-anchor="middle" dominant-baseline="middle" font-family="Segoe UI" font-size="11" fill="#555555">(8,2)</text>
    </g>
-   <g id="text_24">
-    <!-- K -->
-    <g style="fill: #34495e" transform="translate(286.970154 447.836768) scale(0.182187 -0.273280)">
-     <defs>
-      <path id="SegoeUI-Bold-4b" d="M 4238 0 
-L 2963 0 
-L 1656 1947 
-Q 1619 2003 1538 2194 
-L 1522 2194 
-L 1522 0 
-L 513 0 
-L 513 4481 
-L 1522 4481 
-L 1522 2363 
-L 1538 2363 
-Q 1575 2450 1663 2613 
-L 2900 4481 
-L 4103 4481 
-L 2541 2344 
-L 4238 0 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#SegoeUI-Bold-4b"/>
-    </g>
+   <g transform="translate(212.0 384) scale(0.666667 1)">
+    <text x="0" y="0" text-anchor="middle" dominant-baseline="middle" font-family="Segoe UI" font-size="11" fill="#555555">(2,2)</text>
    </g>
-   <g id="text_25">
-    <!-- 2→2 -->
-    <g style="fill: #555555" transform="translate(280.781590 472.212448) scale(0.125253 -0.187880)">
-     <use xlink:href="#SegoeUI-32"/>
-     <use xlink:href="#SegoeUI-2192" transform="translate(53.90625 0)"/>
-     <use xlink:href="#SegoeUI-32" transform="translate(140.185547 0)"/>
-    </g>
+   <g id="text_eq_K" transform="translate(292.64 445.44) scale(0.666667 1)">
+    <text x="0" y="0" text-anchor="middle" dominant-baseline="middle" font-family="Segoe UI" font-size="13" font-style="italic" fill="#34495E">K = E W<tspan baseline-shift="sub" font-size="9">K</tspan><tspan baseline-shift="super" font-size="9">T</tspan></text>
    </g>
-   <g id="text_26">
-    <!-- V -->
-    <g style="fill: #34495e" transform="translate(388.200114 447.836768) scale(0.182187 -0.273280)">
-     <defs>
-      <path id="SegoeUI-Bold-56" d="M 4244 4481 
-L 2700 0 
-L 1556 0 
-L 31 4481 
-L 1119 4481 
-L 2053 1363 
-Q 2128 1109 2144 916 
-L 2163 916 
-Q 2184 1125 2259 1375 
-L 3188 4481 
-L 4244 4481 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#SegoeUI-Bold-56"/>
-    </g>
+   <g transform="translate(292.64 464.64) scale(0.666667 1)">
+    <text x="0" y="0" text-anchor="middle" dominant-baseline="middle" font-family="Segoe UI" font-size="11" fill="#555555">(8,2)</text>
    </g>
-   <g id="text_27">
-    <!-- 2→2 -->
-    <g style="fill: #555555" transform="translate(382.157590 472.212448) scale(0.125253 -0.187880)">
-     <use xlink:href="#SegoeUI-32"/>
-     <use xlink:href="#SegoeUI-2192" transform="translate(53.90625 0)"/>
-     <use xlink:href="#SegoeUI-32" transform="translate(140.185547 0)"/>
-    </g>
+   <g transform="translate(313.12 384) scale(0.666667 1)">
+    <text x="0" y="0" text-anchor="middle" dominant-baseline="middle" font-family="Segoe UI" font-size="11" fill="#555555">(2,2)</text>
+   </g>
+   <g id="text_eq_V" transform="translate(394.08 445.44) scale(0.666667 1)">
+    <text x="0" y="0" text-anchor="middle" dominant-baseline="middle" font-family="Segoe UI" font-size="13" font-style="italic" fill="#34495E">V = E W<tspan baseline-shift="sub" font-size="9">V</tspan><tspan baseline-shift="super" font-size="9">T</tspan></text>
+   </g>
+   <g transform="translate(394.08 464.64) scale(0.666667 1)">
+    <text x="0" y="0" text-anchor="middle" dominant-baseline="middle" font-family="Segoe UI" font-size="11" fill="#555555">(8,2)</text>
+   </g>
+   <g transform="translate(414.88 384) scale(0.666667 1)">
+    <text x="0" y="0" text-anchor="middle" dominant-baseline="middle" font-family="Segoe UI" font-size="11" fill="#555555">(2,2)</text>
    </g>
    <g id="text_28">
     <!-- QKᵀ / √dₖ  →  Mask  →  Softmax -->
