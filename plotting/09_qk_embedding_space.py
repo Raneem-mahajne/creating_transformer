@@ -113,8 +113,8 @@ def plot_qk_embedding_space(model, itos, save_path: str = None, step_label: int 
     for i in range(num_combinations):
         ax.text(K_2d[i, 0], K_2d[i, 1], labels[i], fontsize=label_fontsize, ha='center', va='center', color='red')
 
-    ax.set_xlabel("Dimension 1" + (" (PCA)" if head_size != 2 else ""), fontsize=axis_fontsize)
-    ax.set_ylabel("Dimension 2" + (" (PCA)" if head_size != 2 else ""), fontsize=axis_fontsize)
+    ax.set_xlabel("Dim 0" + (" (PCA)" if head_size != 2 else ""), fontsize=axis_fontsize)
+    ax.set_ylabel("Dim 1" + (" (PCA)" if head_size != 2 else ""), fontsize=axis_fontsize)
     ax.tick_params(axis='both', labelsize=tick_fontsize)
     ax.set_title(f"Q and K Embedding Space\n{num_combinations} Q (blue) + {num_combinations} K (red) = {2*num_combinations} total\n({vocab_size} tokens × {block_size} positions)", fontsize=title_fontsize, fontweight='bold')
     # Add origin lines (dashed, faded)
@@ -243,8 +243,8 @@ def plot_qk_embedding_space_focused_query(model, itos, token_str="+", position=5
 
     ax.set_xlim(x_min, x_max)
     ax.set_ylim(y_min, y_max)
-    ax.set_xlabel("Dimension 1" + (" (PCA)" if head_size != 2 else ""), fontsize=axis_fontsize)
-    ax.set_ylabel("Dimension 2" + (" (PCA)" if head_size != 2 else ""), fontsize=axis_fontsize)
+    ax.set_xlabel("Dim 0" + (" (PCA)" if head_size != 2 else ""), fontsize=axis_fontsize)
+    ax.set_ylabel("Dim 1" + (" (PCA)" if head_size != 2 else ""), fontsize=axis_fontsize)
     ax.tick_params(axis='both', labelsize=tick_fontsize)
     ax.set_title(f"Q/K space: focus on query {_token_pos_label(token_str, position)}\nBackground = dot product with this query; keys with position \u2265 {position} grayed", fontsize=title_fontsize, fontweight='bold')
     # Add origin lines (dashed, faded) - make them more visible
@@ -381,8 +381,8 @@ def plot_qk_embedding_space_combined(
         )
     ax_top.set_xlim(x_min, x_max)
     ax_top.set_ylim(y_min, y_max)
-    ax_top.set_xlabel(f"Dimension 1{dim_suffix}", fontsize=axis_fontsize)
-    ax_top.set_ylabel(f"Dimension 2{dim_suffix}", fontsize=axis_fontsize)
+    ax_top.set_xlabel(f"Dim 0{dim_suffix}", fontsize=axis_fontsize)
+    ax_top.set_ylabel(f"Dim 1{dim_suffix}", fontsize=axis_fontsize)
     ax_top.tick_params(axis="both", labelsize=tick_fontsize)
     ax_top.set_title(
         f"Q and K Embedding Space\n{num_combinations} Q (blue) and {num_combinations} K (red)",
@@ -443,8 +443,8 @@ def plot_qk_embedding_space_combined(
 
     ax_bottom.set_xlim(x_min, x_max)
     ax_bottom.set_ylim(y_min, y_max)
-    ax_bottom.set_xlabel(f"Dimension 1{dim_suffix}", fontsize=axis_fontsize)
-    ax_bottom.set_ylabel(f"Dimension 2{dim_suffix}", fontsize=axis_fontsize)
+    ax_bottom.set_xlabel(f"Dim 0{dim_suffix}", fontsize=axis_fontsize)
+    ax_bottom.set_ylabel(f"Dim 1{dim_suffix}", fontsize=axis_fontsize)
     ax_bottom.tick_params(axis="both", labelsize=tick_fontsize)
     bottom_title_fontsize = (title_fontsize + 1) if _u._JOURNAL_MODE else title_fontsize
     ax_bottom.set_title(

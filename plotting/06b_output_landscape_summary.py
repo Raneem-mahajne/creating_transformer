@@ -180,8 +180,8 @@ def plot_output_landscape_summary(
 
     for r in range(2):
         for c in range(2):
-            axes[r, c].set_xlabel("embedding dim 0", fontsize=9)
-            axes[r, c].set_ylabel("embedding dim 1", fontsize=9)
+            axes[r, c].set_xlabel("Dim 0", fontsize=9)
+            axes[r, c].set_ylabel("Dim 1", fontsize=9)
             # Mark origin (0, 0)
             axes[r, c].axhline(0, color="black", linestyle="--", linewidth=0.8, alpha=0.7, zorder=5)
             axes[r, c].axvline(0, color="black", linestyle="--", linewidth=0.8, alpha=0.7, zorder=5)

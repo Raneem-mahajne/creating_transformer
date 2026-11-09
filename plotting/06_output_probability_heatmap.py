@@ -107,9 +107,9 @@ def plot_probability_heatmap(
         # Add clear separation between title text and heatmap area.
         ax.set_title(f"P(next = {itos[token_idx]})", fontsize=10, pad=6, y=1.00)
         if row == n_rows - 1:
-            ax.set_xlabel("embedding dim 0", fontsize=9)
+            ax.set_xlabel("Dim 0", fontsize=9)
         if col == 0:
-            ax.set_ylabel("embedding dim 1", fontsize=9)
+            ax.set_ylabel("Dim 1", fontsize=9)
 
     # Hide unused subplots
     for token_idx in range(vocab_size, n_rows * n_cols):

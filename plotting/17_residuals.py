@@ -224,9 +224,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
     def _dim_axis_labels(used_pca):
         if used_pca:
             return "PC1", "PC2"
-        if show_landscape:
-            return "dim 0", "dim 1"
-        return "Dim 1", "Dim 2"
+        return "Dim 0", "Dim 1"
     
     # Second pass: create plots
     _resid_axes = []
@@ -258,8 +256,8 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         sns.heatmap(embeddings, cmap="RdBu_r", center=0, vmin=hm_vmin, vmax=hm_vmax,
                    xticklabels=False, yticklabels=tokens, cbar=False, ax=ax)
         heatmap_axes.append(ax)
-        ax.set_xlabel("Dim", fontsize=10)
-        ax.set_ylabel(seq_str if use_two_rows_r else f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
+        ax.set_xlabel("Embedding Dim", fontsize=10)
+        ax.set_ylabel("Tokens" if use_two_rows_r else f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=10)
         _p0 = _col_abc[0] if _col_abc else ""
         _hm_fs = 9 if _u._JOURNAL_MODE else 11
         if _col_abc:
@@ -276,8 +274,8 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         sns.heatmap(V_transformed, cmap="RdBu_r", center=0, vmin=hm_vmin, vmax=hm_vmax,
                    xticklabels=False, yticklabels=tokens, cbar=False, ax=ax)
         heatmap_axes.append(ax)
-        ax.set_xlabel("Dim", fontsize=10)
-        ax.set_ylabel(seq_str if use_two_rows_r else f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
+        ax.set_xlabel("Embedding Dim", fontsize=10)
+        ax.set_ylabel("Tokens" if use_two_rows_r else f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=10)
         _p1 = _col_abc[1] if _col_abc else ""
         _title_attn_e_i = r"$\mathrm{Attn}(e)_i$" + f" {dim_str}"
         if _col_abc:
@@ -295,8 +293,8 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         sns.heatmap(Sum, cmap="RdBu_r", center=0, vmin=hm_vmin, vmax=hm_vmax,
                    xticklabels=False, yticklabels=tokens, cbar=False, ax=ax)
         heatmap_axes.append(ax)
-        ax.set_xlabel("Dim", fontsize=10)
-        ax.set_ylabel(seq_str if use_two_rows_r else f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=9)
+        ax.set_xlabel("Embedding Dim", fontsize=10)
+        ax.set_ylabel("Tokens" if use_two_rows_r else f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=10)
         _p2 = _col_abc[2] if _col_abc else ""
         if _col_abc:
             _body2 = f"Final ({dim_str})" if _u._JOURNAL_MODE else f"Final (Embed+V_transformed) {dim_str}"
@@ -431,10 +429,10 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
     # Colorbar(s) in right margin
     if heatmap_axes and use_two_rows_r:
         mappable = heatmap_axes[0].collections[0]
-        y0, h = (0.50, 0.32) if show_landscape else (0.42, 0.35)
-        ax_cbar = fig.add_axes([0.91, y0, 0.015, h])
-        cb1 = fig.colorbar(mappable, cax=ax_cbar)
-        cb1.set_label("Row 1 heatmaps (a.u.)", fontsize=7 if _u._JOURNAL_MODE else 8)
+        # Span the same vertical extent as the row-1 heatmaps so the bar sits beside them.
+        _hm_pos = heatmap_axes[-1].get_position()
+        ax_cbar = fig.add_axes([0.91, _hm_pos.y0, 0.015, _hm_pos.height])
+        fig.colorbar(mappable, cax=ax_cbar)
     if show_landscape and landscape_mappable[0] is not None and prob_grid_bg is not None:
         ax_cbar2 = fig.add_axes([0.91, 0.12, 0.015, 0.30])
         V_cb = prob_grid_bg[2].shape[2]
@@ -536,10 +534,10 @@ def plot_ffn_second_residual_arrows(
         ax.set_ylim(y_min, y_max)
         ax.set_aspect('equal')
         ax.set_title(title, fontsize=10)
-        ax.set_xlabel("dim 0", fontsize=9)
+        ax.set_xlabel("Dim 0", fontsize=9)
         ax.grid(True, alpha=0.15)
 
-    ax1.set_ylabel("dim 1", fontsize=9)
+    ax1.set_ylabel("Dim 1", fontsize=9)
     plt.tight_layout()
     if save_path:
         plt.savefig(save_path, bbox_inches='tight', dpi=150, facecolor='white')

@@ -258,8 +258,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         dim_str = f"(T×hs={Q.shape[0]}×{Q.shape[1]})"
         sns.heatmap(Q, cmap="viridis", xticklabels=list(range(Q.shape[1])), 
                    yticklabels=tokens, cbar=True, ax=ax)
-        ax.set_xlabel("Dim", fontsize=10)
-        ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n" if not use_two_rows else f"{seq_str}", fontsize=9)
+        ax.set_xlabel("Head size", fontsize=10)
+        ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n" if not use_two_rows else "Tokens", fontsize=10)
         if _u._JOURNAL_MODE:
             ax.tick_params(axis='both', labelsize=7)
         ax.set_title("Q " + dim_str, fontsize=11, pad=10, loc='center', color='blue')
@@ -270,8 +270,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         dim_str = f"(T×hs={K.shape[0]}×{K.shape[1]})"
         sns.heatmap(K, cmap="viridis", xticklabels=list(range(K.shape[1])), 
                    yticklabels=tokens, cbar=True, ax=ax)
-        ax.set_xlabel("Dim", fontsize=10)
-        ax.set_ylabel("Sequence position", fontsize=10)
+        ax.set_xlabel("Head size", fontsize=10)
+        ax.set_ylabel("Tokens", fontsize=10)
         if _u._JOURNAL_MODE:
             ax.tick_params(axis='both', labelsize=7)
         ax.set_title("K " + dim_str, fontsize=11, pad=10, loc='center', color='red')
@@ -329,8 +329,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
             ax.set_ylabel("Principal component 2", fontsize=10)
             title_suffix = " (PCA)"
         else:
-            ax.set_xlabel("Dimension 1", fontsize=10)
-            ax.set_ylabel("Dimension 2", fontsize=10)
+            ax.set_xlabel("Dim 0", fontsize=10)
+            ax.set_ylabel("Dim 1", fontsize=10)
             title_suffix = ""
         ax.set_title("Q vs K" + title_suffix, fontsize=11, pad=10, loc='center')
         # Add origin lines (dashed, faded)
@@ -557,8 +557,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
             ax.set_ylabel("PC2", fontsize=10)
             title_suffix = " (PCA)"
         else:
-            ax.set_xlabel("Dim 1", fontsize=10)
-            ax.set_ylabel("Dim 2", fontsize=10)
+            ax.set_xlabel("Dim 0", fontsize=10)
+            ax.set_ylabel("Dim 1", fontsize=10)
             title_suffix = ""
         ax.set_title(f"V{title_suffix}", fontsize=11, pad=6)
         ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
@@ -586,8 +586,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
                 pad=8,
             )
         else:
-            ax.set_xlabel("Dim 1", fontsize=10)
-            ax.set_ylabel("Dim 2", fontsize=10)
+            ax.set_xlabel("Dim 0", fontsize=10)
+            ax.set_ylabel("Dim 1", fontsize=10)
             ax.set_title(
                 f"Attention Output\n(Attention × V)\n{dim_str_attn_out}",
                 fontsize=11,

@@ -40,7 +40,7 @@ def plot_token_embeddings_heatmap(model, itos, save_path=None):
     x_labels = list(range(embeddings.shape[1]))
     vocab_size, n_embd = embeddings.shape
     ax = sns.heatmap(embeddings, yticklabels=y_labels, xticklabels=x_labels, cmap="RdBu_r", center=0)
-    plt.xlabel("Embedding dimension")
+    plt.xlabel("Embedding Dim")
     plt.ylabel("Token")
     plt.title(f"Token Embeddings Heatmap ({vocab_size}×{n_embd})")
     plt.tight_layout()
@@ -67,7 +67,7 @@ def plot_bigram_logits_heatmap(model, itos, save_path=None):
     x_labels = list(range(weights.shape[1]))
     vocab_size, n_embd = weights.shape
     sns.heatmap(weights, yticklabels=y_labels, xticklabels=x_labels)
-    plt.xlabel("Embedding dimension")
+    plt.xlabel("Embedding Dim")
     plt.ylabel("Token")
     plt.title(f"Token Embedding Weights Heatmap ({vocab_size}×{n_embd})")
     plt.tight_layout()
@@ -178,7 +178,7 @@ def plot_bigram_probability_heatmap_hclust(
     x_labels = list(range(P_ord.shape[1]))
     vocab_size, n_embd = P_ord.shape
     sns.heatmap(P_ord, yticklabels=y_labels, xticklabels=x_labels, cmap="magma")
-    plt.xlabel("Embedding dimension")
+    plt.xlabel("Embedding Dim")
     plt.ylabel("Token (clustered)")
     plt.title(f"Token Embedding Softmax Heatmap ({vocab_size}×{n_embd}, rows clustered on {cluster_on}; {metric}/{method})")
     plt.tight_layout()
@@ -205,7 +205,7 @@ def plot_bigram_probability_heatmap(model, itos, save_path=None):
     x_labels = list(range(probs.shape[1]))
     vocab_size, n_embd = probs.shape
     sns.heatmap(probs, yticklabels=y_labels, xticklabels=x_labels, cmap="magma")
-    plt.xlabel("Embedding dimension")
+    plt.xlabel("Embedding Dim")
     plt.ylabel("Token")
     plt.title(f"Token Embedding Softmax ({vocab_size}×{n_embd}, over embedding dims)")
     plt.tight_layout()
@@ -388,7 +388,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
         ax1.set_aspect('auto')
     _title_fs = 8 if _u._JOURNAL_MODE else 11
     ax1.set_title(f"Token Embeddings (vocab×embd={vocab_size}×{n_embd})" if not _u._JOURNAL_MODE else f"Token Embeddings (vocab x embd={vocab_size}x{n_embd})", fontsize=_title_fs)
-    ax1.set_xlabel("Embedding dim")
+    ax1.set_xlabel("Embedding Dim")
     ax1.set_ylabel("Token")
     if _u._JOURNAL_MODE:
         ax1.tick_params(axis='both', labelsize=6)
@@ -488,7 +488,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
     if _u._JOURNAL_MODE:
         ax4.set_aspect('auto')
     ax4.set_title(f"Position Embeddings (block_size×embd={block_size}×{n_embd})" if not _u._JOURNAL_MODE else f"Position Embeddings (block_size x embd={block_size}x{n_embd})", fontsize=_title_fs)
-    ax4.set_xlabel("Embedding dim")
+    ax4.set_xlabel("Embedding Dim")
     ax4.set_ylabel("Position")
     if _u._JOURNAL_MODE:
         ax4.tick_params(axis='both', labelsize=6)
