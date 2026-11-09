@@ -294,6 +294,38 @@ def plot_embeddings_pca(model, itos, save_path=None):
         tc = np.array(mcolors.to_rgb(token_color))
         pc = np.array(mcolors.to_rgb(pos_color))
         return tuple(token_weight * tc + (1 - token_weight) * pc)
+
+    # Tokens whose embeddings coincide (e.g. all odd digits in the plus_last_even task) would be
+    # drawn on top of each other as an unreadable blob. Group them and draw ONE label per group,
+    # with a short annotation listing the members.
+    def _is_odd_token(token_str):
+        return token_str.isdigit() and int(token_str) % 2 == 1
+
+    def _coincident_token_groups(E, tol=0.05):
+        """Groups of token indices whose embedding rows are within `tol` (L2) of each other."""
+        n = len(E)
+        group_of = [-1] * n
+        groups = []
+        for i in range(n):
+            if group_of[i] >= 0:
+                continue
+            g = [i]
+            group_of[i] = len(groups)
+            for j in range(i + 1, n):
+                if group_of[j] < 0 and np.linalg.norm(E[i] - E[j]) < tol:
+                    g.append(j)
+                    group_of[j] = len(groups)
+            groups.append(g)
+        return groups
+
+    def _group_label(g, braces=False):
+        strs = [str(itos[t]) for t in g]
+        if len(g) == 1:
+            return strs[0]
+        return '{' + ','.join(strs) + '}' if braces else ','.join(strs)
+
+    # Merged (coincident) token groups are set apart by an accent colour instead of black.
+    _GROUP_COLOR = '#C0392B'
     
     # Create figure: journal=strict 4×2 grid (rows 1–3 equal height, row 4 = g); standard=2 rows × 4 cols
     from matplotlib.gridspec import GridSpec
@@ -415,9 +447,11 @@ def plot_embeddings_pca(model, itos, save_path=None):
             ax3.set_aspect('equal', adjustable='box')
         token_fontsize, token_text_color = get_scatter_annot_style(vocab_size)
         if vocab_size <= 80:
-            for i in range(vocab_size):
-                ax3.text(X_emb[i, 0], X_emb[i, 1], itos[i], fontsize=token_fontsize, fontweight='bold',
-                        ha='center', va='center', color=token_text_color)
+            for g in _coincident_token_groups(X_emb):
+                gx, gy = X_emb[g, 0].mean(), X_emb[g, 1].mean()
+                ax3.text(gx, gy, _group_label(g), fontsize=token_fontsize, fontweight='bold',
+                         ha='center', va='center', zorder=3,
+                         color=_GROUP_COLOR if len(g) > 1 else token_text_color)
         if _u._JOURNAL_MODE:
             ax3.tick_params(axis='both', labelsize=6)
     else:
@@ -581,6 +615,20 @@ def plot_embeddings_pca(model, itos, save_path=None):
     if _u._JOURNAL_MODE:
         # Make token+position annotations more legible in the large bottom panel.
         combo_fontsize = max(combo_fontsize + 6, 11)
+
+    def _draw_combo_labels(ax, XY):
+        """All labels black; tokens with coincident embeddings share one label per position."""
+        token_groups = _coincident_token_groups(embeddings[:max_token_idx])
+        for g in token_groups:
+            lbl = _group_label(g, braces=True)
+            # Set labels like {1,3,5,7,9} are wide; shrink them a little so the stack stays legible.
+            fs = combo_fontsize if len(g) == 1 else max(combo_fontsize - 2, 7)
+            color = _GROUP_COLOR if len(g) > 1 else 'black'
+            for pos_idx in range(block_size):
+                rows = [t * block_size + pos_idx for t in g]
+                gx, gy = XY[rows, 0].mean(), XY[rows, 1].mean()
+                ax.text(gx, gy, _token_pos_label(lbl, pos_idx), fontsize=fs, fontweight='bold',
+                        ha='center', va='center', color=color, zorder=3)
     
     if n_embd > 2:
         # Do PCA for dimensions > 2
@@ -598,14 +646,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
             ax12.set_xlim(X2_comb[:, 0].min() - margin, X2_comb[:, 0].max() + margin)
             ax12.set_ylim(X2_comb[:, 1].min() - margin, X2_comb[:, 1].max() + margin)
 
-        for token_idx in range(max_token_idx):
-            token_str = str(itos[token_idx])
-            for pos_idx in range(block_size):
-                idx = token_idx * block_size + pos_idx
-                label = _token_pos_label(token_str, pos_idx)
-                color = blend_colors(token_colors[token_idx], pos_colors[pos_idx])
-                ax12.text(X2_comb[idx, 0], X2_comb[idx, 1], label, fontsize=combo_fontsize, fontweight='bold',
-                         ha='center', va='center', color=color)
+        _draw_combo_labels(ax12, X2_comb)
         
         ax12.set_title("Token+Position: PCA (all tokens)", fontsize=_title_fs, fontweight='bold')
         ax12.set_xlabel("PC1")
@@ -632,14 +673,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
             ax12.set_xlim(X_comb[:, 0].min() - margin, X_comb[:, 0].max() + margin)
             ax12.set_ylim(X_comb[:, 1].min() - margin, X_comb[:, 1].max() + margin)
 
-        for token_idx in range(max_token_idx):
-            token_str = str(itos[token_idx])
-            for pos_idx in range(block_size):
-                idx = token_idx * block_size + pos_idx
-                label = _token_pos_label(token_str, pos_idx)
-                color = blend_colors(token_colors[token_idx], pos_colors[pos_idx])
-                ax12.text(X_comb[idx, 0], X_comb[idx, 1], label, fontsize=combo_fontsize, fontweight='bold',
-                         ha='center', va='center', color=color)
+        _draw_combo_labels(ax12, X_comb)
         
         ax12.set_title("Token+Position: Raw (all tokens)", fontsize=_title_fs, fontweight='bold')
         ax12.set_xlabel("Dim 0")
