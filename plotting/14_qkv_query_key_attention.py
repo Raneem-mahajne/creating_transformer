@@ -27,6 +27,38 @@ from plotting._utils import (
 )
 
 
+_KEY_MARKERS = ['o', 's', '^', 'D', 'v', 'P', 'X', '*']
+
+
+def _marker_key_labels(ax, XY, labels, tol=0.15, fontsize=5.5):
+    """One distinct black marker shape per point plus a key listing the tokens at each marker.
+
+    Points closer than `tol` (data units) are coincident and share a marker and key entry
+    (e.g. "4₃, 6₄, 9₅, 5₆"). Key entries are ordered by the first sequence position in each group.
+    """
+    XY = np.asarray(XY, dtype=float)
+    n = len(XY)
+    used = [False] * n
+    groups = []
+    for i in range(n):
+        if used[i]:
+            continue
+        g = [i]
+        used[i] = True
+        for j in range(i + 1, n):
+            if not used[j] and np.hypot(*(XY[i] - XY[j])) < tol:
+                g.append(j)
+                used[j] = True
+        groups.append(g)
+
+    for k, g in enumerate(groups):
+        ax.scatter([XY[g, 0].mean()], [XY[g, 1].mean()], marker=_KEY_MARKERS[k % len(_KEY_MARKERS)],
+                   s=30, color='black', zorder=4, label=', '.join(labels[i] for i in g))
+    ax.legend(loc='best', fontsize=fontsize, frameon=True, framealpha=1.0, edgecolor='0.6',
+              markerscale=0.6, handlelength=1.0, handletextpad=0.3, borderpad=0.35,
+              labelspacing=0.35, borderaxespad=0.3)
+
+
 @torch.no_grad()
 def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequences=3):
     """
@@ -469,8 +501,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         dim_str = f"(T×T={T}×{T})"
         sns.heatmap(Attention, cmap="jet", vmin=0.0, vmax=1.0,
                    xticklabels=tokens, yticklabels=tokens, cbar=True, ax=ax)
-        ax.set_xlabel("T", fontsize=10)
-        ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n" if not use_two_rows_2 else seq_str, fontsize=9)
+        ax.set_xlabel("Tokens", fontsize=10)
+        ax.set_ylabel(f"Seq {seq_idx+1}\n{seq_str}\n" if not use_two_rows_2 else "Tokens", fontsize=10)
         if _u._JOURNAL_MODE:
             ax.tick_params(axis='both', labelsize=7)
         ax.set_title(f"Attention (A)\n{dim_str}", fontsize=11, pad=6)
@@ -481,8 +513,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         dim_str = f"(T×hs={V.shape[0]}×{V.shape[1]})"
         sns.heatmap(V, cmap="viridis", xticklabels=list(range(V.shape[1])),
                    yticklabels=tokens, cbar=True, ax=ax)
-        ax.set_xlabel("hs", fontsize=10)
-        ax.set_ylabel("T", fontsize=10)
+        ax.set_xlabel("Head size", fontsize=10)
+        ax.set_ylabel("Tokens", fontsize=10)
         if _u._JOURNAL_MODE:
             ax.tick_params(axis='both', labelsize=7)
         ax.set_title(f"V\n{dim_str}", fontsize=11, pad=6)
@@ -493,8 +525,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         dim_str = f"(T×hs={Final_Output.shape[0]}×{Final_Output.shape[1]})"
         sns.heatmap(Final_Output, cmap="viridis", xticklabels=list(range(Final_Output.shape[1])),
                    yticklabels=tokens, cbar=True, ax=ax)
-        ax.set_xlabel("hs", fontsize=10)
-        ax.set_ylabel("T", fontsize=10)
+        ax.set_xlabel("Head size", fontsize=10)
+        ax.set_ylabel("Tokens", fontsize=10)
         if _u._JOURNAL_MODE:
             ax.tick_params(axis='both', labelsize=7)
         ax.set_title(
@@ -540,9 +572,9 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         ax.set_xlim(xlim_shared)
         ax.set_ylim(ylim_shared)
         
-        for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
-            ax.text(Final_Output_2d[i, 0], Final_Output_2d[i, 1], _token_pos_label(token, pos),
-                   fontsize=10, fontweight='bold', ha='center', va='center', color='black')
+        # Several attention outputs coincide (e.g. every query that attends fully to the same key),
+        # so each distinct point gets its own marker shape and the key lists the tokens at it.
+        _marker_key_labels(ax, Final_Output_2d, [_token_pos_label(t, p) for p, t in enumerate(tokens)])
         
         dim_str_attn_out = f"(T×hs={Final_Output.shape[0]}×{Final_Output.shape[1]})"
         if Final_Output.shape[1] > 2:

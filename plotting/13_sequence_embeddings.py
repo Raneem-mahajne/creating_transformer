@@ -285,23 +285,20 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
             for pos_idx in range(block_size):
                 idx = token_idx * block_size + pos_idx
                 label = _token_pos_label(token_str, pos_idx)
-                bg_rgb = blend_colors(token_colors[token_idx], pos_colors[pos_idx])
                 ax6.text(
                     all_combined_emb[idx, 0],
                     all_combined_emb[idx, 1],
                     label,
                     fontsize=_scatter_bg,
-                    alpha=0.4,
+                    alpha=0.45,
                     ha="center",
                     va="center",
-                    color=bg_rgb,
+                    color="black",
                     zorder=1,
                 )
-        # Foreground: (token, position) pairs from THIS sequence (Figure 5 blended colors)
+        # Foreground: (token, position) pairs from THIS sequence (black, like panels d/e)
         ax6.scatter(combined_emb_np[:, 0], combined_emb_np[:, 1], s=0, alpha=0, zorder=2)
         for i in range(T):
-            tid = int(X[0, i].item())
-            fg_rgb = blend_colors(token_colors[tid], pos_colors[i])
             ax6.text(
                 combined_emb_np[i, 0],
                 combined_emb_np[i, 1],
@@ -310,7 +307,7 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
                 fontweight="bold",
                 ha="center",
                 va="center",
-                color=fg_rgb,
+                color="black",
                 zorder=3,
             )
         ax6.set_title("Token+Position\nEmbeddings (2D)", fontsize=_title_fs, fontweight='bold', pad=6)

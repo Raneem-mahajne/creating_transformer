@@ -216,7 +216,7 @@ def plot_q_dot_product_gradients(model, X_list, itos, save_path=None, num_sequen
     _cbar.set_ticks([0.0, 0.25, 0.5, 0.75, 1.0])
     _cbar.set_ticklabels(["0", "0.25", "0.5", "0.75", "1"])
     _cbar.set_label(
-        r"Per-panel min-max normalized $q^{\top} k$ in PC plane (lowest grid value = 0, highest = 1)",
+        r"Normalized $Q^{\top}K$",
         fontsize=_cbar_fs,
     )
     _cbar.ax.tick_params(labelsize=_cbar_fs - 1)
@@ -242,15 +242,16 @@ def plot_q_dot_product_gradients(model, X_list, itos, save_path=None, num_sequen
     sns.heatmap(Masked_QK_T, cmap="RdBu_r", center=0, xticklabels=tokens,
                yticklabels=tokens, cbar=True, ax=ax_masked, annot=annot_mask, fmt="",
                vmin=-lim, vmax=lim, annot_kws={"fontsize": _annot_fs})
-    ax_masked.set_xlabel("T", fontsize=10)
-    ax_masked.set_ylabel("T", fontsize=10)
+    # Rows of Q @ K.T are queries, columns are keys (causal mask keeps key_pos <= query_pos).
+    ax_masked.set_xlabel("Token (Key)", fontsize=10)
+    ax_masked.set_ylabel("Token (Query)", fontsize=10)
     ax_masked.set_title(r"Masked Q$\cdot$K$^T$ " + f"(T×T={T}×{T})", fontsize=11, pad=12)
 
     ax_att = subfigs[3].add_subplot(gs_heat[0, 1])
     sns.heatmap(Attention, cmap="jet", vmin=0.0, vmax=1.0,
                xticklabels=tokens, yticklabels=tokens, cbar=True, ax=ax_att)
-    ax_att.set_xlabel("T", fontsize=10)
-    ax_att.set_ylabel("T", fontsize=10)
+    ax_att.set_xlabel("Token (Key)", fontsize=10)
+    ax_att.set_ylabel("Token (Query)", fontsize=10)
     ax_att.set_title(f"Attention (T\u00d7T={T}\u00d7{T})", fontsize=11, pad=18)
 
     _panel_fs = 11
