@@ -75,17 +75,22 @@ We use a single-layer, single-head causal transformer, which is a minimal instan
 : Model hyperparameters. {#tbl:hyperparams}
 
 
-**Token embedding:** $X \in \mathbb{R}^{V \times 2}$. At position $i$, the token has id $t_i$; we denote its **token embedding** (the row of $X$ for that token) by $\mathbf{x}_i \in \mathbb{R}^2$. 
+**Token embedding:** At position $i$, the token has id $t_i$; we denote its **token embedding** by $\mathbf{x}_i \in \mathbb{R}^2$. Stacking the token embeddings of all $T$ tokens in the context window as rows gives the matrix $\mathbf{X} \in \mathbb{R}^{T \times 2}$, whose row $i$ is $\mathbf{x}_i^\top$.
 
-**Positional embedding:** $P \in \mathbb{R}^{T \times 2}$; the embedding of position $i$ is $\mathbf{p}_i \in \mathbb{R}^2$. 
+**Positional embedding:** The embedding of position $i$ is $\mathbf{p}_i \in \mathbb{R}^2$. Stacking the positional embeddings of all $T$ positions in the context window as rows gives the matrix $P \in \mathbb{R}^{T \times 2}$, whose row $i$ is $\mathbf{p}_i^\top$.
 
 The **combined embedding** (input to attention) at position $i$ is
 $$
 \mathbf{e}_i = \mathbf{x}_i + \mathbf{p}_i.
 $$
+For the whole context window, the combined embeddings are stacked as rows of the matrix
+$$
+\mathbf{E} = \mathbf{X} + P \in \mathbb{R}^{T \times n_{\mathrm{embed}}},
+$$
+whose row $i$ is $\mathbf{e}_i^\top$.
 
 
-**Self-attention.** Let $\mathbf{E} \in \mathbb{R}^{T \times n_{\mathrm{embed}}}$ stack the combined embeddings with **row** $i$ equal to $\mathbf{e}_i^\top$. Learned projections $W_Q, W_K, W_V \in \mathbb{R}^{d_k \times n_{\mathrm{embed}}}$ map each position into head space (here $d_k = n_{\mathrm{embed}} = 2$). Per position, query, key, and value **column** vectors are $\mathbf{q}_i = W_Q \mathbf{e}_i$, $\mathbf{k}_i = W_K \mathbf{e}_i$, and $\mathbf{v}_i = W_V \mathbf{e}_i$ in $\mathbb{R}^{d_k}$. Stacking them as **rows** gives
+**Self-attention.** Attention operates on the combined-embedding matrix $\mathbf{E}$. Learned projections $W_Q, W_K, W_V \in \mathbb{R}^{d_k \times n_{\mathrm{embed}}}$ map each position into head space (here $d_k = n_{\mathrm{embed}} = 2$). Per position, query, key, and value **column** vectors are $\mathbf{q}_i = W_Q \mathbf{e}_i$, $\mathbf{k}_i = W_K \mathbf{e}_i$, and $\mathbf{v}_i = W_V \mathbf{e}_i$ in $\mathbb{R}^{d_k}$. Stacking them as **rows** gives
 $$
 \mathbf{Q} = \mathbf{E} W_Q^\top, \quad \mathbf{K} = \mathbf{E} W_K^\top, \quad \mathbf{V} = \mathbf{E} W_V^\top,
 $$
