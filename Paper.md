@@ -90,13 +90,13 @@ $$
 whose row $i$ is $\mathbf{e}_i^\top$.
 
 
-**Self-attention.** Attention operates on the combined-embedding matrix $\mathbf{E}$. Learned projections $W_Q, W_K, W_V \in \mathbb{R}^{d_k \times n_{\mathrm{embed}}}$ map each position into head space (here $d_k = n_{\mathrm{embed}} = 2$). Per position, query, key, and value **column** vectors are $\mathbf{q}_i = W_Q \mathbf{e}_i$, $\mathbf{k}_i = W_K \mathbf{e}_i$, and $\mathbf{v}_i = W_V \mathbf{e}_i$ in $\mathbb{R}^{d_k}$. Stacking them as **rows** gives
+**Self-attention.** Attention operates on the combined-embedding matrix $\mathbf{E}$. Learned projections $W_Q, W_K, W_V \in \mathbb{R}^{d_k \times n_{\mathrm{embed}}}$ map each embedding into Q, K, and V space (here $d_k = n_{\mathrm{embed}} = 2$). Per position, query, key, and value **column** vectors are $\mathbf{q}_i = W_Q \mathbf{e}_i$, $\mathbf{k}_i = W_K \mathbf{e}_i$, and $\mathbf{v}_i = W_V \mathbf{e}_i$ in $\mathbb{R}^{d_k}$. Stacking them as **rows** gives
 $$
 \mathbf{Q} = \mathbf{E} W_Q^\top, \quad \mathbf{K} = \mathbf{E} W_K^\top, \quad \mathbf{V} = \mathbf{E} W_V^\top,
 $$
 each in $\mathbb{R}^{T \times d_k}$ (sequence length $\times$ head size): row $i$ of $\mathbf{Q}$, $\mathbf{K}$, and $\mathbf{V}$ is $\mathbf{q}_i^\top$, $\mathbf{k}_i^\top$, and $\mathbf{v}_i^\top$, respectively.
 
-The **attention matrix** $A \in \mathbb{R}^{T \times T}$ is calculated as a row-wise causal softmax of $\mathbf{Q}\mathbf{K}^\top/\sqrt{d_k}$: for each $i$, $(A_{i1},\ldots,A_{ii}) = \mathrm{softmax}\!\bigl((\mathbf{q}_i^\top\mathbf{k}_1/\sqrt{d_k},\ldots,\mathbf{q}_i^\top\mathbf{k}_i/\sqrt{d_k})\bigr)$ and $A_{ij}=0$ for $j>i$. We denote row $i$ of $A$ by $\boldsymbol{\alpha}_i$, and its entries satisfy $\alpha_{ij}=A_{ij}$, where $\alpha_{ij}$ is the attention weight from position $i$ to position $j$.
+The **attention matrix** $A \in \mathbb{R}^{T \times T}$ is calculated as a row-wise causal softmax of $\mathbf{Q}\mathbf{K}^\top/\sqrt{d_k}$: for each $i$, $(A_{i1},\ldots,A_{ii}) = \mathrm{softmax}(\mathbf{q}_i^\top\mathbf{k}_1/\sqrt{d_k},\ldots,\mathbf{q}_i^\top\mathbf{k}_i/\sqrt{d_k})$. We employ 'causal masking by setting $A_{ij}=0$ for $j>i$ to ensure that tokens can only attend to other tokens that precede it in the sequence. We denote row $i$ of $A$ by $\boldsymbol{\alpha}_i$, and its entries satisfy $\alpha_{ij}=A_{ij}$, where $\alpha_{ij}$ is the attention weight from position $i$ to position $j$.
 
 The **attention output** at position $i$, denoted $\mathrm{Attn}(\mathbf{e})_i \in \mathbb{R}^{d_k}$, combines value rows with $A$. The product $A \mathbf{V} \in \mathbb{R}^{T \times d_k}$ stacks outputs as rows: with $\boldsymbol{\alpha}_i$ the $i$-th row of $A$,
 $$
@@ -167,7 +167,7 @@ We first verify that training succeeds by examining the training data, the model
 ![Training Data](plus_last_even/plots/a4/02_training_data.png)
 **Figure 2.** Sample training sequences as heatmaps. Green: constrained position (immediately after `+`) with the correct next token (the most recent even number). Gray: unconstrained position (any token is valid).*
 
-Figure 3 shows the training dynamics over 20,000 steps. Cross-entropy loss drops steeply in the first ~2,000 steps, then continues to decrease more gradually. *Rule error* is the fraction of constrained positions (those immediately following `+`) where the model's top prediction is wrong; it drops from ~90% (chance for a 12-token vocabulary) to near 0%, indicating that the model has learned the rule. Rule error on held-out batches is our primary quantitative performance metric (Figure 3).
+Figure 3 shows the training dynamics over 20,000 steps. Cross-entropy loss drops steeply in the first ~2,000 steps, then continues to decrease more gradually. *Rule error* is the fraction of constrained positions (those immediately following `+`) where the model's top prediction is wrong; it drops from ~90% (chance for a 12-token vocabulary) to near 0%, indicating that the model has learned the rule. Rule error on held-out batches is our primary quantitative performance metric (Figure 3). Rule error stays approximately flat for 7500 epochs even while the cross-entropy loss decreases because in the initial phase of learning, the model first learns the overall token probabilities before learning to correctly follow the plus-last-even rule (see supplementary videos). 
 
 ![Learning Curve](plus_last_even/plots/a4/03_learning_curve.png)
 **Figure 3.** Training dynamics over 20,000 steps. Left axis: cross-entropy loss. Right axis: rule error — the fraction of constrained positions (tokens immediately following `+`) where the model's top predicted token is not the target (the most recent even number). Rule error near 90% is chance level; near 0% indicates the rule is learned.*
@@ -186,7 +186,7 @@ The position embeddings (Figure 5b) form a ladder structure, with $\mathbf{p}_0$
 ![Token Embeddings](plus_last_even/plots/a4/05_token_embeddings.png)
 **Figure 5.** Learned embeddings. (a) Token embeddings $\mathbf{x}_i$ shown as heatmap. (b) Position embeddings $\mathbf{p}_i$ shown as heatmap. (c) Combined token+position embeddings shown as scatterplot. (d) Positions $\mathbf{p}_i$ shown as scatterplot. (e) Token+position embeddings $\mathbf{e}_i$ shown as scatterplot. Positions are indicated as subscripts next to each token e.g. $+_5$ is the `+` token at position 5.*
 
-We emphasize that this geometric structure does not exist at initialization; it is learned. Movie 1 shows the embedding space at every checkpoint across training. At step 0, all points are randomly scattered. Within the first few thousand steps, the `+` token rapidly migrates away from the number tokens. The even/odd split solidifies between steps 5,000 and 10,000, and the position embedding ladder organizes gradually throughout training. 
+ Movie 1 shows how the geometric structure of the embedding space evolves over the course of learning. At step 0, all points are randomly scattered. Within the first few thousand steps, the `+` token rapidly migrates away from the number tokens. The even/odd split solidifies between steps 5,000 and 10,000, and the position embedding ladder organizes gradually throughout training. 
 
 ### 3.3 The Attention Mechanism: Query, Key, and Value Projections
 
