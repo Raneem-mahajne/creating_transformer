@@ -31,6 +31,206 @@ from plotting._utils import (
     collect_epoch_stats, get_attention_snapshot_from_X, get_multihead_snapshot_from_X,
     estimate_loss, estimate_rule_error,
 )
+import matplotlib.patheffects as _pe
+
+
+_FLYER_BOX = dict(boxstyle='round,pad=0.25', facecolor='white', edgecolor='0.25', linewidth=0.5)
+
+
+def _segments_cross(p1, p2, q1, q2):
+    """True if segments p1-p2 and q1-q2 properly intersect (display coordinates)."""
+    def orient(a, b, c):
+        return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+    d1, d2 = orient(q1, q2, p1), orient(q1, q2, p2)
+    d3, d4 = orient(p1, p2, q1), orient(p1, p2, q2)
+    return (d1 * d2 < 0) and (d3 * d4 < 0)
+
+
+def _segment_hits_rect(p1, p2, rect):
+    x0, y0, x1, y1 = rect
+    for p in (p1, p2):
+        if x0 <= p[0] <= x1 and y0 <= p[1] <= y1:
+            return True
+    corners = [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
+    return any(_segments_cross(p1, p2, corners[k], corners[(k + 1) % 4]) for k in range(4))
+
+
+def _point_seg_dist(p, a, b):
+    p, a, b = (np.asarray(v, float) for v in (p, a, b))
+    ab = b - a
+    n2 = float(ab @ ab)
+    t = 0.0 if n2 == 0 else float(np.clip((p - a) @ ab / n2, 0, 1))
+    return float(np.linalg.norm(p - (a + t * ab)))
+
+
+def _seg_seg_dist(p1, p2, q1, q2):
+    if _segments_cross(p1, p2, q1, q2):
+        return 0.0
+    return min(_point_seg_dist(p1, q1, q2), _point_seg_dist(p2, q1, q2),
+               _point_seg_dist(q1, p1, p2), _point_seg_dist(q2, p1, p2))
+
+
+def _point_rect_dist(p, rect):
+    dx = max(rect[0] - p[0], 0, p[0] - rect[2])
+    dy = max(rect[1] - p[1], 0, p[1] - rect[3])
+    return float(np.hypot(dx, dy))
+
+
+def _grow(rect, m):
+    return (rect[0] - m, rect[1] - m, rect[2] + m, rect[3] + m)
+
+
+def _rects_overlap(a, b):
+    return not (a[2] < b[0] or b[2] < a[0] or a[3] < b[1] or b[3] < a[1])
+
+
+def _group_coincident(XY, tol=0.15):
+    groups, used = [], [False] * len(XY)
+    for i in range(len(XY)):
+        if used[i]:
+            continue
+        g = [i]
+        used[i] = True
+        for j in range(i + 1, len(XY)):
+            if not used[j] and np.hypot(*(XY[i] - XY[j])) < tol:
+                g.append(j)
+                used[j] = True
+        groups.append(g)
+    return groups
+
+
+def _draw_clean_arrow(ax, start, end, lw=1.1):
+    """Black arrow with a thin white halo so it reads on any background colour."""
+    ann = ax.annotate(
+        '', xy=end, xytext=start, zorder=5,
+        arrowprops=dict(arrowstyle='-|>,head_length=0.4,head_width=0.2', color='black',
+                        lw=lw, shrinkA=0, shrinkB=0),
+    )
+    ann.arrow_patch.set_path_effects([_pe.Stroke(linewidth=lw + 1.6, foreground='white'), _pe.Normal()])
+
+
+def _place_flyers(ax, anchors, texts, avoid_segments=(), fontsize=8,
+                  radii_pt=(10, 16, 24, 34, 46, 60), n_dir=24):
+    """Call-out labels placed so leaders and boxes avoid the given segments, points and each other.
+
+    Must be called after the figure layout is final. Candidate positions (directions x radii
+    around each anchor) are scored; crossings with arrows/labels are heavily penalised and
+    shorter leaders are preferred.
+    """
+    fig = ax.figure
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    to_px = ax.transData.transform
+    to_data = ax.transData.inverted().transform
+    px_per_pt = fig.dpi / 72.0
+
+    A = to_px(np.asarray(anchors, dtype=float))
+    segs = [(to_px(np.asarray(s, float)), to_px(np.asarray(e, float))) for s, e in avoid_segments]
+    axb = ax.get_window_extent(renderer)
+    inner = (axb.x0 + 2, axb.y0 + 2, axb.x1 - 2, axb.y1 - 2)
+    pad = 0.25 * fontsize * px_per_pt + 1.5
+    clear = 3.0 * px_per_pt
+    soft = 12.0 * px_per_pt
+
+    sizes = []
+    for t in texts:
+        tmp = ax.text(0, 0, t, fontsize=fontsize)
+        bb = tmp.get_window_extent(renderer)
+        tmp.remove()
+        sizes.append((bb.width + 2 * pad, bb.height + 2 * pad))
+
+    placed_rects, placed_leaders = [], []
+    order = sorted(range(len(A)), key=lambda k: -sizes[k][0])
+    choice = {}
+    for k in order:
+        ax_, ay_ = A[k]
+        w, h = sizes[k]
+        best = None
+        for R_pt in radii_pt:
+            R = R_pt * px_per_pt
+            for d in range(n_dir):
+                th = 2 * np.pi * d / n_dir
+                c, s = np.cos(th), np.sin(th)
+                ex, ey = ax_ + R * c, ay_ + R * s          # leader end = box edge point
+                cx = ex + (w / 2) * np.sign(c) * (abs(c) > 0.38)
+                cy = ey + (h / 2) * np.sign(s) * (abs(s) > 0.38)
+                rect = (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
+                if rect[0] < inner[0] or rect[1] < inner[1] or rect[2] > inner[2] or rect[3] > inner[3]:
+                    continue
+                p0 = (ax_ + 4 * c, ay_ + 4 * s)
+                p1 = (ex, ey)
+                score = R
+                for q0, q1 in segs:
+                    own = (np.hypot(q0[0] - ax_, q0[1] - ay_) < 2 or
+                           np.hypot(q1[0] - ax_, q1[1] - ay_) < 2)
+                    if own:
+                        # Leader must not run back along an arrow that starts/ends at this anchor.
+                        far = q1 if np.hypot(q0[0] - ax_, q0[1] - ay_) < 2 else q0
+                        v = np.array(far) - np.array((ax_, ay_))
+                        n = np.linalg.norm(v)
+                        if n > 0 and np.dot(v / n, (c, s)) > np.cos(np.radians(35)):
+                            score += 500
+                    elif _seg_seg_dist(p0, p1, q0, q1) < clear:
+                        score += 1000
+                    if _segment_hits_rect(q0, q1, _grow(rect, clear)):
+                        score += 800
+                    # Arrowheads are wider than the shaft.
+                    if _point_rect_dist(q1, rect) < 2 * clear:
+                        score += 800
+                for r2 in placed_rects:
+                    if _rects_overlap(rect, _grow(r2, 3)):
+                        score += 5000
+                    if _segment_hits_rect(p0, p1, _grow(r2, 2)):
+                        score += 2000
+                for l0, l1 in placed_leaders:
+                    if _seg_seg_dist(p0, p1, l0, l1) < clear:
+                        score += 2000
+                    if _segment_hits_rect(l0, l1, _grow(rect, 2)):
+                        score += 2000
+                own_d = _point_rect_dist((ax_, ay_), rect)
+                for j, (bx, by) in enumerate(A):
+                    if j == k:
+                        continue
+                    d_other = _point_rect_dist((bx, by), rect)
+                    if d_other < 4:
+                        score += 600
+                    # The box must read as belonging to its own point, not a neighbour.
+                    if d_other < own_d + 4:
+                        score += 400
+                    if _point_seg_dist((bx, by), p0, p1) < clear + 2:
+                        score += 300
+                # Soft terms: prefer open space and labels sitting beside (not above/below) the point.
+                score += 25 * abs(s)
+                for j, (bx, by) in enumerate(A):
+                    if j != k:
+                        score += 30 * max(0.0, 1 - _point_rect_dist((bx, by), rect) / soft)
+                for q0, q1 in segs:
+                    dseg = 0.0 if _segment_hits_rect(q0, q1, rect) else min(
+                        [_point_seg_dist(corner, q0, q1)
+                         for corner in ((rect[0], rect[1]), (rect[2], rect[1]),
+                                        (rect[2], rect[3]), (rect[0], rect[3]))]
+                        + [_point_rect_dist(q0, rect), _point_rect_dist(q1, rect)]
+                    )
+                    score += 20 * max(0.0, 1 - dseg / soft)
+                for r2 in placed_rects:
+                    gap = max(r2[0] - rect[2], rect[0] - r2[2], r2[1] - rect[3], rect[1] - r2[3], 0)
+                    score += 20 * max(0.0, 1 - gap / soft)
+                if best is None or score < best[0]:
+                    best = (score, rect, p0, p1, (cx, cy))
+        if best is None:
+            best = (0, (ax_, ay_, ax_, ay_), (ax_, ay_), (ax_, ay_), (ax_ + 20, ay_ + 20))
+        placed_rects.append(best[1])
+        placed_leaders.append((best[2], best[3]))
+        choice[k] = best[4]
+
+    for k in range(len(A)):
+        tx, ty = to_data(choice[k])
+        ax.annotate(
+            texts[k], xy=tuple(anchors[k]), xytext=(tx, ty), textcoords='data',
+            ha='center', va='center', fontsize=fontsize, color='black', zorder=7,
+            bbox=_FLYER_BOX,
+            arrowprops=dict(arrowstyle='-', color='0.2', lw=0.6, shrinkA=0, shrinkB=1.5),
+        )
 
 
 @torch.no_grad()
@@ -228,6 +428,8 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
     
     # Second pass: create plots
     _resid_axes = []
+    _flyer_jobs = []
+    ax_row2_last = None
     ax_col_b_top = None  # top-row axis of column (b); sequence title centered over this
     for data_dict in all_data:
         seq_idx = data_dict['seq_idx']
@@ -309,13 +511,10 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         # Mark origin with faint dashed lines
         ax.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
         ax.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
-        for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
-            color = token_pos_to_color[(token, pos)]
-            ax.text(
-                embeddings_2d[i, 0], embeddings_2d[i, 1], _token_pos_label(token, pos),
-                fontsize=11, fontweight="bold", ha="center", va="center",
-                color="white" if show_landscape else color, zorder=6,
-            )
+        _labels = [_token_pos_label(t, p) for p, t in enumerate(tokens)]
+        ax.scatter(embeddings_2d[:, 0], embeddings_2d[:, 1], s=14, c='black',
+                   edgecolors='white', linewidths=0.6, zorder=6)
+        _flyer_jobs.append((ax, embeddings_2d.copy(), _labels, []))
         ax.set_xlim(xlim_shared)
         ax.set_ylim(ylim_shared)
         ax.margins(0)
@@ -335,25 +534,16 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         # Mark origin with faint dashed lines
         ax.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
         ax.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
-        arr_ec = "0.25" if show_landscape else None
-        for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
-            color = token_pos_to_color[(token, pos)]
-            x, y = V_transformed_2d[i, 0], V_transformed_2d[i, 1]
-            # Arrow from origin to this point
-            arr_len = np.sqrt(x**2 + y**2)
-            head = max(0.12, min(0.25, arr_len * 0.12))
-            kw = dict(head_width=head, head_length=head, fc=color, alpha=0.88, length_includes_head=True, width=0.015, zorder=3)
-            if arr_ec is not None:
-                kw["ec"] = arr_ec
-                kw["linewidth"] = 0.6
-            else:
-                kw["ec"] = color
-            ax.arrow(0, 0, x, y, **kw)
-            ax.text(
-                x, y, _token_pos_label(token, pos),
-                fontsize=11, fontweight="bold", ha="center", va="center",
-                color="white" if show_landscape else color, zorder=6,
-            )
+        # Tokens whose attention outputs coincide share one arrow and one call-out.
+        _labels = [_token_pos_label(t, p) for p, t in enumerate(tokens)]
+        _groups = _group_coincident(V_transformed_2d)
+        _tips = np.array([V_transformed_2d[g].mean(axis=0) for g in _groups])
+        for tip in _tips:
+            _draw_clean_arrow(ax, (0.0, 0.0), tuple(tip))
+        _flyer_jobs.append((
+            ax, _tips, [", ".join(_labels[i] for i in g) for g in _groups],
+            [((0.0, 0.0), tuple(tip)) for tip in _tips],
+        ))
         ax.set_xlim(xlim_shared)
         ax.set_ylim(ylim_shared)
         ax.margins(0)
@@ -374,27 +564,16 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         ax.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
         ax.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
         # Draw arrows from embeddings to Final points
-        arr_ec2 = "0.25" if show_landscape else None
-        for i, (token, pos) in enumerate(zip(tokens, range(len(tokens)))):
-            color = token_pos_to_color[(token, pos)]
-            # Calculate arrow length for head size scaling
-            dx = Final_2d[i, 0] - embeddings_2d[i, 0]
-            dy = Final_2d[i, 1] - embeddings_2d[i, 1]
-            arrow_length = np.sqrt(dx**2 + dy**2)
-            head_size = max(0.15, min(0.3, arrow_length * 0.15))  # Scale head size with arrow length
-            kw2 = dict(head_width=head_size, head_length=head_size, fc=color, alpha=0.88, length_includes_head=True, width=0.02, zorder=3)
-            if arr_ec2 is not None:
-                kw2["ec"] = arr_ec2
-                kw2["linewidth"] = 0.6
-            else:
-                kw2["ec"] = color
-            ax.arrow(embeddings_2d[i, 0], embeddings_2d[i, 1], dx, dy, **kw2)
-            # Annotate only at beginning (embeddings point)
-            ax.text(
-                embeddings_2d[i, 0], embeddings_2d[i, 1], _token_pos_label(token, pos),
-                fontsize=11, fontweight="bold", ha="center", va="center",
-                color="white" if show_landscape else color, zorder=6,
-            )
+        _labels = [_token_pos_label(t, p) for p, t in enumerate(tokens)]
+        for i in range(len(tokens)):
+            _draw_clean_arrow(ax, tuple(embeddings_2d[i]), tuple(Final_2d[i]))
+        ax.scatter(embeddings_2d[:, 0], embeddings_2d[:, 1], s=14, c='black',
+                   edgecolors='white', linewidths=0.6, zorder=6)
+        _flyer_jobs.append((
+            ax, embeddings_2d.copy(), _labels,
+            [(tuple(embeddings_2d[i]), tuple(Final_2d[i])) for i in range(len(tokens))],
+        ))
+        ax_row2_last = ax
         ax.set_xlim(xlim_shared)
         ax.set_ylim(ylim_shared)
         ax.margins(0)
@@ -434,7 +613,11 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         ax_cbar = fig.add_axes([0.91, _hm_pos.y0, 0.015, _hm_pos.height])
         fig.colorbar(mappable, cax=ax_cbar)
     if show_landscape and landscape_mappable[0] is not None and prob_grid_bg is not None:
-        ax_cbar2 = fig.add_axes([0.91, 0.12, 0.015, 0.30])
+        if use_two_rows_r and ax_row2_last is not None:
+            _r2_pos = ax_row2_last.get_position()
+            ax_cbar2 = fig.add_axes([0.91, _r2_pos.y0, 0.015, _r2_pos.height])
+        else:
+            ax_cbar2 = fig.add_axes([0.91, 0.12, 0.015, 0.30])
         V_cb = prob_grid_bg[2].shape[2]
         tick_idx = np.arange(V_cb)
         cb2 = fig.colorbar(landscape_mappable[0], cax=ax_cbar2, ticks=tick_idx)
@@ -443,6 +626,8 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         # Discrete BoundaryNorm colorbars often get minor ticks between classes; hide them.
         cb2.ax.yaxis.set_minor_locator(NullLocator())
         cb2.ax.minorticks_off()
+    for _ax, _anchors, _texts, _segs in _flyer_jobs:
+        _place_flyers(_ax, _anchors, _texts, _segs)
     if save_path:
         plt.savefig(save_path, bbox_inches='tight', dpi=150)
         plt.close()
