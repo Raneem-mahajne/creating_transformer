@@ -375,9 +375,13 @@ hyperparameters.
 
 \begin{figure}
 \centering
-\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 1. Architecture of the minimal transformer. Every component operates entirely in \textbackslash mathbb\{R\}\^{}2.}]{plus_last_even/plots/a4/01_architecture_overview.png}}
-\caption{Figure 1. Architecture of the minimal transformer. Every
-component operates entirely in \(\mathbb{R}^2\).}
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 1: Model architecture. A one-layer, single-head transformer with embedding dimension 2, context length 8, and a 12-token vocabulary. Token and position embeddings are added, then passed through masked self-attention and a feed-forward network, each with a residual connection (green and blue). A linear layer and softmax give the next-token probabilities.}]{plus_last_even/plots/a4/01_architecture_overview.png}}
+\caption{Figure 1: Model architecture. A one-layer, single-head
+transformer with embedding dimension 2, context length 8, and a 12-token
+vocabulary. Token and position embeddings are added, then passed through
+masked self-attention and a feed-forward network, each with a residual
+connection (green and blue). A linear layer and softmax give the
+next-token probabilities.}
 \end{figure}
 
 \begin{longtable}[]{@{}ll@{}}
