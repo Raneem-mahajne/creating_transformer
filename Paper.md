@@ -77,7 +77,7 @@ We use a single-layer, single-head causal transformer, which is a minimal instan
 
 **Token embedding:** At position $i$, the token has id $t_i$; we denote its **token embedding** by $\mathbf{x}_i \in \mathbb{R}^2$. Stacking the token embeddings of all $T$ tokens in the context window as rows gives the matrix $\mathbf{X} \in \mathbb{R}^{T \times 2}$, whose row $i$ is $\mathbf{x}_i^\top$.
 
-**Positional embedding:** The embedding of position $i$ is $\mathbf{p}_i \in \mathbb{R}^2$. Stacking the positional embeddings of all $T$ positions in the context window as rows gives the matrix $P \in \mathbb{R}^{T \times 2}$, whose row $i$ is $\mathbf{p}_i^\top$.
+**Positional embedding:** The embedding of position $i$ is $\mathbf{p}_i \in \mathbb{R}^2$. Stacking the positional embeddings of all $T$ positions in the context window as rows gives the matrix $\mathbf{P} \in \mathbb{R}^{T \times 2}$, whose row $i$ is $\mathbf{p}_i^\top$.
 
 The **combined embedding** (input to attention) at position $i$ is
 $$
@@ -85,22 +85,22 @@ $$
 $$
 For the whole context window, the combined embeddings are stacked as rows of the matrix
 $$
-\mathbf{E} = \mathbf{X} + P \in \mathbb{R}^{T \times n_{\mathrm{embed}}},
+\mathbf{E} = \mathbf{X} + \mathbf{P} \in \mathbb{R}^{T \times n_{\mathrm{embed}}},
 $$
 whose row $i$ is $\mathbf{e}_i^\top$.
 
 
-**Self-attention.** Attention operates on the combined-embedding matrix $\mathbf{E}$. Learned projections $W_Q, W_K, W_V \in \mathbb{R}^{d_k \times n_{\mathrm{embed}}}$ map each embedding into Q, K, and V space (here $d_k = n_{\mathrm{embed}} = 2$). Per position, query, key, and value **column** vectors are $\mathbf{q}_i = W_Q \mathbf{e}_i$, $\mathbf{k}_i = W_K \mathbf{e}_i$, and $\mathbf{v}_i = W_V \mathbf{e}_i$ in $\mathbb{R}^{d_k}$. Stacking them as **rows** gives
+**Self-attention.** Attention operates on the combined-embedding matrix $\mathbf{E}$. Learned projections $\mathbf{W}_Q, \mathbf{W}_K, \mathbf{W}_V \in \mathbb{R}^{d_k \times n_{\mathrm{embed}}}$ map each embedding into Q, K, and V space (here $d_k = n_{\mathrm{embed}} = 2$). Per position, query, key, and value **column** vectors are $\mathbf{q}_i = \mathbf{W}_Q \mathbf{e}_i$, $\mathbf{k}_i = \mathbf{W}_K \mathbf{e}_i$, and $\mathbf{v}_i = \mathbf{W}_V \mathbf{e}_i$ in $\mathbb{R}^{d_k}$. Stacking them as **rows** gives
 $$
-\mathbf{Q} = \mathbf{E} W_Q^\top, \quad \mathbf{K} = \mathbf{E} W_K^\top, \quad \mathbf{V} = \mathbf{E} W_V^\top,
+\mathbf{Q} = \mathbf{E} \mathbf{W}_Q^\top, \quad \mathbf{K} = \mathbf{E} \mathbf{W}_K^\top, \quad \mathbf{V} = \mathbf{E} \mathbf{W}_V^\top,
 $$
 each in $\mathbb{R}^{T \times d_k}$ (sequence length $\times$ head size): row $i$ of $\mathbf{Q}$, $\mathbf{K}$, and $\mathbf{V}$ is $\mathbf{q}_i^\top$, $\mathbf{k}_i^\top$, and $\mathbf{v}_i^\top$, respectively.
 
-The **attention matrix** $A \in \mathbb{R}^{T \times T}$ is calculated as a row-wise causal softmax of $\mathbf{Q}\mathbf{K}^\top/\sqrt{d_k}$: for each $i$, $(A_{i1},\ldots,A_{ii}) = \mathrm{softmax}(\mathbf{q}_i^\top\mathbf{k}_1/\sqrt{d_k},\ldots,\mathbf{q}_i^\top\mathbf{k}_i/\sqrt{d_k})$. We employ causal masking by setting $A_{ij}=0$ for $j>i$ to ensure that tokens can only attend to tokens that precede them in the sequence. We denote row $i$ of $A$ by $\boldsymbol{\alpha}_i$, and its entries satisfy $\alpha_{ij}=A_{ij}$, where $\alpha_{ij}$ is the attention weight from position $i$ to position $j$.
+The **attention matrix** $\mathbf{A} \in \mathbb{R}^{T \times T}$ is calculated as a row-wise causal softmax of $\mathbf{Q}\mathbf{K}^\top/\sqrt{d_k}$: for each $i$, $(A_{i1},\ldots,A_{ii}) = \mathrm{softmax}(\mathbf{q}_i^\top\mathbf{k}_1/\sqrt{d_k},\ldots,\mathbf{q}_i^\top\mathbf{k}_i/\sqrt{d_k})$. We employ causal masking by setting $A_{ij}=0$ for $j>i$ to ensure that tokens can only attend to tokens that precede them in the sequence. We denote row $i$ of $\mathbf{A}$ by $\boldsymbol{\alpha}_i$, and its entries satisfy $\alpha_{ij}=A_{ij}$, where $\alpha_{ij}$ is the attention weight from position $i$ to position $j$.
 
-The **attention output** at position $i$, denoted $\mathrm{Attn}(\mathbf{e})_i \in \mathbb{R}^{d_k}$, combines value rows with $A$. The product $A \mathbf{V} \in \mathbb{R}^{T \times d_k}$ stacks outputs as rows: with $\boldsymbol{\alpha}_i$ the $i$-th row of $A$,
+The **attention output** at position $i$, denoted $\mathrm{Attn}(\mathbf{e})_i \in \mathbb{R}^{d_k}$, combines value rows with $\mathbf{A}$. The product $\mathbf{A} \mathbf{V} \in \mathbb{R}^{T \times d_k}$ stacks outputs as rows: with $\boldsymbol{\alpha}_i$ the $i$-th row of $\mathbf{A}$,
 $$
-\mathrm{Attn}(\mathbf{e})_i^\top = (A \mathbf{V})_{i,:} = \boldsymbol{\alpha}_i \mathbf{V}.
+\mathrm{Attn}(\mathbf{e})_i^\top = (\mathbf{A} \mathbf{V})_{i,:} = \boldsymbol{\alpha}_i \mathbf{V}.
 $$
 Equivalently, with $\alpha_{ij} = A_{ij}$,
 $$
@@ -121,9 +121,9 @@ $$
 
 **LM head.** The LM head produces the next-token distribution from the hidden state $\mathbf{h}_i$:
 $$
-P(t_{i+1} \mid \mathbf{h}_i) = \mathrm{softmax}\!\left(\mathbf{h}_i \, W_{\mathrm{lm}}^\top + \mathbf{b}\right),
+P(t_{i+1} \mid \mathbf{h}_i) = \mathrm{softmax}\!\left(\mathbf{h}_i \, \mathbf{W}_{\mathrm{lm}}^\top + \mathbf{b}\right),
 $$
-where $W_{\mathrm{lm}} \in \mathbb{R}^{V \times 2}$ and $\mathbf{b} \in \mathbb{R}^V$.
+where $\mathbf{W}_{\mathrm{lm}} \in \mathbb{R}^{V \times 2}$ and $\mathbf{b} \in \mathbb{R}^V$.
 
 The forward pass can be summarized as:
 
@@ -132,7 +132,7 @@ $$
 \mathbf{e}_i &= \mathbf{x}_i + \mathbf{p}_i, \\
 \mathbf{z}_i &= \mathbf{e}_i + \mathrm{Attn}(\mathbf{e})_i, \\
 \mathbf{h}_i &= \mathbf{z}_i + \mathrm{FFN}(\mathbf{z}_i), \\
-P(t_{i+1} \mid \mathbf{h}_i) &= \mathrm{softmax}\!\left(\mathbf{h}_i \, W_{\mathrm{lm}}^\top + \mathbf{b}\right).
+P(t_{i+1} \mid \mathbf{h}_i) &= \mathrm{softmax}\!\left(\mathbf{h}_i \, \mathbf{W}_{\mathrm{lm}}^\top + \mathbf{b}\right).
 \end{aligned}
 $$
 
@@ -194,10 +194,10 @@ The combined embeddings $\mathbf{e}_i$ alone are not sufficient for the model to
 
 To illustrate how the attention mechanism works, consider what happens when the model encounters a `+` token and needs to retrieve the most recent even number. Each combined embedding $\mathbf{e}_i$ is linearly transformed into three vectors: a query ($q$), a key ($k$), and a value ($v$). For example, when processing $\mathbf{+}_{7}$ (the `+` token at position 7), the query vector represents the "search request" asking, "Where is the relevant even number?" Every other position in the sequence, including those with even numbers, supplies its own key and value vectors. The model computes the attention weights for the `+` token by taking the dot product between its query ($q$) and every other token's key ($k$). This produces a score indicating how strongly the `+` should attend to each past token—ideally, giving the highest score to the key corresponding to the most recent even number. The value vectors ($v$) determine what information can actually be retrieved—so the value for the most recent even number carries semantic information about that number, which is then used to generate the correct output after `+`. In summary: the query and key vectors let the `+` "look back" specifically for even numbers (and, thanks to position embeddings, for the most recent one), while the value vectors supply the actual information necessary to produce the correct output.
 
-The model applies three learned linear maps $W_Q, W_K, W_V \in \mathbb{R}^{d_k \times n_{\mathrm{embed}}}$ (here $n_{\mathrm{embed}}, d_k = 2$) to every combined embedding $\mathbf{e}_i$, producing query, key, and value column vectors in $\mathbb{R}^{d_k}$; for a sequence of tokens of length $T$ these form $\mathbf{Q}, \mathbf{K}, \mathbf{V} \in \mathbb{R}^{T \times d_k}$. Figure 6 shows these transformations and their effect. Panel (a) displays the original combined token+position embeddings (all 96 points in embedding space). Panels (b), (c), and (d) show the same points after projection into query space (blue), key space (red), and value space (green).
+The model applies three learned linear maps $\mathbf{W}_Q, \mathbf{W}_K, \mathbf{W}_V \in \mathbb{R}^{d_k \times n_{\mathrm{embed}}}$ (here $n_{\mathrm{embed}}, d_k = 2$) to every combined embedding $\mathbf{e}_i$, producing query, key, and value column vectors in $\mathbb{R}^{d_k}$; for a sequence of tokens of length $T$ these form $\mathbf{Q}, \mathbf{K}, \mathbf{V} \in \mathbb{R}^{T \times d_k}$. Figure 6 shows these transformations and their effect. Panel (a) displays the original combined token+position embeddings (all 96 points in embedding space). Panels (b), (c), and (d) show the same points after projection into query space (blue), key space (red), and value space (green).
 
 ![QKV Transformations](plus_last_even/plots/a4/08_qkv_transforms.png)
-**Figure 6.** Q,K, and V projections. (a) Original combined token+position embeddings (as in Figure 5e). (b) Query-space (blue), with $W_Q$ inset. (c) Key-space (red), with $W_K$ inset. (d) Value-space (green), with $W_V$ inset. All 96 token+position points in each panel.*
+**Figure 6.** Q,K, and V projections. (a) Original combined token+position embeddings (as in Figure 5e). (b) Query-space (blue), with $\mathbf{W}_Q$ inset. (c) Key-space (red), with $\mathbf{W}_K$ inset. (d) Value-space (green), with $\mathbf{W}_V$ inset. All 96 token+position points in each panel.*
 
 ### 3.4 Who Attends to Whom: The Query–Key Geometry
 
@@ -213,10 +213,10 @@ If we focus on a single query $\mathbf{+}_5$ (`+` at position 5), we can see the
 **Figure 7.** Query–key geometry in Q/K space. **Top:** joint query–key space (blue: queries; red: keys; labels show token and position). **Bottom:** Focus on the query $+_5$ (blue); background color indicates the dot product of the $+_5$ query with every point in space. Keys with position $\geq 5$ are grayed due to the causal mask.*
 
 
-Because Figure 8 is not tied to a specific input sequence, it is not possible to produce a true attention matrix, which would require having only a single token in each position. However, we can calculate the raw query–key scores $QK^T$, i.e. the dot product between every possible query vector and every possible key vector. To focus on the rule-relevant structure, Figure 8 shows only the blocks where the query token is `+`. Each subplot is an 8×8 grid: rows index the position of the `+` query, and columns index the position of the key for the indicated key token. Even-number key blocks score consistently higher than odd-number key blocks, showing that `+` queries score even keys more strongly across positions. (The full all-query $QK^T$ matrix is included in the supplementary figure S5). Moreover, tokens at later positions receive higher dot product scores than tokens at earlier positions. This confirms the observation from Figure 7 that the geometry of the key/query space allows the `+` tokens to attend to most recent even tokens.
+Because Figure 8 is not tied to a specific input sequence, it is not possible to produce a true attention matrix, which would require having only a single token in each position. However, we can calculate the raw query–key scores $\mathbf{Q}\mathbf{K}^\top$, i.e. the dot product between every possible query vector and every possible key vector. To focus on the rule-relevant structure, Figure 8 shows only the blocks where the query token is `+`. Each subplot is an 8×8 grid: rows index the position of the `+` query, and columns index the position of the key for the indicated key token. Even-number key blocks score consistently higher than odd-number key blocks, showing that `+` queries score even keys more strongly across positions. (The full all-query $\mathbf{Q}\mathbf{K}^\top$ matrix is included in the supplementary figure S5). Moreover, tokens at later positions receive higher dot product scores than tokens at earlier positions. This confirms the observation from Figure 7 that the geometry of the key/query space allows the `+` tokens to attend to most recent even tokens.
 
 ![QK scores for `+` queries](plus_last_even/plots/a4/11_1_qk_full_heatmap_last_row.png)
-**Figure 8.** Pre-softmax query–key scores $QK^\top$, restricted to `+` queries. Each subplot shows an 8×8 matrix of dot products: `+` query positions (rows) vs. key positions (columns) for a particular key token.*
+**Figure 8.** Pre-softmax query–key scores $\mathbf{Q}\mathbf{K}^\top$, restricted to `+` queries. Each subplot shows an 8×8 matrix of dot products: `+` query positions (rows) vs. key positions (columns) for a particular key token.*
 
 ### 3.5 The Output Landscape: Where Representations Need to Land
 
@@ -241,7 +241,7 @@ In other words, $\mathbf{z}_i$ can be thought of as being the sum of two constit
 
 Panels (c) and (d) of Figure 10 overlay the embeddings $\mathbf{e}_i$ and the values $\mathbf{v}_j$, respectively, on the argmax map (panel b) to reveal where they sit relative to the output network's decision regions. In panel (c), the 96 combined embeddings $\mathbf{e}_i$ (12 tokens $\times$ 8 positions) are plotted. The digit embeddings generally fall in the high-entropy indifference region in the upper half-plane (visible in panel a), where no specific retrieval is triggered. In contrast, all `+` embeddings land in the lower half-plane — inside the strong prediction region — which provides a geometric head start for the algorithm: the model has already categorized `+` as requiring an even-number output based on token identity and position alone. However, because the embeddings lack the context of the rest of the string, it can identify the "type" of output needed (even/odd/`+`) but cannot resolve the specific value. This defines the attention layer's objective: it must look back to find the most recent even number and produce a value vector that, when added to the residual stream, nudges the representation into the correct even-number target zone.
 
-Panel (d) shows the value-transformed vectors $\mathbf{v}_j = W_V \mathbf{e}_j$ for all 96 combined token+position embeddings, overlaid on the same argmax map. We observe that the ordering of the value vectors on the plane in Figure 10d is the same ordering as the even-digit prediction zones in Figure 10b. This overlay reads $\mathbf{v}_j$ against a landscape whose native input is $\mathbf{z}_i$, a technique similar in spirit to the "logit lens" used to probe intermediate layers in large language models (nostalgebraist, 2020; Geva et al., 2021, 2022; Belrose et al., 2023). This illustrates that the purpose of the value vectors is to nudge the embeddings towards a particular zone in order to produce the correct output. However, *which* value specifically will be chosen depends on the attention matrix which requires a specific sequence.
+Panel (d) shows the value-transformed vectors $\mathbf{v}_j = \mathbf{W}_V \mathbf{e}_j$ for all 96 combined token+position embeddings, overlaid on the same argmax map. We observe that the ordering of the value vectors on the plane in Figure 10d is the same ordering as the even-digit prediction zones in Figure 10b. This overlay reads $\mathbf{v}_j$ against a landscape whose native input is $\mathbf{z}_i$, a technique similar in spirit to the "logit lens" used to probe intermediate layers in large language models (nostalgebraist, 2020; Geva et al., 2021, 2022; Belrose et al., 2023). This illustrates that the purpose of the value vectors is to nudge the embeddings towards a particular zone in order to produce the correct output. However, *which* value specifically will be chosen depends on the attention matrix which requires a specific sequence.
 (Per-unit heatmaps with embedding and value overlays are included in the Supplementary Figures.)
 
 ![Output Landscape Summary](plus_last_even/plots/a4/07_output_landscape_summary.png)
@@ -272,7 +272,7 @@ It is apparent from these visualizations that once causal masking is applied, th
 ![Q dot product gradients](plus_last_even/plots/a4/15_q_dot_product_gradients.png)
 **Figure 13.** Attention computation for the demo sequence. (a) The background of each panel displays the dot product of a specific query (blue) in the test sequence with every point in space (green = high, white = low). The unmasked (red) and masked (gray) keys are overlaid on this space to show their dot products with the selected query. (b) The masked $Q \cdot K^\top$ matrix, (c) the attention matrix after normalization by ${\sqrt{d_k}}$ and applying softmax.
 
-**Value routing.** Now that we have the attention weight matrix $\mathbf{A}$, we need to apply it to the value vectors in order to produce the attention vector for each token $\mathrm{Attn}(\mathbf{e})_i$. Specifically, the attention vectors are the attention-weighted sum of the value vectors for each token, i.e. $\mathrm{Attn}(\mathbf{e})_i = \sum_{j=1}^{i} \alpha_{ij} \mathbf{v}_j$. We can generate a matrix whose rows are the attention outputs for each position by multiplying the attention weight matrix $\mathbf{A}$ (Figure 14A) by the value matrix $\mathbf{V}$ (Figure 14B) such that we have $\mathrm{Attn}(\mathbf{e})_i^\top = (A \mathbf{V})_{i,:}$ (Figure 14C). We also show the value vectors $\mathbf{v}_j$ (Figure 14D) and attention vectors $\mathrm{Attn}(\mathbf{e})_i$ as scatter plots. The attention weights for each token here effectively select value vectors to be used for the prediction; the attention vectors for the `+` tokens for example, are basically copies of the value vectors of the most recent even number. 
+**Value routing.** Now that we have the attention weight matrix $\mathbf{A}$, we need to apply it to the value vectors in order to produce the attention vector for each token $\mathrm{Attn}(\mathbf{e})_i$. Specifically, the attention vectors are the attention-weighted sum of the value vectors for each token, i.e. $\mathrm{Attn}(\mathbf{e})_i = \sum_{j=1}^{i} \alpha_{ij} \mathbf{v}_j$. We can generate a matrix whose rows are the attention outputs for each position by multiplying the attention weight matrix $\mathbf{A}$ (Figure 14A) by the value matrix $\mathbf{V}$ (Figure 14B) such that we have $\mathrm{Attn}(\mathbf{e})_i^\top = (\mathbf{A} \mathbf{V})_{i,:}$ (Figure 14C). We also show the value vectors $\mathbf{v}_j$ (Figure 14D) and attention vectors $\mathrm{Attn}(\mathbf{e})_i$ as scatter plots. The attention weights for each token here effectively select value vectors to be used for the prediction; the attention vectors for the `+` tokens for example, are basically copies of the value vectors of the most recent even number. 
 
 ![Value Output](plus_last_even/plots/a4/16_value_output.png)
 **Figure 14.** Values and attention output for the demo sequence. (a) Attention weight matrix as in Figure 13c, (b) Values for each digit shown as heatmaps. (c) Attention outputs shown as heatmaps. (d) Values shown as scatter plot. (e) Attention output shown as scatter plot.*
@@ -295,11 +295,11 @@ For the plus-last-even rule, the model's behavior decomposes into a six-step alg
 
 1. **Encode.** Map each (token, position) pair to a 2D point: token embedding $\mathbf{x}_i$ plus position embedding $\mathbf{p}_i$ gives the combined embedding $\mathbf{e}_i = \mathbf{x}_i + \mathbf{p}_i$. The embedding scatter plots (Figure 5) show this mapping, with even numbers, odd numbers, and `+` occupying distinct regions.
 
-2. **Detect the `+`.** The query projection $W_Q$ maps the `+` embedding to a query vector that is geometrically distinct from number queries (Figure 7, top).
+2. **Detect the `+`.** The query projection $\mathbf{W}_Q$ maps the `+` embedding to a query vector that is geometrically distinct from number queries (Figure 7, top).
 
-3. **Retrieve the last even number.** The dot product between the `+` query and all keys (produced by the $W_K$ projection) yields high attention weight for even-digit keys, with recency encoded in the positional component of the key layout. The focused-query analysis (Figure 7, bottom) and full dot product matrix for `+` queries (Figure 8) make this retrieval pattern explicit; the per-query gradient figure (Figure 13) shows it for the demo sequence.
+3. **Retrieve the last even number.** The dot product between the `+` query and all keys (produced by the $\mathbf{W}_K$ projection) yields high attention weight for even-digit keys, with recency encoded in the positional component of the key layout. The focused-query analysis (Figure 7, bottom) and full dot product matrix for `+` queries (Figure 8) make this retrieval pattern explicit; the per-query gradient figure (Figure 13) shows it for the demo sequence.
 
-4. **Produce attention vectors.** Multiplying the attention matrix $\mathbf{A}$ by the value matrix $\mathbf{V}$ (generated by the $W_V$ projection) produces a weighted sum of value vectors for each token. For the `+` tokens, attention selects the value vector of the most recent even-digit position.
+4. **Produce attention vectors.** Multiplying the attention matrix $\mathbf{A}$ by the value matrix $\mathbf{V}$ (generated by the $\mathbf{W}_V$ projection) produces a weighted sum of value vectors for each token. For the `+` tokens, attention selects the value vector of the most recent even-digit position.
 
 5. **Use attention vectors to push embeddings into the correct output zone.** For each token, the attention vectors are added to the original token+position embedding from the residual in order to nudge that token's representation into the correct zone for the prediction of the next token. In the case of the `+` tokens, the `+` embeddings are nudged into the direction of the zone of the most recent even number.
 
@@ -353,9 +353,9 @@ Additional static figures in `plus_last_even/plots/supplementary/` and `plus_las
 \parbox[t]{3.2cm}{\raggedright\ttfamily\seqsplit{supplementary/14\_attention\_matrix.png}} & Per-sequence attention matrices alongside LM head linear input, logits, and output probabilities for three demo sequences. \\
 \parbox[t]{3.2cm}{\raggedright\ttfamily\seqsplit{supplementary/16\_value\_arrows.png}} & Value vectors (original, transformed, residual) for three demo sequences, with correctness indicated by green/red markers. \\
 \parbox[t]{3.2cm}{\raggedright\ttfamily\seqsplit{extended/08\_qkv\_transforms\_extended.png}} & Extended QKV figure with per-dimension heatmaps (tokens$\times$positions) for Q, K, and V. \\
-\parbox[t]{3.2cm}{\raggedright\ttfamily\seqsplit{a4/11\_qk\_full\_heatmap.png}} & Full 96×96 pre-softmax query–key score matrix \(QK^\top\) (dot products), covering all query tokens and positions vs. all key tokens and positions (no masking/softmax), organized as a 12×12 grid of token–token blocks. \\
+\parbox[t]{3.2cm}{\raggedright\ttfamily\seqsplit{a4/11\_qk\_full\_heatmap.png}} & Full 96×96 pre-softmax query–key score matrix \(\mathbf{Q}\mathbf{K}^\top\) (dot products), covering all query tokens and positions vs. all key tokens and positions (no masking/softmax), organized as a 12×12 grid of token–token blocks. \\
 \parbox[t]{3.2cm}{\raggedright\ttfamily\seqsplit{a4/07\_output\_probs\_embed.png}} & Per-unit output probability heatmaps with all 96 combined embeddings $\mathbf{e}_i$ overlaid (token + position labels). \\
-\parbox[t]{3.2cm}{\raggedright\ttfamily\seqsplit{a4/12\_probability\_heatmap\_with\_values.png}} & Per-unit output probability heatmaps with all 96 value-transformed vectors $W_V \mathbf{e}_i$ overlaid. \\
+\parbox[t]{3.2cm}{\raggedright\ttfamily\seqsplit{a4/12\_probability\_heatmap\_with\_values.png}} & Per-unit output probability heatmaps with all 96 value-transformed vectors $\mathbf{W}_V \mathbf{e}_i$ overlaid. \\
 \bottomrule
 \end{tabularx}
 
