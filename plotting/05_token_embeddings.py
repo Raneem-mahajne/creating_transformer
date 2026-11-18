@@ -326,6 +326,108 @@ def plot_embeddings_pca(model, itos, save_path=None):
 
     # Merged (coincident) token groups are set apart by an accent colour instead of black.
     _GROUP_COLOR = '#C0392B'
+
+    def _zoom_inset(ax, pts, point_labels, rect, fontsize, clusters=None, pad=None, dot_size=28, off=None, tight=False,
+                    text_only=False, equal_aspect=True, left_connectors_only=False):
+        """Inset (no ticks) magnifying tight clusters of points, each labelled separately.
+
+        clusters: list of index lists into `pts`; labels point radially outward from their own
+                  cluster's centre (default: one cluster of all points).
+        pad:      zoom half-width as a multiple of the cluster radius (single-cluster use).
+                  If None, the zoom is sized from the inset's pixel size so every label fits inside.
+        equal_aspect: same data scale on both axes (False: x and y zoomed independently).
+        text_only: draw each label at its point's coordinates (no dots, no leader lines);
+                  near-identical points are nudged apart sideways so their labels stay readable.
+        """
+        if clusters is None:
+            clusters = [list(range(len(pts)))]
+        ins = ax.inset_axes(rect)
+        if text_only:
+            nudge = np.zeros(len(pts))
+            for cl in clusters:
+                R = max(np.linalg.norm(pts[cl] - pts[cl].mean(axis=0), axis=1).max(), 1e-6)
+                done = set()
+                for i in cl:
+                    if i in done:
+                        continue
+                    dup = [j for j in cl if np.linalg.norm(pts[j] - pts[i]) < 0.1 * R]
+                    for k, j in enumerate(dup):
+                        nudge[j] = 0.95 * fontsize * (k - (len(dup) - 1) / 2)
+                    done.update(dup)
+            off = 0
+            for lbl, (px, py), dx in zip(point_labels, pts, nudge):
+                ins.annotate(lbl, (px, py), xytext=(dx, 0), textcoords='offset points',
+                             fontsize=fontsize, fontweight='bold', color='black',
+                             ha='center', va='center', zorder=4)
+            angles, clusters = None, []
+        else:
+            ins.scatter(pts[:, 0], pts[:, 1], s=dot_size, color='black', zorder=3)
+            angles = np.zeros(len(pts))
+        for cl in clusters:
+            cc = pts[cl].mean(axis=0)
+            R = max(np.linalg.norm(pts[cl] - cc, axis=1).max(), 1e-6)
+            angles[cl] = np.arctan2(pts[cl, 1] - cc[1], pts[cl, 0] - cc[0])
+            # Near-duplicate points (closer than 10% of the cluster radius) get fanned label directions.
+            done = set()
+            for i in cl:
+                if i in done:
+                    continue
+                dup = [j for j in cl if np.linalg.norm(pts[j] - pts[i]) < 0.1 * R]
+                if len(dup) > 1:
+                    base_a = angles[dup].mean()
+                    for k, j in enumerate(dup):
+                        angles[j] = base_a + np.deg2rad(70) * (k - (len(dup) - 1) / 2)
+                    done.update(dup)
+            if len(clusters) > 1:
+                # Several clusters: fan this cluster's labels evenly over the half-plane facing
+                # away from the other clusters, so labels of neighbouring clusters never collide.
+                others = np.vstack([pts[o] for o in clusters if o is not cl]).mean(axis=0)
+                away = np.arctan2(cc[1] - others[1], cc[0] - others[0])
+                rel = (angles[cl] - away + np.pi) % (2 * np.pi) - np.pi   # angle relative to `away`
+                order = np.argsort(rel)
+                fan = np.linspace(-np.deg2rad(80), np.deg2rad(80), len(cl))
+                cl_arr = np.array(cl)
+                angles[cl_arr[order]] = away + fan
+        if off is None:
+            off = 16 if _u._JOURNAL_MODE else 22
+        # tight: leader line runs from the dot edge right up to the label text.
+        shrinkA, shrinkB = (0, 0) if tight else (2, 3)
+        for a, lbl, (px, py) in ([] if text_only else zip(angles, point_labels, pts)):
+            ins.annotate(lbl, (px, py), xytext=(off * np.cos(a), off * np.sin(a)),
+                         textcoords='offset points', fontsize=fontsize, fontweight='bold',
+                         color='black', ha='center', va='center', zorder=4,
+                         arrowprops=dict(arrowstyle='-', color='gray', lw=0.6, shrinkA=shrinkA, shrinkB=shrinkB))
+        if pad is not None:
+            c = pts.mean(axis=0)
+            half = max(np.linalg.norm(pts - c, axis=1).max() * pad, 1e-3)
+            hx = hy = half
+        else:
+            c = (pts.min(axis=0) + pts.max(axis=0)) / 2
+            fig_ = ax.figure
+            bb = ins.get_window_extent(renderer=fig_.canvas.get_renderer())
+            margin_px = (off + (0.8 if text_only else 1.2) * fontsize) * fig_.dpi / 72.0   # leader + text, px
+            if equal_aspect:
+                ext = np.abs(pts - c).max()
+                hx = hy = ext / max(1 - 2 * margin_px / min(bb.width, bb.height), 0.2)
+            else:
+                # Independent x/y zoom: each axis is stretched to fill the box.
+                ex, ey = np.maximum(np.abs(pts - c).max(axis=0), 1e-6)
+                hx = ex / max(1 - 2 * 1.3 * margin_px / bb.width, 0.2)
+                hy = ey / max(1 - 2 * margin_px / bb.height, 0.2)
+        ins.set_xlim(c[0] - hx, c[0] + hx)
+        ins.set_ylim(c[1] - hy, c[1] + hy)
+        if equal_aspect:
+            ins.set_aspect('equal', adjustable='box')
+        ins.set_xticks([])
+        ins.set_yticks([])
+        ind = ax.indicate_inset_zoom(ins, edgecolor='black', alpha=0.6)
+        if left_connectors_only:
+            # Connectors are ordered (lower-left, upper-left, lower-right, upper-right) of the inset;
+            # keep only the left pair so lines never cut across a neighbouring inset.
+            conns = ind[1] if isinstance(ind, tuple) else ind.connectors
+            for k, cn in enumerate(conns):
+                cn.set_visible(k in (0, 1))
+        return ins
     
     # Create figure: journal=strict 4×2 grid (rows 1–3 equal height, row 4 = g); standard=2 rows × 4 cols
     from matplotlib.gridspec import GridSpec
@@ -447,11 +549,15 @@ def plot_embeddings_pca(model, itos, save_path=None):
             ax3.set_aspect('equal', adjustable='box')
         token_fontsize, token_text_color = get_scatter_annot_style(vocab_size)
         if vocab_size <= 80:
-            for g in _coincident_token_groups(X_emb):
-                gx, gy = X_emb[g, 0].mean(), X_emb[g, 1].mean()
-                ax3.text(gx, gy, _group_label(g), fontsize=token_fontsize, fontweight='bold',
-                         ha='center', va='center', zorder=3,
-                         color=_GROUP_COLOR if len(g) > 1 else token_text_color)
+            # One label per token at its own coordinates (coincident tokens overlap).
+            for i in range(vocab_size):
+                ax3.text(X_emb[i, 0], X_emb[i, 1], itos[i], fontsize=token_fontsize, fontweight='bold',
+                         ha='center', va='center', zorder=3, color='black')
+            merged = [g for g in _coincident_token_groups(X_emb) if len(g) > 1]
+            if merged:
+                g = max(merged, key=len)
+                _zoom_inset(ax3, X_emb[g], [str(itos[t]) for t in g],
+                            [0.68, 0.06, 0.28, 0.30], max(token_fontsize - 3, 7), pad=1.8, text_only=True)
         if _u._JOURNAL_MODE:
             ax3.tick_params(axis='both', labelsize=6)
     else:
@@ -617,7 +723,19 @@ def plot_embeddings_pca(model, itos, save_path=None):
         combo_fontsize = max(combo_fontsize + 6, 11)
 
     def _draw_combo_labels(ax, XY):
-        """All labels black; tokens with coincident embeddings share one label per position."""
+        """One label per token per position at its own coordinates; tokens with coincident
+        embeddings are drawn in the accent colour (the zoom inset separates them)."""
+        token_groups = _coincident_token_groups(embeddings[:max_token_idx])
+        for g in token_groups:
+            color = 'black'
+            for t in g:
+                for pos_idx in range(block_size):
+                    x, y = XY[t * block_size + pos_idx]
+                    ax.text(x, y, _token_pos_label(str(itos[t]), pos_idx), fontsize=combo_fontsize,
+                            fontweight='bold', ha='center', va='center', color=color, zorder=3)
+
+    def _draw_combo_labels_merged(ax, XY):
+        """Previous style: tokens with coincident embeddings share one set label per position."""
         token_groups = _coincident_token_groups(embeddings[:max_token_idx])
         for g in token_groups:
             lbl = _group_label(g, braces=True)
@@ -629,7 +747,24 @@ def plot_embeddings_pca(model, itos, save_path=None):
                 gx, gy = XY[rows, 0].mean(), XY[rows, 1].mean()
                 ax.text(gx, gy, _token_pos_label(lbl, pos_idx), fontsize=fs, fontweight='bold',
                         ha='center', va='center', color=color, zorder=3)
-    
+
+    def _draw_coincident_zoom_inset(ax, XY, positions=None):
+        """Panel (e): one zoomed inset per position for the largest merged token group,
+        stacked beside the cluster (labels like 3₄: token digit + position subscript)."""
+        groups = [g for g in _coincident_token_groups(embeddings[:max_token_idx]) if len(g) > 1]
+        if not groups:
+            return
+        g = max(groups, key=len)
+        if positions is None:
+            positions = [block_size // 2, block_size // 2 - 1]   # upper inset = later position
+        # Inset rects (axes fraction), stacked top to bottom just right of the odd cluster.
+        w, h, x0, top, gap = 0.13, 0.22, 0.53, 0.58, 0.04
+        for k, p in enumerate(positions):
+            pts = np.array([XY[t * block_size + p] for t in g])
+            rect = [x0, top - (k + 1) * h - k * gap, w, h]
+            _zoom_inset(ax, pts, [_token_pos_label(str(itos[t]), p) for t in g], rect,
+                        max(combo_fontsize - 5, 7), pad=2.0, text_only=True, left_connectors_only=True)
+
     if n_embd > 2:
         # Do PCA for dimensions > 2
         X_comb = all_combinations.astype(np.float64)
@@ -674,7 +809,8 @@ def plot_embeddings_pca(model, itos, save_path=None):
             ax12.set_ylim(X_comb[:, 1].min() - margin, X_comb[:, 1].max() + margin)
 
         _draw_combo_labels(ax12, X_comb)
-        
+        _draw_coincident_zoom_inset(ax12, X_comb)
+
         ax12.set_title("Token+Position: Raw (all tokens)", fontsize=_title_fs, fontweight='bold')
         ax12.set_xlabel("Dim 0")
         ax12.set_ylabel("Dim 1")
