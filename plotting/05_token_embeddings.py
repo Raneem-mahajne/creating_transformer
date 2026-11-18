@@ -758,7 +758,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
         if positions is None:
             positions = [block_size // 2, block_size // 2 - 1]   # upper inset = later position
         # Inset rects (axes fraction), stacked top to bottom just right of the odd cluster.
-        w, h, x0, top, gap = 0.13, 0.22, 0.53, 0.58, 0.04
+        w, h, x0, top, gap = 0.105, 0.18, 0.53, 0.56, 0.04
         for k, p in enumerate(positions):
             pts = np.array([XY[t * block_size + p] for t in g])
             rect = [x0, top - (k + 1) * h - k * gap, w, h]
