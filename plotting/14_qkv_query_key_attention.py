@@ -21,7 +21,7 @@ from plotting._utils import (
     _constrain_figsize, _update_font_scale_for_figure,
     set_journal_mode, clear_journal_mode,
     _label_panels, annotate_sequence, sparse_ticks,
-    _SUBSCRIPT_DIGITS, _pos_subscript, _token_pos_label, _pos_only_label,
+    _SUBSCRIPT_DIGITS, _pos_subscript, _token_pos_label, _pos_only_label, zoom_text_inset,
     collect_epoch_stats, get_attention_snapshot_from_X, get_multihead_snapshot_from_X,
     estimate_loss, estimate_rule_error,
 )
@@ -57,6 +57,59 @@ def _marker_key_labels(ax, XY, labels, tol=0.15, fontsize=5.5):
     ax.legend(loc='best', fontsize=fontsize, frameon=True, framealpha=1.0, edgecolor='0.6',
               markerscale=0.6, handlelength=1.0, handletextpad=0.3, borderpad=0.35,
               labelspacing=0.35, borderaxespad=0.3)
+
+
+def _text_labels_with_insets(ax, XY, labels, tol=0.15, fontsize=11, inset_fontsize=6,
+                             inset_size=0.20):
+    """Label every point with its token text (e.g. 4₃) instead of markers + key.
+
+    Points within `tol` form a group. A group whose points are exactly coincident gets its
+    labels side by side at the shared point; a group that is merely tight is drawn as
+    overlapping labels plus a small tick-less zoom inset that separates them.
+    """
+    XY = np.asarray(XY, dtype=float)
+    n = len(XY)
+    used = [False] * n
+    groups = []
+    for i in range(n):
+        if used[i]:
+            continue
+        g = [i]
+        used[i] = True
+        for j in range(i + 1, n):
+            if not used[j] and np.hypot(*(XY[i] - XY[j])) < tol:
+                g.append(j)
+                used[j] = True
+        groups.append(g)
+
+    def _text(x, y, lbl, dx=0.0):
+        ax.annotate(lbl, (x, y), xytext=(dx, 0), textcoords='offset points', fontsize=fontsize,
+                    fontweight='bold', color='black', ha='center', va='center', zorder=4)
+
+    xlo, xhi = ax.get_xlim()
+    ylo, yhi = ax.get_ylim()
+    for g in groups:
+        if len(g) == 1:
+            _text(*XY[g[0]], labels[g[0]])
+            continue
+        c = XY[g].mean(axis=0)
+        spread = np.linalg.norm(XY[g] - c, axis=1).max()
+        if spread < 1e-3 * max(xhi - xlo, yhi - ylo):
+            # Identical outputs: labels side by side at the shared point.
+            for k, i in enumerate(g):
+                _text(*c, labels[i], dx=1.6 * fontsize * (k - (len(g) - 1) / 2))
+            continue
+        for i in g:
+            _text(*XY[i], labels[i])
+        # Inset beside the group, on the side with more room, clipped to the axes.
+        fx = (c[0] - xlo) / (xhi - xlo)
+        fy = (c[1] - ylo) / (yhi - ylo)
+        x0 = fx + 0.16 if fx < 0.5 else fx - 0.16 - inset_size
+        y0 = min(max(fy - inset_size / 2, 0.03), 0.97 - inset_size)
+        x0 = min(max(x0, 0.03), 0.97 - inset_size)
+        zoom_text_inset(ax, XY[g], [labels[i] for i in g], [x0, y0, inset_size, inset_size],
+                        inset_fontsize, pad=2.3, left_connectors_only=fx < 0.5, dup_frac=0.4,
+                        src_half_pt=(6, 4), lw=0.7)
 
 
 @torch.no_grad()
@@ -573,8 +626,8 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         ax.set_ylim(ylim_shared)
         
         # Several attention outputs coincide (e.g. every query that attends fully to the same key),
-        # so each distinct point gets its own marker shape and the key lists the tokens at it.
-        _marker_key_labels(ax, Final_Output_2d, [_token_pos_label(t, p) for p, t in enumerate(tokens)])
+        # so tight groups get a zoom inset and identical points get side-by-side labels.
+        _text_labels_with_insets(ax, Final_Output_2d, [_token_pos_label(t, p) for p, t in enumerate(tokens)])
         
         dim_str_attn_out = f"(T×hs={Final_Output.shape[0]}×{Final_Output.shape[1]})"
         if Final_Output.shape[1] > 2:

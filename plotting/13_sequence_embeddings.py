@@ -21,7 +21,7 @@ from plotting._utils import (
     _constrain_figsize, _update_font_scale_for_figure,
     set_journal_mode, clear_journal_mode,
     _label_panels, annotate_sequence, sparse_ticks,
-    _SUBSCRIPT_DIGITS, _pos_subscript, _token_pos_label, _pos_only_label,
+    _SUBSCRIPT_DIGITS, _pos_subscript, _token_pos_label, _pos_only_label, zoom_text_inset, INSET_COLORS,
     collect_epoch_stats, get_attention_snapshot_from_X, get_multihead_snapshot_from_X,
     estimate_loss, estimate_rule_error,
 )
@@ -230,6 +230,17 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
         ax4.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
         ax4.grid(True, alpha=0.3)
         # Remove aspect='equal' to allow plots to fill width like heatmaps above
+
+        # Zoom inset on the odd-token cluster (odd tokens have near-identical embeddings).
+        odd_ids = [i for i in range(vocab_size) if str(itos[i]).isdigit() and int(itos[i]) % 2 == 1]
+        _inset_fs = 7 if _u._JOURNAL_MODE else 11
+        if len(odd_ids) > 1:
+            zoom_text_inset(
+                ax4, all_token_emb[odd_ids], [str(itos[i]) for i in odd_ids],
+                [0.57, 0.20, 0.18, 0.18], _inset_fs, pad=1.25,
+                highlight=[str(itos[i]) in tokens for i in odd_ids],
+                src_half_pt=(5, 3), lw=0.7,
+            )
         
         # Column 2: Position embeddings scatter
         ax5 = fig.add_subplot(gs[1, 1])
@@ -319,7 +330,30 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
         ax6.axvline(x=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.4, zorder=0.5)
         ax6.grid(True, alpha=0.3)
         # Remove aspect='equal' to allow plots to fill width like heatmaps above
-        
+
+        # Zoom insets (at most two) for positions where the sequence has an odd token: each shows all
+        # odd tokens at that position (sequence token bold, others faded). Stacked top to
+        # bottom by Dim 1 (later positions sit higher), just right of the odd cluster.
+        if len(odd_ids) > 1:
+            seq_odd_pos = sorted({i for i in range(T) if tokens[i] in [str(itos[o]) for o in odd_ids]},
+                                 key=lambda p: -all_pos_emb[p % block_size, 1])
+            if len(seq_odd_pos) > 2:
+                # Keep two insets: the highest and lowest of these positions in Dim 1.
+                seq_odd_pos = [seq_odd_pos[0], seq_odd_pos[-1]]
+            n_ins = len(seq_odd_pos)
+            if n_ins:
+                top, bottom, gap = 0.58, 0.03, 0.04
+                h = min(0.15, (top - bottom - gap * (n_ins - 1)) / n_ins)
+                for k, p in enumerate(seq_odd_pos):
+                    pts = [all_combined_emb[o * block_size + (p % block_size)] for o in odd_ids]
+                    zoom_text_inset(
+                        ax6, pts, [_token_pos_label(str(itos[o]), p) for o in odd_ids],
+                        [0.55, top - (k + 1) * h - k * gap, 0.18, h], _inset_fs - 1, pad=1.45,
+                        color=INSET_COLORS[k % len(INSET_COLORS)],
+                        src_half_pt=(6, 2.5), lw=0.7,
+                        highlight=[str(itos[o]) == tokens[p] for o in odd_ids],
+                    )
+
         _label_panels([ax1, ax2, ax3, ax4, ax5, ax6], fontsize=10, y=1.12)
 
         # Add sequence as supertitle

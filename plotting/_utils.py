@@ -183,6 +183,87 @@ def _pos_only_label(pos_idx):
     return f"p{_pos_subscript(pos_idx)}"
 
 
+# One colour per zoom inset: border, connector lines and source box all use it.
+INSET_COLORS = ['#1f77b4', '#d95f02', '#1b9e77', '#7570b3']
+
+
+def link_inset(ax, ins, center, zoom_half, color=INSET_COLORS[0], src_half_pt=(9, 6), side='left',
+               lw=1.3):
+    """Colour-link an inset to the region it magnifies.
+
+    Draws the inset border in `color`, a source box in `color` on top of the main-axes
+    labels, and two connector lines from the box to the inset's near corners.
+    The source box is at least the zoom extent and at least src_half_pt (half-width,
+    half-height, in points) so it stays visible around text labels.
+    side: which side of the inset faces the source ('left' or 'right').
+    lw: line width of the inset border and source box (connectors are a bit thinner).
+    """
+    from matplotlib.patches import Rectangle, ConnectionPatch
+    for sp in ins.spines.values():
+        sp.set_edgecolor(color)
+        sp.set_linewidth(lw)
+    bb = ax.get_window_extent()
+    x0, x1 = ax.get_xlim()
+    y0, y1 = ax.get_ylim()
+    px_per_pt = ax.figure.dpi / 72.0
+    hw = max(zoom_half, src_half_pt[0] * px_per_pt * (x1 - x0) / bb.width)
+    hh = max(zoom_half, src_half_pt[1] * px_per_pt * (y1 - y0) / bb.height)
+    cx, cy = center
+    ax.add_patch(Rectangle((cx - hw, cy - hh), 2 * hw, 2 * hh, fill=False, edgecolor=color,
+                           linewidth=lw, zorder=6))
+    xa, xb = (0, cx + hw) if side == 'left' else (1, cx - hw)
+    for ya, yb in [(0, cy - hh), (1, cy + hh)]:
+        ax.figure.add_artist(ConnectionPatch(xyA=(xa, ya), coordsA=ins.transAxes,
+                                             xyB=(xb, yb), coordsB=ax.transData,
+                                             color=color, linewidth=0.75 * lw, alpha=0.9))
+
+
+def zoom_text_inset(ax, pts, labels, rect, fontsize, pad=1.6, highlight=None,
+                    dim_alpha=0.45, left_connectors_only=True, dup_frac=0.1,
+                    color=INSET_COLORS[0], src_half_pt=(9, 6), lw=1.3):
+    """Tick-less inset magnifying a tight cluster, with each label drawn at its own point.
+
+    pts: (N, 2) coordinates; labels: N strings; rect: inset bounds in ax-axes fraction.
+    pad: zoom half-width as a multiple of the cluster radius.
+    highlight: optional N bools; True = bold, False = faded (dim_alpha), matching
+               the foreground/background styling of the sequence plots.
+    Points closer than dup_frac × cluster radius are nudged apart sideways so their labels stay readable.
+    color / src_half_pt: see link_inset (inset border, connectors and source box share `color`);
+               the inset labels are drawn in `color` on a light tint of it.
+    """
+    pts = np.asarray(pts, dtype=float)
+    if highlight is None:
+        highlight = [True] * len(pts)
+    c = pts.mean(axis=0)
+    R = max(np.linalg.norm(pts - c, axis=1).max(), 1e-6)
+    nudge = np.zeros(len(pts))
+    done = set()
+    for i in range(len(pts)):
+        if i in done:
+            continue
+        dup = [j for j in range(len(pts)) if j not in done and np.linalg.norm(pts[j] - pts[i]) < dup_frac * R]
+        for k, j in enumerate(dup):
+            nudge[j] = 0.95 * fontsize * (k - (len(dup) - 1) / 2)
+        done.update(dup)
+    ins = ax.inset_axes(rect)
+    for lbl, (px, py), dx, hl in zip(labels, pts, nudge, highlight):
+        ins.annotate(lbl, (px, py), xytext=(dx, 0), textcoords='offset points',
+                     fontsize=fontsize, fontweight='bold' if hl else 'normal',
+                     color=color, alpha=1.0 if hl else dim_alpha,
+                     ha='center', va='center', zorder=4 if hl else 3)
+    half = R * pad
+    ins.set_xlim(c[0] - half, c[0] + half)
+    ins.set_ylim(c[1] - half, c[1] + half)
+    ins.set_aspect('equal', adjustable='box')
+    ins.set_xticks([])
+    ins.set_yticks([])
+    link_inset(ax, ins, c, half, color=color, src_half_pt=src_half_pt,
+               side='left' if left_connectors_only else 'right', lw=lw)
+    import matplotlib.colors as _mcolors
+    ins.set_facecolor(_mcolors.to_rgba(color, 0.10))   # light tint of the inset colour
+    return ins
+
+
 # ---------------------------------------------------------------------------
 # Data extraction helpers
 # ---------------------------------------------------------------------------

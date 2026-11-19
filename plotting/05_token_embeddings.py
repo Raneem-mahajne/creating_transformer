@@ -21,7 +21,7 @@ from plotting._utils import (
     _constrain_figsize, _update_font_scale_for_figure,
     set_journal_mode, clear_journal_mode,
     _label_panels, annotate_sequence, sparse_ticks,
-    _SUBSCRIPT_DIGITS, _pos_subscript, _token_pos_label, _pos_only_label,
+    _SUBSCRIPT_DIGITS, _pos_subscript, _token_pos_label, _pos_only_label, link_inset, INSET_COLORS,
     collect_epoch_stats, get_attention_snapshot_from_X, get_multihead_snapshot_from_X,
     estimate_loss, estimate_rule_error,
 )
@@ -328,7 +328,8 @@ def plot_embeddings_pca(model, itos, save_path=None):
     _GROUP_COLOR = '#C0392B'
 
     def _zoom_inset(ax, pts, point_labels, rect, fontsize, clusters=None, pad=None, dot_size=28, off=None, tight=False,
-                    text_only=False, equal_aspect=True, left_connectors_only=False):
+                    text_only=False, equal_aspect=True, left_connectors_only=False,
+                    color=INSET_COLORS[0], src_half_pt=(9, 6), plain_link=False):
         """Inset (no ticks) magnifying tight clusters of points, each labelled separately.
 
         clusters: list of index lists into `pts`; labels point radially outward from their own
@@ -357,7 +358,8 @@ def plot_embeddings_pca(model, itos, save_path=None):
             off = 0
             for lbl, (px, py), dx in zip(point_labels, pts, nudge):
                 ins.annotate(lbl, (px, py), xytext=(dx, 0), textcoords='offset points',
-                             fontsize=fontsize, fontweight='bold', color='black',
+                             fontsize=fontsize, fontweight='bold',
+                             color='black' if plain_link else color,
                              ha='center', va='center', zorder=4)
             angles, clusters = None, []
         else:
@@ -420,13 +422,19 @@ def plot_embeddings_pca(model, itos, save_path=None):
             ins.set_aspect('equal', adjustable='box')
         ins.set_xticks([])
         ins.set_yticks([])
-        ind = ax.indicate_inset_zoom(ins, edgecolor='black', alpha=0.6)
-        if left_connectors_only:
-            # Connectors are ordered (lower-left, upper-left, lower-right, upper-right) of the inset;
-            # keep only the left pair so lines never cut across a neighbouring inset.
-            conns = ind[1] if isinstance(ind, tuple) else ind.connectors
-            for k, cn in enumerate(conns):
-                cn.set_visible(k in (0, 1))
+        if plain_link:
+            # Plain black zoom indicator (used where the source is already obvious, e.g. panel c).
+            ind = ax.indicate_inset_zoom(ins, edgecolor='black', alpha=0.6)
+            if left_connectors_only:
+                # Connectors are ordered (lower-left, upper-left, lower-right, upper-right).
+                conns = ind[1] if isinstance(ind, tuple) else ind.connectors
+                for k, cn in enumerate(conns):
+                    cn.set_visible(k in (0, 1))
+        else:
+            # Colour-linked: inset border, source box (drawn above the labels) and connectors share `color`.
+            link_inset(ax, ins, c, max(hx, hy), color=color, src_half_pt=src_half_pt,
+                       side='left' if left_connectors_only else 'right')
+            ins.set_facecolor(mcolors.to_rgba(color, 0.10))   # light tint of the inset colour
         return ins
     
     # Create figure: journal=strict 4×2 grid (rows 1–3 equal height, row 4 = g); standard=2 rows × 4 cols
@@ -557,7 +565,8 @@ def plot_embeddings_pca(model, itos, save_path=None):
             if merged:
                 g = max(merged, key=len)
                 _zoom_inset(ax3, X_emb[g], [str(itos[t]) for t in g],
-                            [0.68, 0.06, 0.28, 0.30], max(token_fontsize - 3, 7), pad=1.8, text_only=True)
+                            [0.54, 0.28, 0.20, 0.22], max(token_fontsize - 3, 7), pad=1.4, text_only=True,
+                            left_connectors_only=True, plain_link=True)
         if _u._JOURNAL_MODE:
             ax3.tick_params(axis='both', labelsize=6)
     else:
@@ -758,12 +767,13 @@ def plot_embeddings_pca(model, itos, save_path=None):
         if positions is None:
             positions = [block_size // 2, block_size // 2 - 1]   # upper inset = later position
         # Inset rects (axes fraction), stacked top to bottom just right of the odd cluster.
-        w, h, x0, top, gap = 0.105, 0.18, 0.53, 0.56, 0.04
+        w, h, x0, top, gap = 0.085, 0.145, 0.53, 0.54, 0.04
         for k, p in enumerate(positions):
             pts = np.array([XY[t * block_size + p] for t in g])
             rect = [x0, top - (k + 1) * h - k * gap, w, h]
             _zoom_inset(ax, pts, [_token_pos_label(str(itos[t]), p) for t in g], rect,
-                        max(combo_fontsize - 5, 7), pad=2.0, text_only=True, left_connectors_only=True)
+                        max(combo_fontsize - 5, 7), pad=1.6, text_only=True, left_connectors_only=True,
+                        color=INSET_COLORS[k % len(INSET_COLORS)], src_half_pt=(10, 3))
 
     if n_embd > 2:
         # Do PCA for dimensions > 2
