@@ -358,8 +358,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
             off = 0
             for lbl, (px, py), dx in zip(point_labels, pts, nudge):
                 ins.annotate(lbl, (px, py), xytext=(dx, 0), textcoords='offset points',
-                             fontsize=fontsize, fontweight='bold',
-                             color='black' if plain_link else color,
+                             fontsize=fontsize, fontweight='bold', color='black',
                              ha='center', va='center', zorder=4)
             angles, clusters = None, []
         else:
@@ -434,7 +433,6 @@ def plot_embeddings_pca(model, itos, save_path=None):
             # Colour-linked: inset border, source box (drawn above the labels) and connectors share `color`.
             link_inset(ax, ins, c, max(hx, hy), color=color, src_half_pt=src_half_pt,
                        side='left' if left_connectors_only else 'right')
-            ins.set_facecolor(mcolors.to_rgba(color, 0.10))   # light tint of the inset colour
         return ins
     
     # Create figure: journal=strict 4×2 grid (rows 1–3 equal height, row 4 = g); standard=2 rows × 4 cols

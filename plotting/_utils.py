@@ -228,8 +228,7 @@ def zoom_text_inset(ax, pts, labels, rect, fontsize, pad=1.6, highlight=None,
     highlight: optional N bools; True = bold, False = faded (dim_alpha), matching
                the foreground/background styling of the sequence plots.
     Points closer than dup_frac × cluster radius are nudged apart sideways so their labels stay readable.
-    color / src_half_pt: see link_inset (inset border, connectors and source box share `color`);
-               the inset labels are drawn in `color` on a light tint of it.
+    color / src_half_pt: see link_inset (only the inset border, connectors and source box use `color`).
     """
     pts = np.asarray(pts, dtype=float)
     if highlight is None:
@@ -249,7 +248,7 @@ def zoom_text_inset(ax, pts, labels, rect, fontsize, pad=1.6, highlight=None,
     for lbl, (px, py), dx, hl in zip(labels, pts, nudge, highlight):
         ins.annotate(lbl, (px, py), xytext=(dx, 0), textcoords='offset points',
                      fontsize=fontsize, fontweight='bold' if hl else 'normal',
-                     color=color, alpha=1.0 if hl else dim_alpha,
+                     color='black', alpha=1.0 if hl else dim_alpha,
                      ha='center', va='center', zorder=4 if hl else 3)
     half = R * pad
     ins.set_xlim(c[0] - half, c[0] + half)
@@ -259,8 +258,6 @@ def zoom_text_inset(ax, pts, labels, rect, fontsize, pad=1.6, highlight=None,
     ins.set_yticks([])
     link_inset(ax, ins, c, half, color=color, src_half_pt=src_half_pt,
                side='left' if left_connectors_only else 'right', lw=lw)
-    import matplotlib.colors as _mcolors
-    ins.set_facecolor(_mcolors.to_rgba(color, 0.10))   # light tint of the inset colour
     return ins
 
 
