@@ -100,22 +100,25 @@ def _group_coincident(XY, tol=0.15):
 
 
 def _draw_clean_arrow(ax, start, end, lw=1.1):
-    """Black arrow with a thin white halo so it reads on any background colour."""
-    ann = ax.annotate(
+    """Plain black arrow (no outline)."""
+    ax.annotate(
         '', xy=end, xytext=start, zorder=5,
         arrowprops=dict(arrowstyle='-|>,head_length=0.4,head_width=0.2', color='black',
                         lw=lw, shrinkA=0, shrinkB=0),
     )
-    ann.arrow_patch.set_path_effects([_pe.Stroke(linewidth=lw + 1.6, foreground='white'), _pe.Normal()])
 
 
 def _place_flyers(ax, anchors, texts, avoid_segments=(), fontsize=8,
-                  radii_pt=(5, 8, 12, 17, 24, 34, 46, 60), n_dir=24, length_weight=3.0):
+                  radii_pt=(5, 8, 12, 17, 24, 34, 46, 60), n_dir=24, length_weight=7.0,
+                  soft_scale=1.0, tip_pref=0.0):
     """Call-out labels placed so leaders and boxes avoid the given segments, points and each other.
 
     Must be called after the figure layout is final. Candidate positions (directions x radii
     around each anchor) are scored; crossings with arrows/labels are heavily penalised and
     shorter leaders are preferred.
+    tip_pref: when an anchor is an arrow's tip, extra cost for label directions that deviate
+        from the arrow's own direction, so the label sits just past the arrowhead unless that
+        spot is blocked.
     """
     fig = ax.figure
     fig.canvas.draw()
@@ -145,6 +148,58 @@ def _place_flyers(ax, anchors, texts, avoid_segments=(), fontsize=8,
     for k in order:
         ax_, ay_ = A[k]
         w, h = sizes[k]
+        if tip_pref:
+            # First choice: box just past the arrowhead, on the arrow's own line, with the
+            # leader touching the tip. Used unless it hits another arrow, label, point or edge.
+            tipdir = None
+            for q0, q1 in segs:
+                if np.hypot(q1[0] - ax_, q1[1] - ay_) < 6:
+                    v = np.array((ax_, ay_)) - np.array(q0)
+                    n = np.linalg.norm(v)
+                    if n > 0:
+                        tipdir = v / n
+                        break
+            placed_here = False
+            if tipdir is not None:
+                # Straight past the tip first, then angled away from the arrow's line, then
+                # beside the arrowhead; the leader always starts at the tip.
+                for off_deg in (0, 30, -30, 60, -60, 90, -90):
+                    a = np.radians(off_deg)
+                    c = tipdir[0] * np.cos(a) - tipdir[1] * np.sin(a)
+                    s = tipdir[0] * np.sin(a) + tipdir[1] * np.cos(a)
+                    R = 2 * px_per_pt
+                    ex, ey = ax_ + R * c, ay_ + R * s
+                    t = min(w / 2 / max(abs(c), 1e-9), h / 2 / max(abs(s), 1e-9))
+                    cx, cy = ex + c * t, ey + s * t
+                    rect = (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
+                    ok = not (rect[0] < inner[0] or rect[1] < inner[1]
+                              or rect[2] > inner[2] or rect[3] > inner[3])
+                    for q0, q1 in segs if ok else ():
+                        own = np.hypot(q1[0] - ax_, q1[1] - ay_) < 6
+                        if own:
+                            if _segment_hits_rect(q0, q1, rect):
+                                ok = False
+                        elif (_segment_hits_rect(q0, q1, _grow(rect, clear))
+                              or _point_rect_dist(q1, rect) < 2 * clear):
+                            ok = False
+                        if not ok:
+                            break
+                    if ok and any(_rects_overlap(rect, _grow(r2, 3)) for r2 in placed_rects):
+                        ok = False
+                    if ok and any(_segment_hits_rect(l0, l1, _grow(rect, 2))
+                                  for l0, l1 in placed_leaders):
+                        ok = False
+                    if ok and any(_point_rect_dist((bx, by), rect) < 4
+                                  for j, (bx, by) in enumerate(A) if j != k):
+                        ok = False
+                    if ok:
+                        placed_rects.append(rect)
+                        placed_leaders.append(((ax_, ay_), (ex, ey)))
+                        choice[k] = (cx, cy)
+                        placed_here = True
+                        break
+            if placed_here:
+                continue
         best = None
         for R_pt in radii_pt:
             R = R_pt * px_per_pt
@@ -162,21 +217,25 @@ def _place_flyers(ax, anchors, texts, avoid_segments=(), fontsize=8,
                 # Short leaders keep each label close to its point/arrow.
                 score = length_weight * R
                 for q0, q1 in segs:
-                    own = (np.hypot(q0[0] - ax_, q0[1] - ay_) < 2 or
-                           np.hypot(q1[0] - ax_, q1[1] - ay_) < 2)
+                    at_tip = np.hypot(q1[0] - ax_, q1[1] - ay_) < 6
+                    own = np.hypot(q0[0] - ax_, q0[1] - ay_) < 2 or at_tip
                     if own:
                         # Leader must not run back along an arrow that starts/ends at this anchor.
-                        far = q1 if np.hypot(q0[0] - ax_, q0[1] - ay_) < 2 else q0
+                        far = q0 if at_tip else q1
                         v = np.array(far) - np.array((ax_, ay_))
                         n = np.linalg.norm(v)
                         if n > 0 and np.dot(v / n, (c, s)) > np.cos(np.radians(35)):
                             score += 500
+                        if at_tip and n > 0 and tip_pref:
+                            # Prefer continuing straight past the arrowhead (direction -v).
+                            score += tip_pref * (1 + np.dot(v / n, (c, s))) / 2
                     elif _seg_seg_dist(p0, p1, q0, q1) < clear:
                         score += 1000
                     if _segment_hits_rect(q0, q1, _grow(rect, clear)):
                         score += 800
-                    # Arrowheads are wider than the shaft.
-                    if _point_rect_dist(q1, rect) < 2 * clear:
+                    # Arrowheads are wider than the shaft. A label may sit just beside its own
+                    # arrowhead (tighter margin) but must keep clear of other arrows' heads.
+                    if _point_rect_dist(q1, rect) < (0.8 * clear if own else 2 * clear):
                         score += 800
                 for r2 in placed_rects:
                     if _rects_overlap(rect, _grow(r2, 3)):
@@ -201,10 +260,10 @@ def _place_flyers(ax, anchors, texts, avoid_segments=(), fontsize=8,
                     if _point_seg_dist((bx, by), p0, p1) < clear + 2:
                         score += 300
                 # Soft terms: prefer open space and labels sitting beside (not above/below) the point.
-                score += 25 * abs(s)
+                score += 25 * soft_scale * abs(s)
                 for j, (bx, by) in enumerate(A):
                     if j != k:
-                        score += 30 * max(0.0, 1 - _point_rect_dist((bx, by), rect) / soft)
+                        score += 30 * soft_scale * max(0.0, 1 - _point_rect_dist((bx, by), rect) / soft)
                 for q0, q1 in segs:
                     dseg = 0.0 if _segment_hits_rect(q0, q1, rect) else min(
                         [_point_seg_dist(corner, q0, q1)
@@ -212,10 +271,10 @@ def _place_flyers(ax, anchors, texts, avoid_segments=(), fontsize=8,
                                         (rect[2], rect[3]), (rect[0], rect[3]))]
                         + [_point_rect_dist(q0, rect), _point_rect_dist(q1, rect)]
                     )
-                    score += 20 * max(0.0, 1 - dseg / soft)
+                    score += 20 * soft_scale * max(0.0, 1 - dseg / soft)
                 for r2 in placed_rects:
                     gap = max(r2[0] - rect[2], rect[0] - r2[2], r2[1] - rect[3], rect[1] - r2[3], 0)
-                    score += 20 * max(0.0, 1 - gap / soft)
+                    score += 20 * soft_scale * max(0.0, 1 - gap / soft)
                 if best is None or score < best[0]:
                     best = (score, rect, p0, p1, (cx, cy))
         if best is None:
@@ -230,7 +289,7 @@ def _place_flyers(ax, anchors, texts, avoid_segments=(), fontsize=8,
             texts[k], xy=tuple(anchors[k]), xytext=(tx, ty), textcoords='data',
             ha='center', va='center', fontsize=fontsize, color='black', zorder=7,
             bbox=_FLYER_BOX,
-            arrowprops=dict(arrowstyle='-', color='0.2', lw=0.6, shrinkA=0, shrinkB=1.5),
+            arrowprops=dict(arrowstyle='-', color='0.2', lw=0.6, shrinkA=0, shrinkB=0),
         )
 
 
@@ -512,10 +571,11 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         # Mark origin with faint dashed lines
         ax.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
         ax.axvline(x=0, color='gray', linestyle='--', linewidth=1, alpha=0.5, zorder=5)
+        # Token labels drawn at the embedding points themselves (no markers or call-outs).
         _labels = [_token_pos_label(t, p) for p, t in enumerate(tokens)]
-        ax.scatter(embeddings_2d[:, 0], embeddings_2d[:, 1], s=14, c='black',
-                   edgecolors='white', linewidths=0.6, zorder=6)
-        _flyer_jobs.append((ax, embeddings_2d.copy(), _labels, []))
+        for (px_, py_), lbl in zip(embeddings_2d, _labels):
+            ax.text(px_, py_, lbl, fontsize=9, fontweight='bold', color='black',
+                    ha='center', va='center', zorder=7)
         ax.set_xlim(xlim_shared)
         ax.set_ylim(ylim_shared)
         ax.margins(0)
@@ -544,6 +604,8 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         _flyer_jobs.append((
             ax, _tips, [", ".join(_labels[i] for i in g) for g in _groups],
             [((0.0, 0.0), tuple(tip)) for tip in _tips],
+            # Tight call-outs: short leaders, weak open-space preference (overlaps still forbidden).
+            dict(radii_pt=(2, 3, 5, 8, 12, 17, 24, 34), length_weight=12.0, soft_scale=0.3, tip_pref=350.0),
         ))
         ax.set_xlim(xlim_shared)
         ax.set_ylim(ylim_shared)
@@ -570,9 +632,11 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
             _draw_clean_arrow(ax, tuple(embeddings_2d[i]), tuple(Final_2d[i]))
         ax.scatter(embeddings_2d[:, 0], embeddings_2d[:, 1], s=14, c='black',
                    edgecolors='white', linewidths=0.6, zorder=6)
+        # Call-outs label the arrowheads (z_i), with tight placement as in the Attn panel.
         _flyer_jobs.append((
-            ax, embeddings_2d.copy(), _labels,
+            ax, Final_2d.copy(), _labels,
             [(tuple(embeddings_2d[i]), tuple(Final_2d[i])) for i in range(len(tokens))],
+            dict(radii_pt=(2, 3, 5, 8, 12, 17, 24, 34), length_weight=12.0, soft_scale=0.3, tip_pref=350.0),
         ))
         ax_row2_last = ax
         ax.set_xlim(xlim_shared)
@@ -627,8 +691,8 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         # Discrete BoundaryNorm colorbars often get minor ticks between classes; hide them.
         cb2.ax.yaxis.set_minor_locator(NullLocator())
         cb2.ax.minorticks_off()
-    for _ax, _anchors, _texts, _segs in _flyer_jobs:
-        _place_flyers(_ax, _anchors, _texts, _segs)
+    for _ax, _anchors, _texts, _segs, *_kw in _flyer_jobs:
+        _place_flyers(_ax, _anchors, _texts, _segs, **(_kw[0] if _kw else {}))
     if save_path:
         plt.savefig(save_path, bbox_inches='tight', dpi=150)
         plt.close()
