@@ -59,8 +59,8 @@ def _marker_key_labels(ax, XY, labels, tol=0.15, fontsize=5.5):
               labelspacing=0.35, borderaxespad=0.3)
 
 
-def _text_labels_with_insets(ax, XY, labels, tol=0.15, fontsize=11, inset_fontsize=6,
-                             inset_size=0.20):
+def _text_labels_with_insets(ax, XY, labels, tol=0.15, fontsize=11, inset_fontsize=None,
+                             inset_size=0.38):
     """Label every point with its token text (e.g. 4₃) instead of markers + key.
 
     Points within `tol` form a group. A group whose points are exactly coincident gets its
@@ -108,7 +108,7 @@ def _text_labels_with_insets(ax, XY, labels, tol=0.15, fontsize=11, inset_fontsi
         y0 = min(max(fy - inset_size / 2, 0.03), 0.97 - inset_size)
         x0 = min(max(x0, 0.03), 0.97 - inset_size)
         zoom_text_inset(ax, XY[g], [labels[i] for i in g], [x0, y0, inset_size, inset_size],
-                        inset_fontsize, pad=2.3, left_connectors_only=fx < 0.5, dup_frac=0.4,
+                        inset_fontsize or fontsize, pad=2.3, left_connectors_only=fx < 0.5, dup_frac=0.4,
                         src_half_pt=(6, 4), lw=0.7)
 
 
@@ -583,7 +583,7 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
         if _u._JOURNAL_MODE:
             ax.tick_params(axis='both', labelsize=7)
         ax.set_title(
-            f"Attention output\n(Attention × V)\n{dim_str}",
+            "Attention output\n" + r"$\mathrm{Attn}(\mathbf{E}) = \mathbf{A}\mathbf{V}$" + f"\n{dim_str}",
             fontsize=11,
             pad=10,
         )
@@ -634,7 +634,7 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
             ax.set_xlabel("PC1", fontsize=10)
             ax.set_ylabel("PC2", fontsize=10)
             ax.set_title(
-                f"Attention Output\n(Attention × V)\n{dim_str_attn_out}\n(PCA)",
+                "Attention output\n" + r"$\mathrm{Attn}(\mathbf{E})_i$" + f"\n{dim_str_attn_out}\n(PCA)",
                 fontsize=11,
                 pad=8,
             )
@@ -642,7 +642,7 @@ def plot_weights_qkv_two_sequences(model, X_list, itos, save_path=None, num_sequ
             ax.set_xlabel("Dim 0", fontsize=10)
             ax.set_ylabel("Dim 1", fontsize=10)
             ax.set_title(
-                f"Attention Output\n(Attention × V)\n{dim_str_attn_out}",
+                "Attention output\n" + r"$\mathrm{Attn}(\mathbf{E})_i$" + f"\n{dim_str_attn_out}",
                 fontsize=11,
                 pad=8,
             )

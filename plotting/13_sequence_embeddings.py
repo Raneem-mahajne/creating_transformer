@@ -233,11 +233,10 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
 
         # Zoom inset on the odd-token cluster (odd tokens have near-identical embeddings).
         odd_ids = [i for i in range(vocab_size) if str(itos[i]).isdigit() and int(itos[i]) % 2 == 1]
-        _inset_fs = 7 if _u._JOURNAL_MODE else 11
         if len(odd_ids) > 1:
             zoom_text_inset(
                 ax4, all_token_emb[odd_ids], [str(itos[i]) for i in odd_ids],
-                [0.57, 0.20, 0.18, 0.18], _inset_fs, pad=1.25,
+                [0.52, 0.06, 0.42, 0.44], _scatter_fg, pad=1.3, dim_fontsize=_scatter_bg,
                 highlight=[str(itos[i]) in tokens for i in odd_ids],
                 src_half_pt=(5, 3), lw=0.7,
             )
@@ -342,13 +341,13 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
                 seq_odd_pos = [seq_odd_pos[0], seq_odd_pos[-1]]
             n_ins = len(seq_odd_pos)
             if n_ins:
-                top, bottom, gap = 0.58, 0.03, 0.04
-                h = min(0.15, (top - bottom - gap * (n_ins - 1)) / n_ins)
+                top, bottom, gap = 0.62, 0.02, 0.04
+                h = min(0.28, (top - bottom - gap * (n_ins - 1)) / n_ins)
                 for k, p in enumerate(seq_odd_pos):
                     pts = [all_combined_emb[o * block_size + (p % block_size)] for o in odd_ids]
                     zoom_text_inset(
                         ax6, pts, [_token_pos_label(str(itos[o]), p) for o in odd_ids],
-                        [0.55, top - (k + 1) * h - k * gap, 0.18, h], _inset_fs - 1, pad=1.45,
+                        [0.50, top - (k + 1) * h - k * gap, 0.44, h], _scatter_fg, pad=1.45, dim_fontsize=_scatter_bg,
                         color=INSET_COLORS[k % len(INSET_COLORS)],
                         src_half_pt=(6, 2.5), lw=0.7,
                         highlight=[str(itos[o]) == tokens[p] for o in odd_ids],

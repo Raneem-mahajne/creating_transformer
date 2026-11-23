@@ -98,30 +98,43 @@ each in $\mathbb{R}^{T \times d_k}$ (sequence length $\times$ head size): row $i
 
 The **attention matrix** $\mathbf{A} \in \mathbb{R}^{T \times T}$ is calculated as a row-wise causal softmax of $\mathbf{Q}\mathbf{K}^\top/\sqrt{d_k}$: for each $i$, $(A_{i0},\ldots,A_{ii}) = \mathrm{softmax}(\mathbf{q}_i^\top\mathbf{k}_0/\sqrt{d_k},\ldots,\mathbf{q}_i^\top\mathbf{k}_i/\sqrt{d_k})$. We employ causal masking by setting $A_{ij}=0$ for $j>i$ to ensure that tokens can only attend to tokens that precede them in the sequence. We denote row $i$ of $\mathbf{A}$ by $\boldsymbol{\alpha}_i$, and its entries satisfy $\alpha_{ij}=A_{ij}$, where $\alpha_{ij}$ is the attention weight from position $i$ to position $j$.
 
-The **attention output** at position $i$, denoted $\mathrm{Attn}(\mathbf{e})_i \in \mathbb{R}^{d_k}$, combines value rows with $\mathbf{A}$. The product $\mathbf{A} \mathbf{V} \in \mathbb{R}^{T \times d_k}$ stacks outputs as rows: with $\boldsymbol{\alpha}_i$ the $i$-th row of $\mathbf{A}$,
+The **attention output** combines the value rows using the attention weights:
 $$
-\mathrm{Attn}(\mathbf{e})_i^\top = (\mathbf{A} \mathbf{V})_{i,:} = \boldsymbol{\alpha}_i \mathbf{V}.
+\mathrm{Attn}(\mathbf{E}) = \mathbf{A} \mathbf{V} \in \mathbb{R}^{T \times d_k},
+$$
+whose row $i$ is $\mathrm{Attn}(\mathbf{E})_i^\top$, the attention output at position $i$. With $\boldsymbol{\alpha}_i$ the $i$-th row of $\mathbf{A}$,
+$$
+\mathrm{Attn}(\mathbf{E})_i^\top = (\mathbf{A} \mathbf{V})_{i,:} = \boldsymbol{\alpha}_i \mathbf{V}.
 $$
 Equivalently, with $\alpha_{ij} = A_{ij}$,
 $$
-\mathrm{Attn}(\mathbf{e})_i = \sum_{j=0}^{i} \alpha_{ij} \mathbf{v}_j.
+\mathrm{Attn}(\mathbf{E})_i = \sum_{j=0}^{i} \alpha_{ij} \mathbf{v}_j.
 $$
-Thus $\mathrm{Attn}(\mathbf{e})_i$ is the "message" delivered to position $i$ by the attention mechanism.
+Thus $\mathrm{Attn}(\mathbf{E})_i$ is the "message" delivered to position $i$ by the attention mechanism.
 
 **First residual.** The representation passed to the feedforward block is the sum of the combined embedding and the attention output. We denote this **first-residual state** by $\mathbf{z}_i$:
 $$
-\mathbf{z}_i = \mathbf{e}_i + \mathrm{Attn}(\mathbf{e})_i.
+\mathbf{z}_i = \mathbf{e}_i + \mathrm{Attn}(\mathbf{E})_i.
 $$
-So $\mathbf{z}_i$ is the quantity that is passed into the feedforward network. (Note that the feedforward network itself can be interpreted as a key-value operation over its inputs; see Geva et al., 2021, 2022).
+Stacking over positions, the first-residual states form the matrix
+$$
+\mathbf{Z} = \mathbf{E} + \mathrm{Attn}(\mathbf{E}) \in \mathbb{R}^{T \times n_{\mathrm{embed}}},
+$$
+whose row $i$ is $\mathbf{z}_i^\top$ (the sum is defined because $d_k = n_{\mathrm{embed}}$). So $\mathbf{z}_i$ is the quantity that is passed into the feedforward network. (Note that the feedforward network itself can be interpreted as a key-value operation over its inputs; see Geva et al., 2021, 2022).
 
 **Second residual.** The feedforward network (FFN) is applied to $\mathbf{z}_i$, and its output is added back to $\mathbf{z}_i$ (the second residual connection). The resulting **hidden state** passed to the LM head is
 $$
 \mathbf{h}_i = \mathbf{z}_i + \mathrm{FFN}(\mathbf{z}_i).
 $$
+Stacking over positions, the hidden states form the matrix
+$$
+\mathbf{H} = \mathbf{Z} + \mathrm{FFN}(\mathbf{Z}) \in \mathbb{R}^{T \times n_{\mathrm{embed}}},
+$$
+where the FFN is applied to each row of $\mathbf{Z}$ separately, and whose row $i$ is $\mathbf{h}_i^\top$.
 
 **LM head.** The LM head produces the next-token distribution from the hidden state $\mathbf{h}_i$:
 $$
-P(t_{i+1} \mid \mathbf{h}_i) = \mathrm{softmax}\!\left(\mathbf{h}_i \, \mathbf{W}_{\mathrm{lm}}^\top + \mathbf{b}\right),
+P(t_{i+1} \mid \mathbf{h}_i) = \mathrm{softmax}\!\left(\mathbf{W}_{\mathrm{lm}} \mathbf{h}_i + \mathbf{b}\right),
 $$
 where $\mathbf{W}_{\mathrm{lm}} \in \mathbb{R}^{V \times 2}$ and $\mathbf{b} \in \mathbb{R}^V$.
 
@@ -130,9 +143,9 @@ The forward pass can be summarized as:
 $$
 \begin{aligned}
 \mathbf{e}_i &= \mathbf{x}_i + \mathbf{p}_i, \\
-\mathbf{z}_i &= \mathbf{e}_i + \mathrm{Attn}(\mathbf{e})_i, \\
+\mathbf{z}_i &= \mathbf{e}_i + \mathrm{Attn}(\mathbf{E})_i, \\
 \mathbf{h}_i &= \mathbf{z}_i + \mathrm{FFN}(\mathbf{z}_i), \\
-P(t_{i+1} \mid \mathbf{h}_i) &= \mathrm{softmax}\!\left(\mathbf{h}_i \, \mathbf{W}_{\mathrm{lm}}^\top + \mathbf{b}\right).
+P(t_{i+1} \mid \mathbf{h}_i) &= \mathrm{softmax}\!\left(\mathbf{W}_{\mathrm{lm}} \mathbf{h}_i + \mathbf{b}\right).
 \end{aligned}
 $$
 
@@ -236,7 +249,7 @@ Panels (a) and (b) together reveal a clear functional decomposition of the plane
 1. **Indifference region** (upper half-plane). No single digit is strongly favored. The `+` operator unit shows the highest probability here, reflecting the training distribution: `+` appears with probability 0.3 and can follow any digit, so the model assigns it a high baseline in this unspecialized zone.
 2. **Strong specific-prediction region** (lower half-plane). This area is subdivided into distinct target zones, one for each even integer. In each zone, one even-number unit produces a large output while all others are nearly zero. This region is effectively reserved for the final retrieval of the correct even digit after a `+` sign.
 
-Now that we understand how the output network maps a point $\mathbf{z}_i$ to a token prediction, we consider the individual components of $\mathbf{z}_i$. Recall that $\mathbf{z}_i = \mathbf{e}_i + \mathrm{Attn}(\mathbf{e})_i$ where $\mathrm{Attn}(\mathbf{e})_i = \sum_{j=0}^{i} \alpha_{ij} \mathbf{v}_j$.
+Now that we understand how the output network maps a point $\mathbf{z}_i$ to a token prediction, we consider the individual components of $\mathbf{z}_i$. Recall that $\mathbf{z}_i = \mathbf{e}_i + \mathrm{Attn}(\mathbf{E})_i$ where $\mathrm{Attn}(\mathbf{E})_i = \sum_{j=0}^{i} \alpha_{ij} \mathbf{v}_j$.
 In other words, $\mathbf{z}_i$ can be thought of as being the sum of two constituent components, the embedding $\mathbf{e}_i$, which is passed via the residual stream, and an attention-weighted sum of values $\mathbf{v}_j$. It can thus be instructive to see how each of these components, i.e. the embeddings $\mathbf{e}_i$ and the values $\mathbf{v}_j$, are situated in the plane representing the network's output.
 
 Panels (c) and (d) of Figure 10 overlay the embeddings $\mathbf{e}_i$ and the values $\mathbf{v}_j$, respectively, on the argmax map (panel b) to reveal where they sit relative to the output network's decision regions. In panel (c), the 96 combined embeddings $\mathbf{e}_i$ (12 tokens $\times$ 8 positions) are plotted. The digit embeddings generally fall in the high-entropy indifference region in the upper half-plane (visible in panel a), where no specific retrieval is triggered. In contrast, all `+` embeddings land in the lower half-plane — inside the strong prediction region — which provides a geometric head start for the algorithm: the model has already categorized `+` as requiring an even-number output based on token identity and position alone. However, because the embeddings lack the context of the rest of the string, the model can identify the "type" of output needed (even/odd/`+`) but cannot resolve the specific value. This defines the attention layer's objective: it must look back to find the most recent even number and produce a value vector that, when added to the residual stream, nudges the representation into the correct even-number target zone.
@@ -273,19 +286,19 @@ It is apparent from these visualizations that once causal masking is applied, th
 ![Q dot product gradients](plus_last_even/plots/a4/15_q_dot_product_gradients.png)
 **Figure 13.** Attention computation for the demo sequence. (a) The background of each panel displays the dot product of a specific query (blue) in the test sequence with every point in space (green = high, white = low). The unmasked (red) and masked (gray) keys are overlaid on this space to show their dot products with the selected query. (b) The masked $\mathbf{Q}\mathbf{K}^\top$ matrix, (c) the attention matrix after normalization by ${\sqrt{d_k}}$ and applying softmax.
 
-**Value routing.** Now that we have the attention weight matrix $\mathbf{A}$, we need to apply it to the value vectors in order to produce the attention vector for each token $\mathrm{Attn}(\mathbf{e})_i$. Specifically, the attention vectors are the attention-weighted sum of the value vectors for each token, i.e. $\mathrm{Attn}(\mathbf{e})_i = \sum_{j=0}^{i} \alpha_{ij} \mathbf{v}_j$. We can generate a matrix whose rows are the attention outputs for each position by multiplying the attention weight matrix $\mathbf{A}$ (Figure 14a) by the value matrix $\mathbf{V}$ (Figure 14b) such that we have $\mathrm{Attn}(\mathbf{e})_i^\top = (\mathbf{A} \mathbf{V})_{i,:}$ (Figure 14c). We also show the value vectors $\mathbf{v}_j$ (Figure 14d) and attention vectors $\mathrm{Attn}(\mathbf{e})_i$ (Figure 14e) as scatter plots. The attention weights for each token here effectively select value vectors to be used for the prediction; the attention vectors for the `+` tokens, for example, are basically copies of the value vectors of the most recent even number. 
+**Value routing.** Now that we have the attention weight matrix $\mathbf{A}$, we need to apply it to the value vectors in order to produce the attention vector for each token $\mathrm{Attn}(\mathbf{E})_i$. Specifically, the attention vectors are the attention-weighted sum of the value vectors for each token, i.e. $\mathrm{Attn}(\mathbf{E})_i = \sum_{j=0}^{i} \alpha_{ij} \mathbf{v}_j$. We can generate a matrix whose rows are the attention outputs for each position by multiplying the attention weight matrix $\mathbf{A}$ (Figure 14a) by the value matrix $\mathbf{V}$ (Figure 14b) such that we have $\mathrm{Attn}(\mathbf{E})_i^\top = (\mathbf{A} \mathbf{V})_{i,:}$ (Figure 14c). We also show the value vectors $\mathbf{v}_j$ (Figure 14d) and attention vectors $\mathrm{Attn}(\mathbf{E})_i$ (Figure 14e) as scatter plots. The attention weights for each token here effectively select value vectors to be used for the prediction; the attention vectors for the `+` tokens, for example, are basically copies of the value vectors of the most recent even number. 
 
 ![Value Output](plus_last_even/plots/a4/16_value_output.png)
 **Figure 14.** Values and attention output for the demo sequence. (a) Attention weight matrix as in Figure 13c, (b) Values for each digit shown as heatmaps. (c) Attention outputs shown as heatmaps. (d) Values shown as scatter plot. (e) Attention output shown as scatter plot.
 
 
-**Predicting the next token.** With the attention vectors $\mathrm{Attn}(\mathbf{e})_i$ for each embedding in hand, we are ready to predict the next token for each token in our test sequence. For the token at position $i$ in the sequence, we first compute $\mathbf{z}_i = \mathbf{e}_i + \mathrm{Attn}(\mathbf{e})_i$. In other words, we add the token's attention vector to its embedding and see where it lands in the output space. We can think of this addition as the original token+position embedding being nudged to the right zone in the output space by the attention vector. By showing the input embeddings, attention vectors, and their sums as both heatmaps and scatter plots on the background of the output prediction space (Figure 15), we observe that the embeddings for all digits are nudged toward the high-entropy region where all tokens are somewhat likely to occur, but the `+` token is the most likely prediction. The `+` embeddings, however, are nudged to the regions of the correct predictions for the most recent even number. The `+` in position 2 correctly predicts that the next number in the sequence should be a 4. The final token in the sequence, the `+` in position 7, correctly predicts that the next number in the sequence should be a 6, thus demonstrating that the transformer can correctly produce new tokens that are beyond the end of the input sequence. 
+**Predicting the next token.** With the attention vectors $\mathrm{Attn}(\mathbf{E})_i$ for each embedding in hand, we are ready to predict the next token for each token in our test sequence. For the token at position $i$ in the sequence, we first compute $\mathbf{z}_i = \mathbf{e}_i + \mathrm{Attn}(\mathbf{E})_i$. In other words, we add the token's attention vector to its embedding and see where it lands in the output space. We can think of this addition as the original token+position embedding being nudged to the right zone in the output space by the attention vector. By showing the input embeddings, attention vectors, and their sums as both heatmaps and scatter plots on the background of the output prediction space (Figure 15), we observe that the embeddings for all digits are nudged toward the high-entropy region where all tokens are somewhat likely to occur, but the `+` token is the most likely prediction. The `+` embeddings, however, are nudged to the regions of the correct predictions for the most recent even number. The `+` in position 2 correctly predicts that the next number in the sequence should be a 4. The final token in the sequence, the `+` in position 7, correctly predicts that the next number in the sequence should be a 6, thus demonstrating that the transformer can correctly produce new tokens that are beyond the end of the input sequence. 
 
 ![Residuals](plus_last_even/plots/a4/17_residuals.png)
 **Figure 15. Predicting the next token by summing the input embeddings and attention vectors.** 
-(a) Top: Heatmaps illustrating the 2D values for the input embeddings ($\mathbf{e}$) for each token in the test sequence. Bottom: Input embeddings in the 2D output space, where the background colors represent the most likely next-token prediction. (b) Top: The attention vectors ($\mathrm{Attn}(\mathbf{e})$) as heatmap.
+(a) Top: Heatmaps illustrating the 2D values for the input embeddings ($\mathbf{E}$) for each token in the test sequence. Bottom: Input embeddings in the 2D output space, where the background colors represent the most likely next-token prediction. (b) Top: The attention vectors ($\mathrm{Attn}(\mathbf{E})$) as heatmap.
 Bottom: The attention vectors shown as arrows from the origin.
-(c) Top: The sum of the input embeddings and the attention vectors ($\mathbf{z}$) as heatmap.
+(c) Top: The sum of the input embeddings and the attention vectors ($\mathbf{Z}$) as heatmap.
 Bottom: Input embeddings (white annotations) are moved by the attention vectors (arrows) to the correct region for predicting the next token.
 
 ---

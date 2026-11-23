@@ -220,12 +220,12 @@ def link_inset(ax, ins, center, zoom_half, color=INSET_COLORS[0], src_half_pt=(9
 
 def zoom_text_inset(ax, pts, labels, rect, fontsize, pad=1.6, highlight=None,
                     dim_alpha=0.45, left_connectors_only=True, dup_frac=0.1,
-                    color=INSET_COLORS[0], src_half_pt=(9, 6), lw=1.3):
+                    color=INSET_COLORS[0], src_half_pt=(9, 6), lw=1.3, dim_fontsize=None):
     """Tick-less inset magnifying a tight cluster, with each label drawn at its own point.
 
     pts: (N, 2) coordinates; labels: N strings; rect: inset bounds in ax-axes fraction.
     pad: zoom half-width as a multiple of the cluster radius.
-    highlight: optional N bools; True = bold, False = faded (dim_alpha), matching
+    highlight: optional N bools; True = bold, False = faded (dim_alpha, dim_fontsize), matching
                the foreground/background styling of the sequence plots.
     Points closer than dup_frac × cluster radius are nudged apart sideways so their labels stay readable.
     color / src_half_pt: see link_inset (only the inset border, connectors and source box use `color`).
@@ -247,7 +247,8 @@ def zoom_text_inset(ax, pts, labels, rect, fontsize, pad=1.6, highlight=None,
     ins = ax.inset_axes(rect)
     for lbl, (px, py), dx, hl in zip(labels, pts, nudge, highlight):
         ins.annotate(lbl, (px, py), xytext=(dx, 0), textcoords='offset points',
-                     fontsize=fontsize, fontweight='bold' if hl else 'normal',
+                     fontsize=fontsize if (hl or dim_fontsize is None) else dim_fontsize,
+                     fontweight='bold' if hl else 'normal',
                      color='black', alpha=1.0 if hl else dim_alpha,
                      ha='center', va='center', zorder=4 if hl else 3)
     half = R * pad

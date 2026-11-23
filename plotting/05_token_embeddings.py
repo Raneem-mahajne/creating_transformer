@@ -563,7 +563,7 @@ def plot_embeddings_pca(model, itos, save_path=None):
             if merged:
                 g = max(merged, key=len)
                 _zoom_inset(ax3, X_emb[g], [str(itos[t]) for t in g],
-                            [0.54, 0.28, 0.20, 0.22], max(token_fontsize - 3, 7), pad=1.4, text_only=True,
+                            [0.54, 0.10, 0.36, 0.40], token_fontsize, pad=1.3, text_only=True,
                             left_connectors_only=True, plain_link=True)
         if _u._JOURNAL_MODE:
             ax3.tick_params(axis='both', labelsize=6)
@@ -765,12 +765,12 @@ def plot_embeddings_pca(model, itos, save_path=None):
         if positions is None:
             positions = [block_size // 2, block_size // 2 - 1]   # upper inset = later position
         # Inset rects (axes fraction), stacked top to bottom just right of the odd cluster.
-        w, h, x0, top, gap = 0.085, 0.145, 0.53, 0.54, 0.04
+        w, h, x0, top, gap = 0.15, 0.25, 0.53, 0.56, 0.04
         for k, p in enumerate(positions):
             pts = np.array([XY[t * block_size + p] for t in g])
             rect = [x0, top - (k + 1) * h - k * gap, w, h]
             _zoom_inset(ax, pts, [_token_pos_label(str(itos[t]), p) for t in g], rect,
-                        max(combo_fontsize - 5, 7), pad=1.6, text_only=True, left_connectors_only=True,
+                        combo_fontsize, pad=1.5, text_only=True, left_connectors_only=True,
                         color=INSET_COLORS[k % len(INSET_COLORS)], src_half_pt=(10, 3))
 
     if n_embd > 2:

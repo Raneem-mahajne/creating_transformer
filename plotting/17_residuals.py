@@ -110,7 +110,7 @@ def _draw_clean_arrow(ax, start, end, lw=1.1):
 
 
 def _place_flyers(ax, anchors, texts, avoid_segments=(), fontsize=8,
-                  radii_pt=(10, 16, 24, 34, 46, 60), n_dir=24):
+                  radii_pt=(5, 8, 12, 17, 24, 34, 46, 60), n_dir=24, length_weight=3.0):
     """Call-out labels placed so leaders and boxes avoid the given segments, points and each other.
 
     Must be called after the figure layout is final. Candidate positions (directions x radii
@@ -159,7 +159,8 @@ def _place_flyers(ax, anchors, texts, avoid_segments=(), fontsize=8,
                     continue
                 p0 = (ax_ + 4 * c, ay_ + 4 * s)
                 p1 = (ex, ey)
-                score = R
+                # Short leaders keep each label close to its point/arrow.
+                score = length_weight * R
                 for q0, q1 in segs:
                     own = (np.hypot(q0[0] - ax_, q0[1] - ay_) < 2 or
                            np.hypot(q1[0] - ax_, q1[1] - ay_) < 2)
@@ -463,10 +464,10 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         _p0 = _col_abc[0] if _col_abc else ""
         _hm_fs = 9 if _u._JOURNAL_MODE else 11
         if _col_abc:
-            _body0 = f"Embed ({dim_str})" if _u._JOURNAL_MODE else f"Embeddings (Token+Pos) {dim_str}"
+            _body0 = r"$\mathbf{E}$ " + dim_str if _u._JOURNAL_MODE else r"Embeddings $\mathbf{E}$ (Token+Pos) " + dim_str
             ax.set_title(f"{_p0.strip()}\n{_body0}", fontsize=_hm_fs)
         else:
-            ax.set_title(f"{_p0}Embed ({dim_str})" if _u._JOURNAL_MODE else f"{_p0}Embeddings (Token+Pos) {dim_str}", fontsize=_hm_fs)
+            ax.set_title(_p0 + (r"$\mathbf{E}$ " + dim_str if _u._JOURNAL_MODE else r"Embeddings $\mathbf{E}$ (Token+Pos) " + dim_str), fontsize=_hm_fs)
         # V Transformed heatmap
         ax = fig.add_subplot(gs[r0_r, c_v_hm])
         if use_two_rows_r:
@@ -479,7 +480,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         ax.set_xlabel("Embedding Dim", fontsize=10)
         ax.set_ylabel("Tokens" if use_two_rows_r else f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=10)
         _p1 = _col_abc[1] if _col_abc else ""
-        _title_attn_e_i = r"$\mathrm{Attn}(e)_i$" + f" {dim_str}"
+        _title_attn_e_i = r"$\mathrm{Attn}(\mathbf{E})$" + f" {dim_str}"
         if _col_abc:
             _body1 = _title_attn_e_i
             ax.set_title(f"{_p1.strip()}\n{_body1}", fontsize=_hm_fs)
@@ -499,10 +500,10 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         ax.set_ylabel("Tokens" if use_two_rows_r else f"Seq {seq_idx+1}\n{seq_str}\n", fontsize=10)
         _p2 = _col_abc[2] if _col_abc else ""
         if _col_abc:
-            _body2 = f"Final ({dim_str})" if _u._JOURNAL_MODE else f"Final (Embed+V_transformed) {dim_str}"
+            _body2 = r"$\mathbf{Z} = \mathbf{E} + \mathrm{Attn}(\mathbf{E})$ " + dim_str
             ax.set_title(f"{_p2.strip()}\n{_body2}", fontsize=_hm_fs)
         else:
-            ax.set_title(f"{_p2}Final ({dim_str})" if _u._JOURNAL_MODE else f"{_p2}Final (Embed+V_transformed) {dim_str}", fontsize=_hm_fs)
+            ax.set_title(_p2 + r"$\mathbf{Z} = \mathbf{E} + \mathrm{Attn}(\mathbf{E})$ " + dim_str, fontsize=_hm_fs)
         
         # Embeddings scatter (row 1, under Embed heatmap)
         ax = fig.add_subplot(gs[r1_r, c_emb_sc])
@@ -524,7 +525,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         ax.set_ylabel(yl, fontsize=10)
         title_suffix = " (PCA)" if used_pca else ""
         _sc_fs = 9 if _u._JOURNAL_MODE else 11
-        ax.set_title(f"Embed{title_suffix}", fontsize=_sc_fs)
+        ax.set_title(r"$\mathbf{e}_i$" + title_suffix, fontsize=_sc_fs)
         ax.grid(True, alpha=0.35, zorder=4)
         
         # V Transformed scatter (with arrows from origin to each point)
@@ -552,7 +553,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         ax.set_xlabel(xl, fontsize=10)
         ax.set_ylabel(yl, fontsize=10)
         title_suffix = " (PCA)" if used_pca else ""
-        ax.set_title(r"$\mathrm{Attn}(e)_i$" + title_suffix, fontsize=_sc_fs)
+        ax.set_title(r"$\mathrm{Attn}(\mathbf{E})_i$" + title_suffix, fontsize=_sc_fs)
         ax.grid(True, alpha=0.35, zorder=4)
         
         # Embeddings → Final arrows (col 2, row 1 when single seq)
@@ -582,7 +583,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         ax.set_xlabel(xl, fontsize=10)
         ax.set_ylabel(yl, fontsize=10)
         title_suffix = " (PCA)" if used_pca else ""
-        ax.set_title(f"Embed → Final (Modified by Attention){title_suffix}", fontsize=_sc_fs)
+        ax.set_title(r"$\mathbf{e}_i \rightarrow \mathbf{z}_i = \mathbf{e}_i + \mathrm{Attn}(\mathbf{E})_i$" + title_suffix, fontsize=_sc_fs)
         ax.grid(True, alpha=0.35, zorder=4)
     
     top_rect = 0.95

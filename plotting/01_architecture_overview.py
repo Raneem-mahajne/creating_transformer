@@ -420,7 +420,8 @@ def _plot_architecture_journal(save_path, block_size, n_embd, head_size,
     """Vertical A4 architecture diagram (paper Figure 1).
 
     Notation follows Paper.md: matrices bold upright (X, P, E, Q, K, V, W_Q, ...),
-    vectors bold lowercase (e, z, h), dimensions written as rows × cols.
+    including the sequence-level states Attn(E), Z and H (rows are the per-position vectors
+    e_i, z_i, h_i used in the text), dimensions written as rows × cols.
     Coordinates are in pixels of the 300-dpi output, y increasing downward.
     Saves PNG, SVG and PDF side by side.
     """
@@ -548,25 +549,26 @@ def _plot_architecture_journal(save_path, block_size, n_embd, head_size,
 
         # ── Weights × V ───────────────────────────────────────────────
         arrow(cx, 1182, cx, 1296)
-        text(cx, 1230, 'Attention Weights', 8.5, color=C_SUB, italic=True, bg='white')
+        text(cx, 1230, r'Attention weights $\mathbf{A}$', 8.5, color=C_SUB, italic=True, bg='white')
         box(601, 1296, 1305, 1398, C_ATTN)
-        text(cx, 1334, 'Weights × ' + r'$\mathbf{V}$', 12.5, bold=True)
+        text(cx, 1334, r'$\mathbf{A}\,\mathbf{V}$', 12.5, bold=True)
         text(cx, 1376, dim(T, dk), FS_DIM, color=C_SUB)
         v_x = 1574
         line([qkv_cx[2] + 106, v_x, v_x], [938, 938, 1347])
         arrow(v_x, 1347, 1305, 1347)
 
-        # ── First residual: z = e + Attn(e) ───────────────────────────
+        # ── First residual: Z = E + Attn(E) ───────────────────────────
         c1 = 1524
         arrow(cx, 1398, cx, c1 - R)
-        text(cx, 1430, r'$\mathrm{Attn}(\mathbf{e})$', 8.5, color=C_SUB, bg='white')
+        text(cx, 1430, r'$\mathrm{Attn}(\mathbf{E})$', 8.5, color=C_SUB, bg='white')
         plus(cx, c1)
         skip_x = 218
         if use_residual:
             line([894, skip_x, skip_x], [c0, c0, c1], color=C_SKIP1)
             arrow(skip_x, c1, 900, c1, color=C_SKIP1)
         arrow(cx, c1 + R, cx, 1655)
-        text(1012, 1600, r'$\mathbf{z}$', 11, color=C_SKIP2)
+        text(990, 1600, r'$\mathbf{Z}$', 11, color=C_SKIP2, ha='left')
+        text(1040, 1602, dim(T, C), FS_DIM, color=C_SUB, ha='left')
 
         # ── Feed-forward ──────────────────────────────────────────────
         box(562, 1655, 1344, 1878, C_FFN)
@@ -574,7 +576,7 @@ def _plot_architecture_journal(save_path, block_size, n_embd, head_size,
         text(cx, 1784, f'Linear({C},{ffwd_hidden_dim})', 10, color=C_SUB)
         text(cx, 1845, f'ReLU→Linear({ffwd_hidden_dim},{C})', 10, color=C_SUB)
 
-        # ── Second residual: h = z + FFN(z) ───────────────────────────
+        # ── Second residual: H = Z + FFN(Z) ───────────────────────────
         c2 = 1988
         arrow(cx, 1878, cx, c2 - R)
         plus(cx, c2)
@@ -582,7 +584,8 @@ def _plot_architecture_journal(save_path, block_size, n_embd, head_size,
             line([900, skip_x, skip_x], [c1 + 25, c1 + 25, c2], color=C_SKIP2)
             arrow(skip_x, c2, 900, c2, color=C_SKIP2)
         arrow(cx, c2 + R, cx, 2106)
-        text(1012, 2045, r'$\mathbf{h}$', 11)
+        text(990, 2045, r'$\mathbf{H}$', 11, ha='left')
+        text(1040, 2047, dim(T, C), FS_DIM, color=C_SUB, ha='left')
 
         # ── LM head → softmax → P(next) ───────────────────────────────
         box(633, 2106, 1272, 2258, C_OUTPUT)
