@@ -457,7 +457,7 @@ def _plot_architecture_journal(save_path, block_size, n_embd, head_size,
     DPI = 300
     X0, X1, Y0, Y1 = 150, 1720, 40, 2760          # visible canvas (px)
     LW = 0.9                                      # line width (pt)
-    FS_DIM = 8.5
+    FS_DIM = 10           # shape labels; sized to stay >= 8 pt when printed on A4
 
     with plt.rc_context(rc):
         fig = plt.figure(figsize=((X1 - X0) / DPI, (Y1 - Y0) / DPI), dpi=DPI)
@@ -503,7 +503,7 @@ def _plot_architecture_journal(save_path, block_size, n_embd, head_size,
         box(680, 90, 1225, 265, C_INPUT)
         text(cx, 128, 'Input', 14, bold=True)
         text(cx, 180, 'Tokens', 14, bold=True)
-        text(cx, 234, f'(Context Window T={T})', 9, color=C_SUB)
+        text(cx, 234, f'(Context Window T={T})', 10, color=C_SUB)
 
         # ── Token / position embeddings ───────────────────────────────
         tok_cx, pos_cx = 665, 1269
@@ -549,7 +549,7 @@ def _plot_architecture_journal(save_path, block_size, n_embd, head_size,
 
         # ── Weights × V ───────────────────────────────────────────────
         arrow(cx, 1182, cx, 1296)
-        text(cx, 1230, r'Attention weights $\mathbf{A}$', 8.5, color=C_SUB, italic=True, bg='white')
+        text(cx, 1230, r'Attention weights $\mathbf{A}$', 10, color=C_SUB, italic=True, bg='white')
         box(601, 1296, 1305, 1398, C_ATTN)
         text(cx, 1334, r'$\mathbf{A}\,\mathbf{V}$', 12.5, bold=True)
         text(cx, 1376, dim(T, dk), FS_DIM, color=C_SUB)
@@ -560,7 +560,7 @@ def _plot_architecture_journal(save_path, block_size, n_embd, head_size,
         # ── First residual: Z = E + Attn(E) ───────────────────────────
         c1 = 1524
         arrow(cx, 1398, cx, c1 - R)
-        text(cx, 1430, r'$\mathrm{Attn}(\mathbf{E})$', 8.5, color=C_SUB, bg='white')
+        text(cx, 1430, r'$\mathrm{Attn}(\mathbf{E})$', 10, color=C_SUB, bg='white')
         plus(cx, c1)
         skip_x = 218
         if use_residual:
@@ -573,8 +573,8 @@ def _plot_architecture_journal(save_path, block_size, n_embd, head_size,
         # ── Feed-forward ──────────────────────────────────────────────
         box(562, 1655, 1344, 1878, C_FFN)
         text(cx, 1713, 'Feed-Forward', 13.5, bold=True)
-        text(cx, 1784, f'Linear({C},{ffwd_hidden_dim})', 10, color=C_SUB)
-        text(cx, 1845, f'ReLU→Linear({ffwd_hidden_dim},{C})', 10, color=C_SUB)
+        text(cx, 1784, f'Linear({C},{ffwd_hidden_dim})', 11, color=C_SUB)
+        text(cx, 1845, f'ReLU→Linear({ffwd_hidden_dim},{C})', 11, color=C_SUB)
 
         # ── Second residual: H = Z + FFN(Z) ───────────────────────────
         c2 = 1988
@@ -590,7 +590,7 @@ def _plot_architecture_journal(save_path, block_size, n_embd, head_size,
         # ── LM head → softmax → P(next) ───────────────────────────────
         box(633, 2106, 1272, 2258, C_OUTPUT)
         text(cx, 2164, 'LM Head', 13.5, bold=True)
-        text(cx, 2226, f'Linear({C},{V})', 10, color=C_SUB)
+        text(cx, 2226, f'Linear({C},{V})', 11, color=C_SUB)
         arrow(cx, 2258, cx, 2394)
         box(778, 2394, 1127, 2507, C_OUTPUT)
         text(952, 2452, 'Softmax', 13, bold=True)
@@ -604,7 +604,7 @@ def _plot_architecture_journal(save_path, block_size, n_embd, head_size,
                            (984, C_FFN, 'Feed-Forward'), (1417, C_OUTPUT, 'Output')]:
             ax.add_patch(FancyBboxPatch((lx, 2684), 52, 26, boxstyle='round,pad=0,rounding_size=6',
                                         facecolor=c, edgecolor=C_STROKE, linewidth=0.6, zorder=3))
-            text(lx + 76, 2697, lbl, 9.5, ha='left')
+            text(lx + 76, 2697, lbl, 10.5, ha='left')
 
         if save_path:
             stem = save_path.rsplit('.', 1)[0]

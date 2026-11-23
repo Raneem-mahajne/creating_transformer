@@ -378,14 +378,36 @@ hyperparameters.
 
 \begin{figure}
 \centering
-\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 1: Model architecture. A one-layer, single-head causal transformer with embedding dimension d = 2, context window T = 8, and a 12-token vocabulary. Each input token's embedding \textbackslash mathbf\{X\} and its position embedding \textbackslash mathbf\{P\} are added to form \textbackslash mathbf\{E\} = \textbackslash mathbf\{X\} + \textbackslash mathbf\{P\} (8 \textbackslash times 2). Self-attention (yellow) projects \textbackslash mathbf\{E\} into queries, keys and values, \textbackslash mathbf\{Q\} = \textbackslash mathbf\{E\}\textbackslash mathbf\{W\}\_Q\^{}\textbackslash top, \textbackslash mathbf\{K\} = \textbackslash mathbf\{E\}\textbackslash mathbf\{W\}\_K\^{}\textbackslash top and \textbackslash mathbf\{V\} = \textbackslash mathbf\{E\}\textbackslash mathbf\{W\}\_V\^{}\textbackslash top, each with a 2 \textbackslash times 2 weight matrix. The scaled scores \textbackslash mathbf\{Q\}\textbackslash mathbf\{K\}\^{}\textbackslash top/\textbackslash sqrt\{d\_k\} are causally masked and softmax-normalized to give the 8 \textbackslash times 8 attention weights \textbackslash mathbf\{A\}, and the attention output is \textbackslash mathbf\{A\}\textbackslash mathbf\{V\}. A residual connection (green) adds \textbackslash mathbf\{E\} to this output, giving \textbackslash mathbf\{Z\}. A position-wise feed-forward network (red; Linear(2,32), ReLU, Linear(32,2)) is applied to \textbackslash mathbf\{Z\}, and a second residual connection (blue) adds \textbackslash mathbf\{Z\} back, giving the final hidden states \textbackslash mathbf\{H\}. The language-model head (green; Linear(2,12)) followed by a softmax maps each row of \textbackslash mathbf\{H\} to a probability distribution over the next token (8 \textbackslash times 12). The figure shows the shape of each matrix next to it.}]{plus_last_even/plots/a4/01_architecture_overview.png}}
-\caption{Figure 1: Model architecture. A one-layer, single-head causal
-transformer with embedding dimension \(d = 2\), context window
-\(T = 8\), and a 12-token vocabulary. Each input token's embedding
-\(\mathbf{X}\) and its position embedding \(\mathbf{P}\) are added to
-form \(\mathbf{E} = \mathbf{X} + \mathbf{P}\) (\(8 \times 2\)).
-Self-attention (yellow) projects \(\mathbf{E}\) into queries, keys and
-values, \(\mathbf{Q} = \mathbf{E}\mathbf{W}_Q^\top\),
+\includegraphics[width=\linewidth,height=0.78\textheight,keepaspectratio,alt={Figure 1. Model architecture. A one-layer, single-head causal transformer with embedding dimension d = 2, context window T = 8, and a 12-token vocabulary. The token embeddings \textbackslash mathbf\{X\} and positional embeddings \textbackslash mathbf\{P\} of the T positions (each 8 \textbackslash times 2, one row per position) are summed to give \textbackslash mathbf\{E\} = \textbackslash mathbf\{X\} + \textbackslash mathbf\{P\}. Self-attention (yellow) projects \textbackslash mathbf\{E\} into queries, keys and values, \textbackslash mathbf\{Q\} = \textbackslash mathbf\{E\}\textbackslash mathbf\{W\}\_Q\^{}\textbackslash top, \textbackslash mathbf\{K\} = \textbackslash mathbf\{E\}\textbackslash mathbf\{W\}\_K\^{}\textbackslash top and \textbackslash mathbf\{V\} = \textbackslash mathbf\{E\}\textbackslash mathbf\{W\}\_V\^{}\textbackslash top, each with a 2 \textbackslash times 2 weight matrix. The scaled scores \textbackslash mathbf\{Q\}\textbackslash mathbf\{K\}\^{}\textbackslash top/\textbackslash sqrt\{d\_k\} are causally masked and softmax-normalized to give the 8 \textbackslash times 8 attention weights \textbackslash mathbf\{A\}, and the attention output is \textbackslash mathbf\{A\}\textbackslash mathbf\{V\}. A residual connection (green) adds \textbackslash mathbf\{E\} to this output, giving \textbackslash mathbf\{Z\}. A position-wise feed-forward network (red; Linear(2,32), ReLU, Linear(32,2)) is applied to \textbackslash mathbf\{Z\}, and a second residual connection (blue) adds \textbackslash mathbf\{Z\} back, giving the final hidden states \textbackslash mathbf\{H\}. The language-model head (green; Linear(2,12)) followed by a softmax maps each row of \textbackslash mathbf\{H\} to a probability distribution over the next token (8 \textbackslash times 12). The figure shows the shape of each matrix next to it.}]{plus_last_even/plots/a4/01_architecture_overview.png}
+\caption[\textbf{Figure 1.} Model architecture. A one-layer, single-head
+causal transformer with embedding dimension \(d = 2\), context window
+\(T = 8\), and a 12-token vocabulary. The token embeddings
+\(\mathbf{X}\) and positional embeddings \(\mathbf{P}\) of the \(T\)
+positions (each \(8 \times 2\), one row per position) are summed to give
+\(\mathbf{E} = \mathbf{X} + \mathbf{P}\). Self-attention (yellow)
+projects \(\mathbf{E}\) into queries, keys and values,
+\(\mathbf{Q} = \mathbf{E}\mathbf{W}_Q^\top\),
+\(\mathbf{K} = \mathbf{E}\mathbf{W}_K^\top\) and
+\(\mathbf{V} = \mathbf{E}\mathbf{W}_V^\top\), each with a \(2 \times 2\)
+weight matrix. The scaled scores
+\(\mathbf{Q}\mathbf{K}^\top/\sqrt{d_k}\) are causally masked and
+softmax-normalized to give the \(8 \times 8\) attention weights
+\(\mathbf{A}\), and the attention output is \(\mathbf{A}\mathbf{V}\). A
+residual connection (green) adds \(\mathbf{E}\) to this output, giving
+\(\mathbf{Z}\). A position-wise feed-forward network (red; Linear(2,32),
+ReLU, Linear(32,2)) is applied to \(\mathbf{Z}\), and a second residual
+connection (blue) adds \(\mathbf{Z}\) back, giving the final hidden
+states \(\mathbf{H}\). The language-model head (green; Linear(2,12))
+followed by a softmax maps each row of \(\mathbf{H}\) to a probability
+distribution over the next token (\(8 \times 12\)). The figure shows the
+shape of each matrix next to it.]{\textbf{Figure 1.} Model architecture.
+A one-layer, single-head causal transformer with embedding dimension
+\(d = 2\), context window \(T = 8\), and a 12-token vocabulary. The
+token embeddings \(\mathbf{X}\) and positional embeddings \(\mathbf{P}\)
+of the \(T\) positions (each \(8 \times 2\), one row per position) are
+summed to give \(\mathbf{E} = \mathbf{X} + \mathbf{P}\). Self-attention
+(yellow) projects \(\mathbf{E}\) into queries, keys and values,
+\(\mathbf{Q} = \mathbf{E}\mathbf{W}_Q^\top\),
 \(\mathbf{K} = \mathbf{E}\mathbf{W}_K^\top\) and
 \(\mathbf{V} = \mathbf{E}\mathbf{W}_V^\top\), each with a \(2 \times 2\)
 weight matrix. The scaled scores
@@ -675,20 +697,24 @@ embeddings.
 
 \begin{figure}
 \centering
-\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 5. Learned embeddings. (a) Token embeddings \textbackslash mathbf\{x\}\_i shown as heatmap. (b) Position embeddings \textbackslash mathbf\{p\}\_i shown as heatmap. (c) Token embeddings shown as scatterplot. (d) Positions \textbackslash mathbf\{p\}\_i shown as scatterplot. (e) Token+position embeddings \textbackslash mathbf\{e\}\_i shown as scatterplot. Positions are indicated as subscripts next to each token, e.g., +\_5 is the + token at position 5.}]{plus_last_even/plots/a4/05_token_embeddings.png}}
+\includegraphics[width=\linewidth,height=0.6\textheight,keepaspectratio,alt={Figure 5. Learned embeddings. (a) Token embeddings \textbackslash mathbf\{x\}\_i shown as heatmap. (b) Position embeddings \textbackslash mathbf\{p\}\_i shown as heatmap. (c) Token embeddings shown as scatterplot. Inset: zoom-in on cluster of odd digits. (d) Positions \textbackslash mathbf\{p\}\_i shown as scatterplot. (e) Token+position embeddings \textbackslash mathbf\{e\}\_i shown as scatterplot. Insets magnify the odd-digit cluster at positions 4 (blue) and 3 (orange). Positions are indicated as subscripts next to each token, e.g., +\_5 is the + token at position 5.}]{plus_last_even/plots/a4/05_token_embeddings.png}
 \caption[\textbf{Figure 5.} Learned embeddings. (a) Token embeddings
 \(\mathbf{x}_i\) shown as heatmap. (b) Position embeddings
 \(\mathbf{p}_i\) shown as heatmap. (c) Token embeddings shown as
-scatterplot. (d) Positions \(\mathbf{p}_i\) shown as scatterplot. (e)
-Token+position embeddings \(\mathbf{e}_i\) shown as scatterplot.
-Positions are indicated as subscripts next to each token, e.g., \(+_5\)
-is the \protect\texttt{+} token at position 5.]{\textbf{Figure 5.}
-Learned embeddings. (a) Token embeddings \(\mathbf{x}_i\) shown as
-heatmap. (b) Position embeddings \(\mathbf{p}_i\) shown as heatmap. (c)
-Token embeddings shown as scatterplot. (d) Positions \(\mathbf{p}_i\)
-shown as scatterplot. (e) Token+position embeddings \(\mathbf{e}_i\)
-shown as scatterplot. Positions are indicated as subscripts next to each
-token, e.g., \(+_5\) is the \protect\texttt{+} token at position 5.}
+scatterplot. Inset: zoom-in on cluster of odd digits. (d) Positions
+\(\mathbf{p}_i\) shown as scatterplot. (e) Token+position embeddings
+\(\mathbf{e}_i\) shown as scatterplot. Insets magnify the odd-digit
+cluster at positions 4 (blue) and 3 (orange). Positions are indicated as
+subscripts next to each token, e.g., \(+_5\) is the \protect\texttt{+}
+token at position 5.]{\textbf{Figure 5.} Learned embeddings. (a) Token
+embeddings \(\mathbf{x}_i\) shown as heatmap. (b) Position embeddings
+\(\mathbf{p}_i\) shown as heatmap. (c) Token embeddings shown as
+scatterplot. Inset: zoom-in on cluster of odd digits. (d) Positions
+\(\mathbf{p}_i\) shown as scatterplot. (e) Token+position embeddings
+\(\mathbf{e}_i\) shown as scatterplot. Insets magnify the odd-digit
+cluster at positions 4 (blue) and 3 (orange). Positions are indicated as
+subscripts next to each token, e.g., \(+_5\) is the \protect\texttt{+}
+token at position 5.}
 \end{figure}
 
 Movie 1 shows how the geometric structure of the embedding space evolves
@@ -958,7 +984,7 @@ Figures S6 and S7.)
 
 \begin{figure}
 \centering
-\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 10. Output landscape summary (summary of Figure 9). (a) Entropy of the output distribution (nats); high in the indifference region (top half), near zero in even-number target zones (bottom half). (b) Argmax prediction map: color and annotation indicate which token has the highest predicted probability at each point. (c) Argmax map with combined embeddings \textbackslash mathbf\{e\}\_i overlaid. (d) Argmax map with value-transformed vectors \textbackslash mathbf\{v\}\_j overlaid.}]{plus_last_even/plots/a4/07_output_landscape_summary.png}}
+\includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio,alt={Figure 10. Output landscape summary (summary of Figure 9). (a) Entropy of the output distribution (nats); high in the indifference region (top half), near zero in even-number target zones (bottom half). (b) Argmax prediction map: color and annotation indicate which token has the highest predicted probability at each point. (c) Argmax map with combined embeddings \textbackslash mathbf\{e\}\_i overlaid. (d) Argmax map with value-transformed vectors \textbackslash mathbf\{v\}\_j overlaid.}]{plus_last_even/plots/a4/07_output_landscape_summary.png}
 \caption[\textbf{Figure 10.} Output landscape summary (summary of Figure
 9). (a) Entropy of the output distribution (nats); high in the
 indifference region (top half), near zero in even-number target zones
@@ -997,19 +1023,20 @@ determines where it appears in the ``ladder'' structure for that token.
 
 \begin{figure}
 \centering
-\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 11. Embeddings for the demo sequence 4 1 + 4 6 9 5 +. a--c: Embedding heatmaps for tokens, positions and token+position. d--f: 2D scatter plot views of tokens, positions, and token+position combinations, shown over a backdrop of all possible tokens, positions, and token+position embeddings (light gray).}]{plus_last_even/plots/a4/13_sequence_embeddings.png}}
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 11. Embeddings for the demo sequence 4 1 + 4 6 9 5 +. a--c: Embedding heatmaps for tokens, positions and token+position. d--f: 2D scatter plot views of tokens, positions, and token+position combinations, shown over a backdrop of all possible tokens, positions, and token+position embeddings (light gray). Insets in (d) and (f) magnify clusters of odd digits.}]{plus_last_even/plots/a4/13_sequence_embeddings.png}}
 \caption[\textbf{Figure 11.} Embeddings for the demo sequence
 \protect\texttt{4\ 1\ +\ 4\ 6\ 9\ 5\ +}. \textbf{a--c:} Embedding
 heatmaps for tokens, positions and token+position. \textbf{d--f:} 2D
 scatter plot views of tokens, positions, and token+position
 combinations, shown over a backdrop of all possible tokens, positions,
-and token+position embeddings (light gray).]{\textbf{Figure 11.}
-Embeddings for the demo sequence
-\protect\texttt{4\ 1\ +\ 4\ 6\ 9\ 5\ +}. \textbf{a--c:} Embedding
-heatmaps for tokens, positions and token+position. \textbf{d--f:} 2D
-scatter plot views of tokens, positions, and token+position
-combinations, shown over a backdrop of all possible tokens, positions,
-and token+position embeddings (light gray).}
+and token+position embeddings (light gray). Insets in (d) and (f)
+magnify clusters of odd digits.]{\textbf{Figure 11.} Embeddings for the
+demo sequence \protect\texttt{4\ 1\ +\ 4\ 6\ 9\ 5\ +}. \textbf{a--c:}
+Embedding heatmaps for tokens, positions and token+position.
+\textbf{d--f:} 2D scatter plot views of tokens, positions, and
+token+position combinations, shown over a backdrop of all possible
+tokens, positions, and token+position embeddings (light gray). Insets in
+(d) and (f) magnify clusters of odd digits.}
 \end{figure}
 
 \textbf{Attention.} The model must compute the attention matrix for this
@@ -1096,16 +1123,16 @@ the value vectors of the most recent even number.
 
 \begin{figure}
 \centering
-\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 14. Values and attention output for the demo sequence. (a) Attention weight matrix as in Figure 13c, (b) Values for each digit shown as heatmaps. (c) Attention outputs shown as heatmaps. (d) Values shown as scatter plot. (e) Attention output shown as scatter plot.}]{plus_last_even/plots/a4/16_value_output.png}}
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 14. Values and attention output for the demo sequence. (a) Attention weight matrix as in Figure 13c, (b) Values for each digit shown as heatmaps. (c) Attention outputs shown as heatmaps. (d) Values shown as scatter plot. (e) Attention output shown as scatter plot. Inset: zoom-in.}]{plus_last_even/plots/a4/16_value_output.png}}
 \caption[\textbf{Figure 14.} Values and attention output for the demo
 sequence. (a) Attention weight matrix as in Figure 13c, (b) Values for
 each digit shown as heatmaps. (c) Attention outputs shown as heatmaps.
 (d) Values shown as scatter plot. (e) Attention output shown as scatter
-plot.]{\textbf{Figure 14.} Values and attention output for the demo
-sequence. (a) Attention weight matrix as in Figure 13c, (b) Values for
-each digit shown as heatmaps. (c) Attention outputs shown as heatmaps.
-(d) Values shown as scatter plot. (e) Attention output shown as scatter
-plot.}
+plot. Inset: zoom-in.]{\textbf{Figure 14.} Values and attention output
+for the demo sequence. (a) Attention weight matrix as in Figure 13c, (b)
+Values for each digit shown as heatmaps. (c) Attention outputs shown as
+heatmaps. (d) Values shown as scatter plot. (e) Attention output shown
+as scatter plot. Inset: zoom-in.}
 \end{figure}
 
 \textbf{Predicting the next token.} With the attention vectors
@@ -1360,7 +1387,8 @@ training outcomes, figures, and interpretive claims were independently
 verified by the authors. The first draft of this paper was written by
 Claude Opus 4.6; the entirety of the draft was thoroughly rewritten,
 edited, and revised by the authors for factual accuracy, clarity, and
-language.
+language. Some later edits to the figures, the figure-generation code,
+and the text were made with Claude Opus 5.5.
 
 \section*{Acknowledgments}\label{acknowledgments}
 \addcontentsline{toc}{section}{Acknowledgments}
