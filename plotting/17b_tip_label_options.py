@@ -1,4 +1,5 @@
-"""Ten ways to label the arrow tips in Figure 15 (bottom row, panels Attn(E)_i and e_i -> z_i).
+"""Ten ways to label the arrow tips in Figure 15, panel e_i -> z_i (bottom right),
+drawn at the panel's real A4 size and font size.
 
 Every option puts each label at its arrow tip when that spot is free. If the label would overlap
 an arrow, a point, another label or the panel edge, it moves to the nearest free spot around the
@@ -83,7 +84,7 @@ def background(ax):
     ax.axhline(0, color="gray", ls="--", lw=0.8, alpha=0.5, zorder=1)
     ax.axvline(0, color="gray", ls="--", lw=0.8, alpha=0.5, zorder=1)
     ax.set_xlim(*XLIM); ax.set_ylim(*YLIM)
-    ax.tick_params(labelsize=7)
+    ax.tick_params(labelsize=5)
 
 
 def arrow(ax, a, b, color="black", lw=1.1):
@@ -124,8 +125,12 @@ def boxes_overlap(a, b): return not (a[2] < b[0] or b[2] < a[0] or a[3] < b[1] o
 
 
 BOX = dict(boxstyle="round,pad=0.25", fc="white", ec="0.25", lw=0.5)
-FS = 8
-ANGLES = (0, 30, -30, 60, -60, 90, -90, 120, -120, 150, -150, 180)
+# Sizes match Figure 15 (A4 version): bottom-right panel is 1.443 x 1.908 in, and its
+# label text renders at 5.6 pt (fontsize 8 scaled by the journal-mode factor 0.7).
+PANEL_W, PANEL_H = 1.443, 1.908
+FS = 5.6
+ANGLES = (0, 15, -15, 30, -30, 45, -45, 60, -60, 75, -75, 90, -90,
+          105, -105, 120, -120, 135, -135, 150, -150, 165, -165, 180)
 DISTS = (2, 5, 9, 14, 20, 28, 38)
 
 
@@ -189,6 +194,13 @@ def place_labels(ax, arrows, texts, style, extra_points=()):
                 if ok:
                     ok = not any(grow(bb, 2)[0] <= p[0] <= grow(bb, 2)[2] and grow(bb, 2)[1] <= p[1] <= grow(bb, 2)[3]
                                  for i, p in enumerate(pts) if i != k)
+                if ok and dist > DISTS[1]:
+                    # A moved label gets a leader from the tip to the nearest box point; that
+                    # leader must not cross other arrows or already-placed labels.
+                    lead_end = (min(max(b_px[0], bb[0]), bb[2]), min(max(b_px[1], bb[1]), bb[3]))
+                    ok = not any(_cross(b_px, lead_end, p, q) for j, (p, q) in enumerate(segs) if j != k)
+                    if ok:
+                        ok = not any(seg_hits_box(b_px, lead_end, grow(o, 1)) for o in placed)
                 if ok:
                     chosen = (ann, bb, dist, kw)
                     break
@@ -237,7 +249,7 @@ def opt3(ax, arrows, ep):   # text with white halo at the tip
         extra_points=ep)
 
 def opt4(ax, arrows, ep):   # smaller, non-bold boxed label
-    run(ax, arrows, lambda k: dict(fontsize=6.5, bbox=dict(BOX, pad=0.15)), extra_points=ep)
+    run(ax, arrows, lambda k: dict(fontsize=0.8 * FS, bbox=dict(BOX, pad=0.15)), extra_points=ep)
 
 def opt5(ax, arrows, ep):   # label in a box with a thin coloured edge per token
     run(ax, arrows, lambda k: dict(fontsize=FS, fontweight="bold",
@@ -251,11 +263,11 @@ def opt6(ax, arrows, ep):   # one colour per token: arrow + label
 
 def opt7(ax, arrows, ep):   # numbered tags at the tips + key
     tags = [str(k + 1) for k in range(len(arrows))]
-    run(ax, arrows, lambda k: dict(fontsize=6.5, fontweight="bold", color="white",
+    run(ax, arrows, lambda k: dict(fontsize=0.8 * FS, fontweight="bold", color="white",
                                    bbox=dict(boxstyle="circle,pad=0.2", fc="black", ec="white", lw=0.5)),
         texts=tags, extra_points=ep)
     ax.text(0.98, 0.02, "\n".join(f"{k + 1}: {s}" for k, (_, _, s) in enumerate(arrows)),
-            transform=ax.transAxes, fontsize=6, ha="right", va="bottom", zorder=9,
+            transform=ax.transAxes, fontsize=0.75 * FS, ha="right", va="bottom", zorder=9,
             bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="0.5", lw=0.5))
 
 def opt8(ax, arrows, ep):   # nearby tips share one stacked label
@@ -292,25 +304,25 @@ OPTIONS = [
     ("10. Boxed label, thinner arrows", opt10),
 ]
 
-fig, axes = plt.subplots(5, 4, figsize=(16, 21))
-plt.subplots_adjust(hspace=0.32, wspace=0.18, top=0.965, bottom=0.03, left=0.04, right=0.99)
+# Panel (c) only, each drawn at Figure 15's real panel size.
+NCOL, NROW = 5, 2
+GAP_W, GAP_H, LEFT, TOP = 0.55, 0.75, 0.45, 0.55
+FIG_W = LEFT + NCOL * (PANEL_W + GAP_W)
+FIG_H = TOP + NROW * (PANEL_H + GAP_H)
+fig = plt.figure(figsize=(FIG_W, FIG_H), dpi=300)
 for idx, (title, fn) in enumerate(OPTIONS):
-    r, c0 = divmod(idx, 2)
-    for j, (arrows, sub) in enumerate([(B_ARROWS, r"Attn$(\mathbf{E})_i$"),
-                                       (C_ARROWS, r"$\mathbf{e}_i \rightarrow \mathbf{z}_i$")]):
-        ax = axes[r, 2 * c0 + j]
-        background(ax)
-        ep = ()
-        if j == 1:   # tails of the e_i -> z_i arrows are points to keep clear
-            ax.scatter(E[:, 0], E[:, 1], s=10, c="black", zorder=6)
-            ep = [tuple(p) for p in E]
-        fn(ax, arrows, ep)
-        ax.set_title(sub, fontsize=9)
-    axes[r, 2 * c0].text(0.0, 1.11, title, transform=axes[r, 2 * c0].transAxes,
-                         fontsize=11, fontweight="bold")
+    r, c = divmod(idx, NCOL)
+    x0 = LEFT + c * (PANEL_W + GAP_W)
+    y0 = FIG_H - TOP - (r + 1) * (PANEL_H + GAP_H) + GAP_H * 0.35
+    ax = fig.add_axes([x0 / FIG_W, y0 / FIG_H, PANEL_W / FIG_W, PANEL_H / FIG_H])
+    background(ax)
+    ax.scatter(E[:, 0], E[:, 1], s=14, c="black", edgecolors="white", linewidths=0.6, zorder=6)
+    fn(ax, C_ARROWS, [tuple(p) for p in E])
+    ax.set_title(title, fontsize=6.3, fontweight="bold", loc="left")
 
-fig.suptitle("Figure 15 bottom row: labels at the arrow tips, moved only when blocked (10 options)",
-             fontsize=14, fontweight="bold", y=0.995)
+fig.suptitle(r"Figure 15 panel $\mathbf{e}_i \rightarrow \mathbf{z}_i$ at its real size: "
+             "labels at the arrow tips, moved only when blocked (10 options)",
+             fontsize=8, fontweight="bold", y=0.995)
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
-fig.savefig(OUT, dpi=150, bbox_inches="tight")
+fig.savefig(OUT, dpi=300, bbox_inches="tight")
 print("saved", OUT)

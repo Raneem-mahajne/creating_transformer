@@ -243,19 +243,7 @@ def plot_sequence_embeddings(model, X, itos, save_path=None):
         
         # Column 2: Position embeddings scatter
         ax5 = fig.add_subplot(gs[1, 1])
-        # Background: ALL position embeddings (annotated, shaded out)
-        for pos_idx in range(block_size):
-            ax5.text(
-                all_pos_emb[pos_idx, 0],
-                all_pos_emb[pos_idx, 1],
-                _pos_only_label(pos_idx),
-                fontsize=_scatter_bg,
-                alpha=0.45,
-                ha="center",
-                va="center",
-                color="black",
-                zorder=1,
-            )
+        # No faded background here: the sequence fills all T positions, so it would only ghost behind the labels.
         # Foreground: positions used in THIS sequence (Figure 5 position scatter = black)
         ax5.scatter(pos_emb_np[:, 0], pos_emb_np[:, 1], s=0, alpha=0, zorder=2)
         for i in range(T):

@@ -293,6 +293,117 @@ def _place_flyers(ax, anchors, texts, avoid_segments=(), fontsize=8,
         )
 
 
+def _place_tip_labels(ax, arrows, texts, extra_points=(), fontsize=8,
+                      angles=(0, 15, -15, 30, -30, 45, -45, 60, -60, 75, -75, 90, -90,
+                              105, -105, 120, -120, 135, -135, 150, -150, 165, -165, 180),
+                      dists_pt=(2, 5, 9, 14, 20, 28, 38), boxed=True, always_leader=False,
+                      tip_overshoot_pt=-1.0):
+    """Labels placed at their arrow tips (see 17b_tip_label_options).
+
+    Each label goes just past its arrowhead when that spot is free. If it would overlap
+    another arrow, a point, another label or the panel edge, it moves to the nearest free
+    spot around the tip (angles x distances) and a thin leader line runs back to the tip.
+    Must be called after the figure layout is final.
+    arrows: list of (tail, tip) in data coordinates.
+    boxed: white box around each label (option 1) or plain bold text (option 2).
+    always_leader: draw the leader line for every label, not only for moved ones
+        (pair with dists_pt starting a few points out, so the line is visible).
+    """
+    # Plain labels get a tight invisible box so leader lines are clipped right at the text.
+    text_kw = (dict(bbox=_FLYER_BOX) if boxed else
+               dict(fontweight='bold', bbox=dict(boxstyle='square,pad=0.08', fc='none', ec='none')))
+    fig = ax.figure
+    fig.canvas.draw()
+    rend = fig.canvas.get_renderer()
+    T = ax.transData.transform
+    segs = [(T(np.asarray(a, float)), T(np.asarray(b, float))) for a, b in arrows]
+    pts = [q for _, q in segs] + [T(np.asarray(p, float)) for p in extra_points]
+    axb = ax.get_window_extent(rend)
+    inner = (axb.x0 + 1, axb.y0 + 1, axb.x1 - 1, axb.y1 - 1)
+    ppt = fig.dpi / 72.0
+    # Space kept around each label: _FLYER_BOX padding when boxed, a small margin otherwise.
+    pad_px = (0.3 * fontsize * ppt + 1) if boxed else 1.0 * ppt
+
+    def _unit(v):
+        n = np.hypot(*v)
+        return np.asarray(v) / n if n > 1e-9 else np.array([1.0, 0.0])
+
+    def _align(d):
+        ha = 'left' if d[0] > 0.35 else 'right' if d[0] < -0.35 else 'center'
+        va = 'bottom' if d[1] > 0.35 else 'top' if d[1] < -0.35 else 'center'
+        return ha, va
+
+    placed, placed_leaders = [], []
+    for k in sorted(range(len(arrows)), key=lambda k: -len(texts[k])):
+        p_k, q_k = segs[k]
+        d0 = _unit(q_k - p_k)
+        chosen = None
+        for dist in dists_pt:
+            for ang in angles:
+                r = np.radians(ang)
+                d = np.array([d0[0] * np.cos(r) - d0[1] * np.sin(r),
+                              d0[0] * np.sin(r) + d0[1] * np.cos(r)])
+                ha, va = _align(d)
+                ann = ax.annotate(texts[k], xy=tuple(arrows[k][1]), xytext=tuple(dist * d),
+                                  textcoords='offset points', ha=ha, va=va, fontsize=fontsize,
+                                  color='black', zorder=7, **text_kw)
+                tb = ann.get_window_extent(rend)
+                bb = _grow((tb.x0, tb.y0, tb.x1, tb.y1), pad_px)
+                ok = (bb[0] >= inner[0] and bb[1] >= inner[1]
+                      and bb[2] <= inner[2] and bb[3] <= inner[3])
+                for j, (p, q) in enumerate(segs):
+                    if not ok:
+                        break
+                    if j == k:
+                        # Own arrow: only the shaft (not the last few px at the tip) must stay clear.
+                        ok = not _segment_hits_rect(p, q - 4 * ppt * _unit(q - p), bb)
+                    else:
+                        ok = (not _segment_hits_rect(p, q, _grow(bb, 2))
+                              and _point_rect_dist(q, bb) > 3 * ppt)
+                if ok:
+                    ok = not any(_rects_overlap(_grow(bb, 2), o) for o in placed)
+                if ok:
+                    ok = not any(_point_rect_dist(p, bb) < 2 for i, p in enumerate(pts) if i != k)
+                if ok and (always_leader or dist > dists_pt[1]):
+                    # A moved label gets a leader from the tip to the nearest box point; that
+                    # leader must not cross other arrows or already-placed labels.
+                    lead_end = (min(max(q_k[0], bb[0]), bb[2]), min(max(q_k[1], bb[1]), bb[3]))
+                    ok = not any(_segments_cross(q_k, lead_end, p, q) for j, (p, q) in enumerate(segs)
+                                 if j != k)
+                    if ok:
+                        ok = not any(_segment_hits_rect(q_k, lead_end, _grow(o, 1)) for o in placed)
+                    if ok:
+                        # Leaders must not cross each other, nor run through this label.
+                        ok = not any(_segments_cross(q_k, lead_end, l0, l1)
+                                     or _segment_hits_rect(l0, l1, bb) for l0, l1 in placed_leaders)
+                if ok:
+                    chosen = (ann, bb, dist, ha, va)
+                    break
+                ann.remove()
+            if chosen:
+                break
+        if chosen is None:
+            ha, va = _align(d0)
+            ann = ax.annotate(texts[k], xy=tuple(arrows[k][1]), xytext=tuple(4 * d0),
+                              textcoords='offset points', ha=ha, va=va, fontsize=fontsize,
+                              color='black', zorder=7, **text_kw)
+            chosen = (ann, (0, 0, 0, 0), 4, ha, va)
+        ann, bb, dist, ha, va = chosen
+        if always_leader or dist > dists_pt[1]:
+            # Redraw with a thin leader that touches the tip. The visible arrowhead point sits
+            # ~1 pt short of the arrow's end point, so the leader ends at that visible apex.
+            apex_px = q_k + tip_overshoot_pt * ppt * d0
+            apex = tuple(ax.transData.inverted().transform(apex_px))
+            xyann = ann.xyann
+            ann.remove()
+            ax.annotate(texts[k], xy=apex, xytext=xyann, textcoords='offset points',
+                        ha=ha, va=va, fontsize=fontsize, color='black', zorder=7, **text_kw,
+                        arrowprops=dict(arrowstyle='-', color='0.2', lw=0.6, shrinkA=0, shrinkB=0))
+            lead_end = (min(max(q_k[0], bb[0]), bb[2]), min(max(q_k[1], bb[1]), bb[3]))
+            placed_leaders.append((q_k, lead_end))
+        placed.append(bb)
+
+
 @torch.no_grad()
 def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
     """
@@ -489,6 +600,7 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
     # Second pass: create plots
     _resid_axes = []
     _flyer_jobs = []
+    _tip_jobs = []   # (ax, arrows, labels, extra_points) for _place_tip_labels
     ax_row2_last = None
     ax_col_b_top = None  # top-row axis of column (b); sequence title centered over this
     for data_dict in all_data:
@@ -632,11 +744,10 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
             _draw_clean_arrow(ax, tuple(embeddings_2d[i]), tuple(Final_2d[i]))
         ax.scatter(embeddings_2d[:, 0], embeddings_2d[:, 1], s=14, c='black',
                    edgecolors='white', linewidths=0.6, zorder=6)
-        # Call-outs label the arrowheads (z_i), with tight placement as in the Attn panel.
-        _flyer_jobs.append((
-            ax, Final_2d.copy(), _labels,
-            [(tuple(embeddings_2d[i]), tuple(Final_2d[i])) for i in range(len(tokens))],
-            dict(radii_pt=(2, 3, 5, 8, 12, 17, 24, 34), length_weight=12.0, soft_scale=0.3, tip_pref=350.0),
+        # Boxed labels at the arrowheads (z_i); moved (with a leader) only when blocked.
+        _tip_jobs.append((
+            ax, [(tuple(embeddings_2d[i]), tuple(Final_2d[i])) for i in range(len(tokens))],
+            _labels, [tuple(p) for p in embeddings_2d],
         ))
         ax_row2_last = ax
         ax.set_xlim(xlim_shared)
@@ -693,6 +804,10 @@ def plot_residuals(model, X_list, itos, save_path=None, num_sequences=3):
         cb2.ax.minorticks_off()
     for _ax, _anchors, _texts, _segs, *_kw in _flyer_jobs:
         _place_flyers(_ax, _anchors, _texts, _segs, **(_kw[0] if _kw else {}))
+    for _ax, _arrows, _texts, _pts in _tip_jobs:
+        # Option 2 of 17b_tip_label_options (plain text) with a leader line to every tip.
+        _place_tip_labels(_ax, _arrows, _texts, _pts, boxed=False, always_leader=True,
+                          dists_pt=(6, 9, 13, 18, 24, 32, 42))
     if save_path:
         plt.savefig(save_path, bbox_inches='tight', dpi=150)
         plt.close()
