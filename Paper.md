@@ -300,7 +300,7 @@ It is apparent from these visualizations that once causal masking is applied, th
 (a) Top: Heatmaps illustrating the 2D values for the input embeddings ($\mathbf{E}$) for each token in the test sequence. Bottom: Input embeddings in the 2D output space, where the background colors represent the most likely next-token prediction. (b) Top: The attention vectors ($\mathrm{Attn}(\mathbf{E})$) as heatmap.
 Bottom: The attention vectors shown as arrows from the origin.
 (c) Top: The sum of the input embeddings and the attention vectors ($\mathbf{Z}$) as heatmap.
-Bottom: Input embeddings (white annotations) are moved by the attention vectors (arrows) to the correct region for predicting the next token.
+Bottom: Input embeddings are moved by the attention vectors (arrows with annotated heads) to the correct region for predicting the next token.
 
 ---
 
