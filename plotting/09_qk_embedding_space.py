@@ -259,7 +259,7 @@ def plot_qk_embedding_space_focused_query(model, itos, token_str="+", position=5
         Patch(facecolor='red', edgecolor='black', label=f'Key (position < {position})'),
         Patch(facecolor='#666666', edgecolor='black', label=f'Key (position \u2265 {position})'),
     ]
-    ax.legend(handles=legend_handles, loc='upper left', fontsize=legend_fontsize, framealpha=0.9)
+    ax.legend(handles=legend_handles, loc='lower left',fontsize=legend_fontsize, framealpha=0.9)
 
     plt.tight_layout()
     if save_path:
@@ -462,7 +462,7 @@ def plot_qk_embedding_space_combined(
             Patch(facecolor="red", edgecolor="black", label=f"Key (position < {position})"),
             Patch(facecolor="#666666", edgecolor="black", label=f"Key (position ≥ {position})"),
         ],
-        loc="upper left",
+        loc="lower left",
         fontsize=legend_fontsize,
         framealpha=0.9,
     )
