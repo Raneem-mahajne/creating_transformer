@@ -19,6 +19,8 @@ from plotting import (
     plot_learning_curve,
     plot_generated_sequences_heatmap_before_after,
     plot_generated_sequences_heatmap,
+    select_plus_last_even_segments,
+    plus_predictions_on_segments,
     plot_architecture_diagram,
     plot_weights_qkv_two_sequences,
     plot_q_dot_product_gradients,
@@ -45,6 +47,10 @@ from plotting import (
     plot_probability_heatmap_with_values,
     plot_per_token_frozen_output,
 )
+
+
+# Earliest saved checkpoint; rule error is still at chance here (used as "before" in Fig. 4).
+early_step_for_fig4 = 100
 
 
 def _has_odd_number(decoded_tokens: list) -> bool:
@@ -308,7 +314,42 @@ def visualize_from_checkpoint(
         )
 
     if _plot("generated_sequences_heatmap.png"):
-        if generated_sequences_e0:
+        early_ckpt = None
+        if config["data"].get("generator_type") == "PlusLastEvenRule":
+            early_ckpt = load_checkpoint(config_name_actual, step=early_step_for_fig4)
+        if early_ckpt is not None:
+            # Same held-out segments in both panels; the token after each '+' is replaced by
+            # the model's top-1 prediction (teacher-forced), early in training vs. trained.
+            # Segments are chosen from the data alone, never from model correctness.
+            seg_len = 12
+            val_seqs = checkpoint_data.get("val_sequences") or train_sequences
+            locs = select_plus_last_even_segments(
+                [decode(s) for s in val_seqs], num_segments=3, length=seg_len,
+                context=block_size, min_plus=2, min_gap=2, fresh_sources=True,
+                return_locations=True,
+            )
+            segs_before = plus_predictions_on_segments(
+                early_ckpt["model"], val_seqs, locs, decode, block_size)
+            segs_after = plus_predictions_on_segments(
+                model, val_seqs, locs, decode, block_size)
+            (acc0, c0, i0), (accf, cf, inf) = plot_generated_sequences_heatmap_before_after(
+                segs_before,
+                segs_after,
+                generator,
+                save_path=_plot_path("generated_sequences_heatmap.png"),
+                num_sequences=3,
+                max_length=seg_len,
+                titles=(f"Early in training (step {early_ckpt['step']})",
+                        "After training"),
+                xlabel="Position in segment",
+                row_label="Segment",
+            )
+            print("Fig 4 data segments:", [" ".join(map(str, w)) for _, _, w in locs])
+            print("Fig 4 (before):", [" ".join(map(str, s)) for s in segs_before])
+            print("Fig 4 (after):", [" ".join(map(str, s)) for s in segs_after])
+            print(f"Generated sequences heatmap (E0): {c0} correct, {i0} incorrect positions ({acc0:.1%} accuracy)")
+            print(f"Generated sequences heatmap (Final): {cf} correct, {inf} incorrect positions ({accf:.1%} accuracy)")
+        elif generated_sequences_e0:
             (acc0, c0, i0), (accf, cf, inf) = plot_generated_sequences_heatmap_before_after(
                 generated_sequences_e0,
                 generated_sequences,

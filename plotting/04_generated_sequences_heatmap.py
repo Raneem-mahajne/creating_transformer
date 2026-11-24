@@ -27,13 +27,102 @@ from plotting._utils import (
 )
 
 
-def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=None, num_sequences=5, max_length=20, ax=None, title=None, show_legend=True):
+def _last_even_source(window, plus_idx, context):
+    """Index of the most recent even integer before window[plus_idx], within `context` tokens, or None."""
+    for j in range(plus_idx - 1, max(-1, plus_idx - context), -1):
+        tok = window[j]
+        if tok != "+" and isinstance(tok, int) and tok % 2 == 0:
+            return j
+    return None
+
+
+def select_plus_last_even_segments(sequences, num_segments=3, length=12, context=8,
+                                   min_plus=1, min_gap=1, fresh_sources=False,
+                                   return_locations=False):
+    """Cut readable demo segments out of generated plus-last-even sequences.
+
+    A segment of `length` tokens qualifies if every '+' in it (a) is followed by a
+    token inside the segment, (b) is not followed by another '+', and (c) has an
+    even number earlier in the segment and within the model's `context` window, so
+    the rule's target is visible in the figure. Segments must contain at least
+    `min_plus` '+' tokens, and the last even must sit at least `min_gap` positions
+    before its '+' (min_gap=2 excludes trivial '8 + 8' copies).
+
+    Selection uses only the input tokens, never whether the model's output was
+    correct. Segments prefer more distinct targets, more '+' tokens, and longer
+    look-back distances; at most one segment is taken per source sequence.
+    If fresh_sources, a '+' target may not itself be the output of an earlier '+'
+    (so replacing outputs with model predictions cannot change later targets).
+    Returns a list of segments (lists of tokens), possibly shorter than num_segments;
+    with return_locations, a list of (sequence_index, start, segment) instead.
+    """
+    best_per_seq = []
+    for seq_i, seq in enumerate(sequences):
+        best = None
+        for start in range(0, len(seq) - length + 1):
+            win = list(seq[start:start + length])
+            plus_idx = [i for i, t in enumerate(win) if t == "+"]
+            if len(plus_idx) < min_plus:
+                continue
+            ok = True
+            gaps, targets = [], set()
+            for i in plus_idx:
+                if i + 1 >= length or win[i + 1] == "+":
+                    ok = False
+                    break
+                src = _last_even_source(win, i, context)
+                if src is None or i - src < min_gap:
+                    ok = False
+                    break
+                if fresh_sources and src > 0 and win[src - 1] == "+":
+                    ok = False
+                    break
+                gaps.append(i - src)
+                targets.add(win[src])
+            if not ok:
+                continue
+            score = (len(targets), min(len(plus_idx), 3), min(gaps), -start)
+            if best is None or score > best[0]:
+                best = (score, (seq_i, start, win))
+        if best is not None:
+            best_per_seq.append(best)
+    best_per_seq.sort(key=lambda b: b[0], reverse=True)
+    chosen = [loc for _, loc in best_per_seq[:num_segments]]
+    return chosen if return_locations else [win for _, _, win in chosen]
+
+
+@torch.no_grad()
+def plus_predictions_on_segments(model, encoded_sequences, locations, decode, block_size, seed=0):
+    """Teacher-forced: replace the token after each '+' in each segment with a token
+    sampled from the model's output distribution (as in generation), using the true
+    preceding tokens (last `block_size`) as context. Uses a private RNG seeded by `seed`."""
+    model.eval()
+    gen = torch.Generator().manual_seed(seed)
+    out = []
+    for seq_i, start, win in locations:
+        full = encoded_sequences[seq_i]
+        shown = list(win)
+        for i, tok in enumerate(win):
+            if tok != "+" or i + 1 >= len(win):
+                continue
+            g = start + i  # index of '+' in the full sequence
+            ctx = torch.tensor([full[max(0, g - block_size + 1):g + 1]], dtype=torch.long)
+            logits, _ = model(ctx)
+            probs = F.softmax(logits[0, -1], dim=-1)
+            pred = int(torch.multinomial(probs, 1, generator=gen).item())
+            shown[i + 1] = decode([pred])[0]
+        out.append(shown)
+    return out
+
+
+def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=None, num_sequences=5, max_length=20, ax=None, title=None, show_legend=True, xlabel="Position in Sequence", row_label="Seq"):
     """
     Plot generated sequences as an annotated heatmap showing correctness.
     Red = incorrect, White/Green = correct.
     """
     sequences_to_show = generated_sequences[:num_sequences]
-    
+    num_sequences = len(sequences_to_show)
+
     # Truncate to max_length and pad to same length
     max_len = min(max_length, max(len(seq) for seq in sequences_to_show))
     
@@ -43,7 +132,7 @@ def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=N
     constrained_matrix = []
     
     for seq in sequences_to_show:
-        seq_truncated = seq[:max_len]
+        seq_truncated = list(seq[:max_len])
         correctness, _ = generator.verify_sequence(seq_truncated)
         valence = generator.valence_mask(seq_truncated)
         
@@ -99,15 +188,15 @@ def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=N
                 ax.text(j, i, str(val), ha='center', va='center', fontsize=_txt_fs, color=text_color, fontweight='bold')
     
     # Set labels — larger fonts
-    ax.set_xlabel("Position in Sequence", fontsize=_lbl_fs)
-    ax.set_ylabel("Sequence #", fontsize=_lbl_fs)
+    ax.set_xlabel(xlabel, fontsize=_lbl_fs)
+    ax.set_ylabel("Sequence #" if row_label == "Seq" else "", fontsize=_lbl_fs)
     ax.set_title(title or "Generated Sequences with Rule Correctness\n(Green = Correct, Red = Incorrect)", fontsize=_tit_fs)
     ax.tick_params(axis='both', labelsize=_tk_fs)
     
     # Set ticks
     ax.set_xticks(range(0, max_len, max(1, max_len // 15)))
     ax.set_yticks(range(num_sequences))
-    ax.set_yticklabels([f"Seq {i+1}" for i in range(num_sequences)])
+    ax.set_yticklabels([f"{row_label} {i+1}" for i in range(num_sequences)])
     
     if created_fig:
         plt.tight_layout()
@@ -137,8 +226,11 @@ def plot_generated_sequences_heatmap(generated_sequences, generator, save_path=N
     return accuracy, total_correct, total_incorrect
 
 
-def plot_generated_sequences_heatmap_before_after(generated_sequences_e0, generated_sequences_final, generator, save_path=None, num_sequences=3, max_length=20):
+def plot_generated_sequences_heatmap_before_after(generated_sequences_e0, generated_sequences_final, generator, save_path=None, num_sequences=3, max_length=20, titles=None, xlabel="Position in Sequence", row_label="Seq"):
     """Plot before/after generated sequences heatmaps in one image."""
+    if titles is None:
+        titles = (f"E0 Generated Sequences (n={num_sequences})",
+                  f"Final Generated Sequences (n={num_sequences})")
     if not generated_sequences_e0:
         return plot_generated_sequences_heatmap(
             generated_sequences_final, generator,
@@ -157,12 +249,12 @@ def plot_generated_sequences_heatmap_before_after(generated_sequences_e0, genera
     acc0, c0, i0 = plot_generated_sequences_heatmap(
         generated_sequences_e0, generator,
         save_path=None, num_sequences=num_sequences, max_length=max_length,
-        ax=axes[0], title=f"E0 Generated Sequences (n={num_sequences})", show_legend=False
+        ax=axes[0], title=titles[0], show_legend=False, xlabel=xlabel, row_label=row_label
     )
     accf, cf, inf = plot_generated_sequences_heatmap(
         generated_sequences_final, generator,
         save_path=None, num_sequences=num_sequences, max_length=max_length,
-        ax=axes[1], title=f"Final Generated Sequences (n={num_sequences})", show_legend=False
+        ax=axes[1], title=titles[1], show_legend=False, xlabel=xlabel, row_label=row_label
     )
     
     _label_panels([axes[0], axes[1]])
