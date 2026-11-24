@@ -12,7 +12,7 @@ Edmond and Lily Safra Center for Brain Sciences, The Hebrew University of Jerusa
 \*These authors contributed equally to this work.
 
 > **Abstract.**
-> We present a framework for building and interpreting minimal transformer models. By constraining a transformer's embedding dimension and head size to $2$, we enable full two-dimensional visualization of its internal representations. Embeddings, query/key/value transforms, attention outputs, residual streams, and decision boundaries can all be seen directly. Our central claim is that the learned geometry implies an algorithm. The arrangement of points and boundaries in $\mathbb{R}^2$ can be read as a step-by-step procedure. We train a transformer on a simple task where it must produce the most recently observed even number whenever the '+' operator appears in a sequence of digits. Once trained, we visually walk through every step of the transformer's computation. We show how the model embeds the tokens and their respective positions in the sequence, transforms them via the Q, K, and V matrices, uses the dot product between the Q and K representations to form the attention matrix, and uses the attention matrix to select values that move the representation of each input token embedding to the region of the domain of the output layer that will correctly predict the next token. We introduce a suite of interpretability visualizations that make the algorithmic interpretation of this procedure explicit. Our framework offers a pedagogical and experimental testbed to explore how transformers use information geometry to implement next-token prediction.
+> We present a framework for building and interpreting minimal transformer models. We train a transformer on a simple task where it must produce the most recently observed even number whenever the '+' operator appears in a sequence of digits. By constraining the transformer's embedding dimension and head size to $2$, we enable full two-dimensional visualization of its internal representations. Embeddings, query/key/value transforms, attention outputs, residual streams, and decision boundaries can thus all be seen directly. Once trained, it is possible to visually walk through every step of the transformer's computation. The visualizations show how the model structures the token and position embeddings, transforms them via the Q, K, and V matrices, uses the dot product between the Q and K representations to form the attention matrix, and uses the attention matrix to select values that move the representation of each input token embedding to the region of the domain of the output layer that will correctly predict the next token. Our framework offers a pedagogical and experimental testbed to explore how transformers use information geometry to implement next-token prediction.
 
 ---
 
@@ -48,13 +48,15 @@ The task is defined over a vocabulary $\mathcal{V}$ of 12 tokens: the integers $
 **Rule.** Whenever `+` appears in the sequence, the *next* token must be the most recent even number that appeared before that `+`. -->
 
 
+An example sequence is shown below. The first `+` is preceded by 5, 3, 8, 7, so the token following it must be 8, the most recent even number. The second `+` is preceded by 8, 10, 2, 4, so it must be followed by 4. All other tokens are drawn freely and only provide context:
+
 ```
 5  3  8  7  +  8  10  2  4  +  4  ...
-            ↑               ↑
-       last even = 8     last even = 4
+               ↑               ↑
+         last even = 8   last even = 4
 ```
 
-Positions not immediately following `+` are unconstrained, so any token may appear. The rule thus constrains only a fraction of positions; the remainder serve as context. The model must learn to (1) identify the `+` token, (2) scan backward through the context to locate the most recent even number, and (3) output that number with high probability. This is a non-trivial attention task: it requires routing information from a variable, content-dependent past position to the present.
+Only the positions right after a `+` are constrained by the rule; the rest serve as context. The model must learn to (1) identify the `+` token, (2) scan backward through the context to locate the most recent even number, and (3) output that number with high probability. This is a non-trivial attention task: it requires routing information from a variable, content-dependent past position to the present.
 
 
 ### 2.2 Model Architecture
