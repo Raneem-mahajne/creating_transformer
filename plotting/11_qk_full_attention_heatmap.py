@@ -274,12 +274,8 @@ def plot_qk_full_attention_heatmap_last_row(model, itos, save_path: str = None):
         row, col = idx // n_cols, idx % n_cols
         axes[row, col].axis('off')
     
-    # Add overall title - emphasize that each subplot is itself a matrix
-    fig.suptitle(f"Query Token '+' Attention to All Key Tokens\n(Each subplot is an {block_size}×{block_size} attention matrix: Query '+' positions (rows) vs Key positions (columns))", 
-                 fontsize=14, fontweight='bold', y=0.97)
-    
     # Colorbar: anchor to the last subplot only so it sits on the right, not in the middle
-    plt.tight_layout(rect=[0, 0, 0.92, 0.94])
+    plt.tight_layout(rect=[0, 0, 0.92, 1.0])
     cbar_ax = fig.add_axes([0.93, 0.15, 0.015, 0.7])  # [left, bottom, width, height] in figure coords
     cbar = fig.colorbar(im, cax=cbar_ax)
     cbar.set_label("Attention Score (pre-softmax)", fontsize=11)
